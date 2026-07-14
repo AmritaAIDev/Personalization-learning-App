@@ -27,11 +27,11 @@ export default function SyllabusPage() {
   // Dynamic theme generator for any subject that might come from the DB
   const getThemeForSubject = (subject: string) => {
     const themes = [
-      { bg: 'bg-blue-500', text: 'text-blue-500', accent: 'border-blue-500/20' },
-      { bg: 'bg-orange-500', text: 'text-orange-500', accent: 'border-orange-500/20' },
-      { bg: 'bg-emerald-500', text: 'text-emerald-500', accent: 'border-emerald-500/20' },
-      { bg: 'bg-purple-500', text: 'text-purple-500', accent: 'border-purple-500/20' },
-      { bg: 'bg-pink-500', text: 'text-pink-500', accent: 'border-pink-500/20' }
+      { bg: 'bg-blue-500', text: 'text-blue-500', accent: 'border-blue-500/20', hex: '#3b82f6' },
+      { bg: 'bg-orange-500', text: 'text-orange-500', accent: 'border-orange-500/20', hex: '#f97316' },
+      { bg: 'bg-emerald-500', text: 'text-emerald-500', accent: 'border-emerald-500/20', hex: '#10b981' },
+      { bg: 'bg-purple-500', text: 'text-purple-500', accent: 'border-purple-500/20', hex: '#a855f7' },
+      { bg: 'bg-pink-500', text: 'text-pink-500', accent: 'border-pink-500/20', hex: '#ec4899' }
     ];
     // Hash the subject name to consistently pick a theme
     let hash = 0;
@@ -72,7 +72,10 @@ export default function SyllabusPage() {
 
       <div className="p-6 h-[calc(100vh-3.5rem)] overflow-y-auto relative">
         {selectedSubject && (
-          <div className={`absolute inset-0 bg-gradient-to-b from-transparent to-${getThemeForSubject(selectedSubject).bg.split('-')[1]}-500/5 pointer-events-none transition-colors duration-1000`}></div>
+          <div
+            className="absolute inset-0 pointer-events-none transition-colors duration-1000"
+            style={{ background: `linear-gradient(to bottom, transparent, ${getThemeForSubject(selectedSubject).hex}0d)` }}
+          ></div>
         )}
         <div className="mx-auto max-w-5xl flex flex-col gap-8 pb-20 relative z-10">
 
@@ -162,7 +165,7 @@ export default function SyllabusPage() {
                             }`}>
                               <span className="text-xs font-semibold text-[#313337]">{sub.name}</span>
                               {!isLocked && (
-                                <Link href="/arena" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Link href={sub.id ? `/arena?topic=${sub.id}` : `/arena?topic=${chapter.id}`} className="opacity-0 group-hover:opacity-100 transition-opacity">
                                   <PlayCircle size={14} className="text-[#111214]" />
                                 </Link>
                               )}

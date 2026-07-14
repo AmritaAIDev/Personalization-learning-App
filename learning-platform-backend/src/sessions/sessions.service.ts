@@ -50,6 +50,7 @@ export class SessionsService {
       const mappedSubtopics = chapterSubtopics.map((sub) => {
         const subScore = sessionMap.get(sub.id) ?? null;
         return {
+          id: sub.id,
           name: sub.name,
           score: subScore,
         };

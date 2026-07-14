@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useJourney, JourneyNode, Subtopic } from '@/context/JourneyContext';
 
 export default function DashboardPage() {
-  const { journeyNodes: rawJourneyNodes, loading } = useJourney();
+  const { journeyNodes: rawJourneyNodes, user, loading } = useJourney();
   const [journeyNodes, setJourneyNodes] = useState<JourneyNode[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
@@ -44,15 +44,15 @@ export default function DashboardPage() {
         <h1 className="font-heading text-lg font-bold text-[#111214]">Overview</h1>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 bg-orange-50 px-3 py-1 rounded-full border border-orange-100 shadow-sm">
-            <span className="text-orange-500 font-bold text-sm">🔥 3</span>
+            <span className="text-orange-500 font-bold text-sm">🔥 {user?.streak ?? 0}</span>
             <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600 hidden sm:inline">Day Streak</span>
           </div>
           <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 shadow-sm">
-            <span className="text-blue-600 font-bold text-sm">✨ 1,250</span>
+            <span className="text-blue-600 font-bold text-sm">✨ {(user?.xp ?? 0).toLocaleString()}</span>
             <span className="text-[10px] font-bold uppercase tracking-widest text-blue-700 hidden sm:inline">XP</span>
           </div>
           <div className="flex items-center gap-1.5 bg-[#111214] px-3 py-1 rounded-full shadow-[0_4px_10px_rgba(17,18,20,0.2)] hover:scale-105 transition-transform cursor-pointer">
-            <span className="text-white font-bold text-sm">Lvl 5</span>
+            <span className="text-white font-bold text-sm">Lvl {user?.level ?? 1}</span>
             <span className="text-[10px] font-bold uppercase tracking-widest text-white/70 hidden sm:inline">Scholar</span>
           </div>
         </div>

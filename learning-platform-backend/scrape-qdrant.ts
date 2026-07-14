@@ -1,6 +1,7 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import * as cheerio from 'cheerio';
 import * as dotenv from 'dotenv';
+import { embedText } from './src/agent/embedding.util';
 
 dotenv.config();
 
@@ -49,20 +50,15 @@ async function scrapeAndSeed() {
 
   console.log(`Successfully scraped ${finalChunks.length} high-density physics paragraphs!`);
 
-  const extractor = async (text: string) => {
-    const vector = Array.from({ length: 384 }, () => Math.random() * 2 - 1);
-    return { data: vector };
-  };
-
   const points: any[] = [];
 
-  console.log("Formatting payloads and generating mock vectors...");
+  console.log("Formatting payloads and generating real embeddings...");
   for (const chunk of finalChunks) {
-    const output = await extractor(chunk.content);
-    
+    const vector = await embedText(chunk.content);
+
     points.push({
       id: chunk.id,
-      vector: Array.from(output.data),
+      vector,
       payload: {
         title: chunk.title,
         text: chunk.content, 

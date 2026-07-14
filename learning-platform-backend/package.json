@@ -19,8 +19,10 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed": "ts-node -r tsconfig-paths/register src/scripts/seed.ts",
+    "seed:postgres": "ts-node seed-postgres.ts",
     "seed:qdrant": "ts-node seed-qdrant.ts",
-    "seed:qdrant:full": "ts-node seed-qdrant-full-chapter.ts"
+    "seed:qdrant:full": "ts-node seed-qdrant-full-chapter.ts",
+    "seed:qdrant:scrape": "ts-node scrape-qdrant.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

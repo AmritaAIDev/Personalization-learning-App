@@ -28,6 +28,9 @@ async function bootstrap() {
     email: 'arjun@student.edu',
     passwordHash: 'dummy_hash',
     role: 'student',
+    xp: 1250,
+    level: 5,
+    streak: 3,
   });
   await userRepository.save(student);
   console.log('User created:', student.name);

@@ -23,6 +23,16 @@ export class User {
   @Column({ default: 'student' })
   role: string; // e.g., 'student', 'admin'
 
+  // Gamification stats surfaced on the dashboard header
+  @Column({ type: 'int', default: 0 })
+  xp: number;
+
+  @Column({ type: 'int', default: 1 })
+  level: number;
+
+  @Column({ type: 'int', default: 0 })
+  streak: number; // consecutive active days
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -50,4 +50,13 @@ export class TopicsService {
     const topic = this.topicsRepository.create(data);
     return this.topicsRepository.save(topic);
   }
+
+  // Get prerequisites for a specific topic (Fallback logic)
+  async getPrerequisites(topicId: string): Promise<Topic[]> {
+    const topic = await this.topicsRepository.findOne({
+      where: { id: topicId },
+      relations: { prerequisites: true },
+    });
+    return topic?.prerequisites || [];
+  }
 }

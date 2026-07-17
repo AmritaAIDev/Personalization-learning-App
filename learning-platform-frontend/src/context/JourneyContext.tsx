@@ -6,6 +6,9 @@ export interface Subtopic {
   id?: string;
   name: string;
   score: number | null;
+  state?: 'locked' | 'active' | 'completed';
+  nodeType?: 'history' | 'prerequisite' | 'next-step' | 'recommended';
+  prerequisites?: { id: string, name: string, score: number }[];
 }
 
 export interface JourneyNode {

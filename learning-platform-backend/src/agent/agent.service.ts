@@ -98,7 +98,7 @@ export class AgentService {
    * generation. Every failure mode (missing config, empty context, LLM error,
    * malformed output) raises an explicit error — there is no fake fallback data.
    */
-  async generateDynamicQuestion(topic: string): Promise<GeneratedQuestion> {
+  async generateDynamicQuestion(topic: string, bloomLevel: string = 'Understand'): Promise<GeneratedQuestion> {
     if (!topic?.trim()) {
       throw new ServiceUnavailableException(
         'A topic is required to generate a question.',
@@ -134,7 +134,10 @@ export class AgentService {
 
     const prompt = `
       You are an expert JEE Physics Professor.
-      Based ONLY on the following textbook context, generate a high-quality, medium-difficulty multiple-choice Physics question about "${topicName}".
+      Based ONLY on the following textbook context, generate a high-quality multiple-choice Physics question about "${topicName}".
+      
+      CRITICAL INSTRUCTION: Target the Bloom's Taxonomy level of "${bloomLevel}". 
+      Ensure the cognitive complexity precisely matches this level.
 
       CONTEXT:
       ${contextText}
@@ -207,5 +210,86 @@ export class AgentService {
       correct_answer: q.correct_answer!,
       explanation: q.explanation!,
     };
+  }
+
+  /**
+   * Simple chat endpoint that calls DeepSeek. 
+   * Context is kept limited for speed and simplicity.
+   */
+  async chatWithTutor(topic: string, message: string): Promise<string> {
+    if (!this.configService.get<string>('DEEPSEEK_API_KEY')) {
+      throw new ServiceUnavailableException('LLM is not configured (missing DEEPSEEK_API_KEY).');
+    }
+
+    const topicName = await this.resolveTopicName(topic?.trim() || 'General Physics');
+
+    const prompt = `
+      You are an expert JEE AI Tutor. You are helping a student with the topic "${topicName}".
+      The student says: "${message}"
+      
+      Provide a helpful, encouraging, and concise response (max 3 sentences). Do not use markdown.
+    `;
+
+    try {
+      this.logger.log('Calling DeepSeek API for chat...');
+      const response = await this.openai.chat.completions.create({
+        model: 'deepseek-chat',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a friendly AI tutor. Keep answers brief and conversational.',
+          },
+          { role: 'user', content: prompt },
+        ],
+      });
+      return response.choices[0]?.message?.content ?? 'I am having trouble thinking right now. Please try again.';
+    } catch (error) {
+      this.logger.error('DeepSeek API chat call failed', error as Error);
+      throw new ServiceUnavailableException('The AI tutor is currently unavailable.');
+    }
+  }
+
+  /**
+   * Returns DUIX App ID and Key from environment safely to the frontend
+   */
+  getDuixAuth() {
+    return {
+      appId: this.configService.get<string>('DUIX_APP_ID'),
+      appKey: this.configService.get<string>('DUIX_APP_KEY'),
+    };
+  }
+
+  /**
+   * Initializes the DUIX Avatar Session using the token from the environment.
+   */
+  async createDuixAvatar(conversationId: string) {
+    const token = this.configService.get<string>('DUIX_TOKEN');
+    if (!token) {
+      throw new ServiceUnavailableException('DUIX_TOKEN is not configured.');
+    }
+
+    try {
+      this.logger.log(`Calling DUIX API to create avatar for conversation: ${conversationId}`);
+      const response = await fetch('https://app.duix.ai/duix-openapi-v2/sdk/v2/createAvatar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': token,
+        },
+        body: JSON.stringify({
+          conversationId: conversationId,
+          ttsName: 'Marin',
+          name: 'Jane',
+          greetings: "Is there anything I can help you?",
+          profile: 'You are an AI avatar created by Duix API'
+        }),
+      });
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      this.logger.error('Failed to create DUIX Avatar', error as Error);
+      throw new ServiceUnavailableException('The DUIX Avatar could not be initialized.');
+    }
   }
 }

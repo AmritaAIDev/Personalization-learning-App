@@ -6,6 +6,8 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToMany,
+  ManyToMany,
+  JoinTable,
   JoinColumn,
 } from 'typeorm';
 
@@ -44,6 +46,15 @@ export class Topic {
 
   @OneToMany(() => Topic, (topic) => topic.parent)
   children: Topic[];
+
+  // Knowledge Graph: Topics this topic depends on (e.g. Pythagoras depends on Algebra)
+  @ManyToMany(() => Topic)
+  @JoinTable({
+    name: 'topic_prerequisites',
+    joinColumn: { name: 'topic_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'prerequisite_id', referencedColumnName: 'id' },
+  })
+  prerequisites: Topic[];
 
   @CreateDateColumn()
   createdAt: Date;

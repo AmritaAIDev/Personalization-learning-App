@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { TopicsService } from './topics.service';
 import { Topic } from './topic.entity';
 
@@ -12,7 +12,14 @@ export class TopicsController {
   }
 
   @Post()
-  async createTopic(@Body() data: Partial<Topic>) {
-    return this.topicsService.createTopic(data);
+  async createTopic(@Body() body: any) {
+    const topic = await this.topicsService.createTopic(body);
+    return { success: true, data: topic };
+  }
+
+  @Get(':id/prerequisites')
+  async getPrerequisites(@Param('id') id: string) {
+    const prereqs = await this.topicsService.getPrerequisites(id);
+    return { success: true, data: prereqs };
   }
 }

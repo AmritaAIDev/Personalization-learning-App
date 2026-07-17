@@ -1,15 +1,9 @@
 import type { Metadata } from "next";
-import { Montserrat, Poppins, Urbanist } from "next/font/google";
+import { Inter, Urbanist } from "next/font/google";
 import "./globals.css";
 
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
-  subsets: ["latin"],
-});
-
-const poppins = Poppins({
-  variable: "--font-poppins",
-  weight: ["300", "400", "500", "600", "700"],
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -33,9 +27,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${montserrat.variable} ${poppins.variable} ${urbanist.variable} h-full antialiased`}
+      className={`${inter.variable} ${urbanist.variable} h-full antialiased`}
     >
-      <body className={`${poppins.className} min-h-full flex flex-col font-sans`}>
+      <body className={`${inter.className} min-h-full flex flex-col font-sans`}>
         <JourneyProvider>
           {children}
         </JourneyProvider>

@@ -19,7 +19,7 @@ export default function Login() {
     }
   };
   return (
-    <div className="relative min-h-screen w-full overflow-x-clip bg-[#fafafa] font-sans selection:bg-[#111214] selection:text-white flex items-center justify-center">
+    <div className="relative min-h-screen w-full overflow-x-clip bg-[#fafafa] font-sans selection:bg-[var(--color-primary)] selection:text-white flex items-center justify-center">
       
       {/* Background Decorators from Chatpress */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -32,7 +32,7 @@ export default function Login() {
       <div className="relative z-10 w-full max-w-md px-6">
         
         <div className="flex flex-col items-center mb-8">
-          <h1 className="font-heading text-3xl font-bold tracking-tight text-[#111214] sm:text-4xl text-center">
+          <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl text-center">
             Welcome back
           </h1>
         </div>
@@ -56,7 +56,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@school.edu" 
-                className="w-full rounded-xl border border-[rgba(49,51,55,0.1)] bg-white px-4 py-3 text-sm font-medium text-[#111214] placeholder-[#a1a5ab] shadow-[0_2px_10px_rgba(49,51,55,0.02)] outline-none transition-[border-color,box-shadow] focus:border-[#111214] focus:ring-1 focus:ring-[#111214]"
+                className="w-full rounded-xl border border-[rgba(49,51,55,0.1)] bg-white px-4 py-3 text-sm font-medium text-foreground placeholder-[#a1a5ab] shadow-[0_2px_10px_rgba(49,51,55,0.02)] outline-none transition-[border-color,box-shadow] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
               />
             </div>
             
@@ -65,7 +65,7 @@ export default function Login() {
                 <label htmlFor="password" className="block text-xs font-bold uppercase tracking-widest text-[#8f939b]">
                   Password
                 </label>
-                <a href="#" className="text-xs font-bold text-[#111214] hover:underline">
+                <a href="#" className="text-xs font-bold text-foreground hover:underline">
                   Forgot password?
                 </a>
               </div>
@@ -75,13 +75,13 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••" 
-                className="w-full rounded-xl border border-[rgba(49,51,55,0.1)] bg-white px-4 py-3 text-sm font-medium text-[#111214] placeholder-[#a1a5ab] shadow-[0_2px_10px_rgba(49,51,55,0.02)] outline-none transition-[border-color,box-shadow] focus:border-[#111214] focus:ring-1 focus:ring-[#111214]"
+                className="w-full rounded-xl border border-[rgba(49,51,55,0.1)] bg-white px-4 py-3 text-sm font-medium text-foreground placeholder-[#a1a5ab] shadow-[0_2px_10px_rgba(49,51,55,0.02)] outline-none transition-[border-color,box-shadow] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
               />
             </div>
 
             <button 
               type="submit"
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#111214] px-5 py-3.5 text-sm font-bold text-white shadow-[0_14px_28px_rgba(49,51,55,0.16)] transition-[background-color,transform,box-shadow] duration-200 hover:-translate-y-px hover:bg-[#313337] hover:shadow-[0_18px_32px_rgba(49,51,55,0.2)]"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] px-5 py-3.5 text-sm font-bold text-white shadow-[0_14px_28px_rgba(49,51,55,0.16)] transition-[background-color,transform,box-shadow] duration-200 hover:-translate-y-px hover:bg-[var(--color-primary-light)] hover:shadow-[0_18px_32px_rgba(49,51,55,0.2)]"
             >
               Sign In <ArrowRight size={16} />
             </button>
@@ -93,7 +93,7 @@ export default function Login() {
             <div className="flex-grow border-t border-[rgba(49,51,55,0.08)]"></div>
           </div>
 
-          <button className="mt-6 w-full rounded-full border border-[rgba(49,51,55,0.1)] bg-[rgba(255,255,255,0.66)] px-5 py-3 text-sm font-bold text-[#111214] shadow-[0_6px_18px_rgba(49,51,55,0.04)] transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-px hover:bg-white hover:shadow-[0_12px_24px_rgba(49,51,55,0.08)]">
+          <button className="mt-6 w-full rounded-full border border-[rgba(49,51,55,0.1)] bg-[rgba(255,255,255,0.66)] px-5 py-3 text-sm font-bold text-foreground shadow-[0_6px_18px_rgba(49,51,55,0.04)] transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-px hover:bg-white hover:shadow-[0_12px_24px_rgba(49,51,55,0.08)]">
             Continue with Google
           </button>
         </div>

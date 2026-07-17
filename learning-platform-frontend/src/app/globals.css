@@ -1,9 +1,12 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-urbanist), ui-sans-serif, system-ui, sans-serif;
-  --font-accent: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-accent: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary: #e31540;
+  --color-primary-light: #d28ea2;
 }
 
 :root {

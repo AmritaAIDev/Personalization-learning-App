@@ -37,6 +37,19 @@ export class TestSession {
   @Column({ type: 'int', default: 0 })
   currentScore: number;
 
+  // --- Algorithmic Routing State ---
+  @Column({ type: 'int', default: 1 })
+  current_taxonomy: number; // 1: Remember, 2: Understand, 3: Apply, 4: Analyze, 5: Evaluate, 6: Create
+
+  @Column({ type: 'int', default: 1 })
+  current_difficulty: number; // 1: Easy, 2: Medium, 3: Hard
+
+  @Column({ type: 'int', default: 0 })
+  streak_counter: number; // Consecutive correct answers at current node
+
+  @Column({ type: 'int', default: 0 })
+  failed_attempts: number; // Failed attempts on the current question
+
   @CreateDateColumn()
   startedAt: Date;
 

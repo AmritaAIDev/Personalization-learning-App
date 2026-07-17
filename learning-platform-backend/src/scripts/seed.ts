@@ -189,6 +189,7 @@ async function bootstrap() {
       subtopics: [
         { name: 'Straight Lines', score: null },
         { name: 'Circles', score: null },
+        { name: 'Pythagoras', score: null },
       ],
     },
   ];
@@ -206,6 +207,16 @@ async function bootstrap() {
         level: TopicLevel.SUB_TOPIC,
         parent: chapter,
       });
+      
+      // Setup the Knowledge Graph Dependency: Pythagoras -> Algebra
+      if (sub.name === 'Pythagoras') {
+        // Find Algebra (we know it was created since it's earlier in the loop)
+        const algebra = await topicRepository.findOne({ where: { name: 'Algebra' } });
+        if (algebra) {
+          subtopic.prerequisites = [algebra];
+        }
+      }
+      
       await topicRepository.save(subtopic);
       if (sub.score !== null) {
         await sessionRepository.save(
@@ -301,6 +312,32 @@ async function bootstrap() {
       );
     }
   }
+
+  console.log('Building Complex Knowledge Graph Links...');
+  const linkTopics = async (targetName: string, prereqNames: string[]) => {
+    const target = await topicRepository.findOne({ where: { name: targetName }, relations: { prerequisites: true } });
+    if (!target) return;
+    
+    target.prerequisites = target.prerequisites || [];
+    for (const prereqName of prereqNames) {
+      const prereq = await topicRepository.findOne({ where: { name: prereqName } });
+      if (prereq && !target.prerequisites.some(p => p.id === prereq.id)) {
+        target.prerequisites.push(prereq);
+      }
+    }
+    await topicRepository.save(target);
+  };
+
+  // Cross-subject & complex dependencies
+  await linkTopics('2D Motion', ['1D Motion', 'Vectors']);
+  await linkTopics('F=ma', ['2D Motion', 'Inertia']);
+  await linkTopics('Kinetic Energy', ['F=ma', 'Calculus']);
+  await linkTopics('Potential Energy', ['Kinetic Energy']);
+  await linkTopics('Applications', ['Symmetry', 'Electric Flux']);
+  await linkTopics('Circuits', ['Dielectrics', 'Ohm Law']);
+  await linkTopics('Complex Numbers', ['Matrices']); // Assuming Matrices represents basic algebra here
+  await linkTopics('Limits', ['Matrices']);
+  await linkTopics('Derivatives', ['Limits']);
 
   console.log('Seeding completed successfully!');
   await app.close();

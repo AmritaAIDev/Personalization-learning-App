@@ -7,6 +7,11 @@ import { TestSession } from '../sessions/test-session.entity';
 import { Repository } from 'typeorm';
 
 async function bootstrap() {
+  if (process.env.ALLOW_DESTRUCTIVE_SEED !== 'true') {
+    throw new Error(
+      'This legacy seed truncates user data. Set ALLOW_DESTRUCTIVE_SEED=true only for an isolated development database.',
+    );
+  }
   const app = await NestFactory.createApplicationContext(AppModule);
 
   const userRepository = app.get<Repository<User>>(getRepositoryToken(User));
@@ -207,16 +212,18 @@ async function bootstrap() {
         level: TopicLevel.SUB_TOPIC,
         parent: chapter,
       });
-      
+
       // Setup the Knowledge Graph Dependency: Pythagoras -> Algebra
       if (sub.name === 'Pythagoras') {
         // Find Algebra (we know it was created since it's earlier in the loop)
-        const algebra = await topicRepository.findOne({ where: { name: 'Algebra' } });
+        const algebra = await topicRepository.findOne({
+          where: { name: 'Algebra' },
+        });
         if (algebra) {
           subtopic.prerequisites = [algebra];
         }
       }
-      
+
       await topicRepository.save(subtopic);
       if (sub.score !== null) {
         await sessionRepository.save(
@@ -315,13 +322,18 @@ async function bootstrap() {
 
   console.log('Building Complex Knowledge Graph Links...');
   const linkTopics = async (targetName: string, prereqNames: string[]) => {
-    const target = await topicRepository.findOne({ where: { name: targetName }, relations: { prerequisites: true } });
+    const target = await topicRepository.findOne({
+      where: { name: targetName },
+      relations: { prerequisites: true },
+    });
     if (!target) return;
-    
+
     target.prerequisites = target.prerequisites || [];
     for (const prereqName of prereqNames) {
-      const prereq = await topicRepository.findOne({ where: { name: prereqName } });
-      if (prereq && !target.prerequisites.some(p => p.id === prereq.id)) {
+      const prereq = await topicRepository.findOne({
+        where: { name: prereqName },
+      });
+      if (prereq && !target.prerequisites.some((p) => p.id === prereq.id)) {
         target.prerequisites.push(prereq);
       }
     }

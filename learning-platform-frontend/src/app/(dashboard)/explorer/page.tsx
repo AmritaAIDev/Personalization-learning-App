@@ -2,9 +2,9 @@
 
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { useJourney, Subtopic } from '@/context/JourneyContext';
-import { motion, useMotionValue, useAnimationFrame } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { Lock, Play, Network, Brain } from 'lucide-react';
+import { Play, Network, Brain } from 'lucide-react';
 
 // --- SPIRAL LAYOUT ALGORITHM ---
 // Places nodes in a dense, organic circular cluster

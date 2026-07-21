@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Roles } from '../auth/roles.decorator';
+import { CreateTopicDto } from './create-topic.dto';
 import { TopicsService } from './topics.service';
-import { Topic } from './topic.entity';
 
 @Controller('api/topics')
 export class TopicsController {
@@ -11,9 +12,14 @@ export class TopicsController {
     return this.topicsService.getTopicTree();
   }
 
+  @Roles('admin')
   @Post()
-  async createTopic(@Body() body: any) {
-    const topic = await this.topicsService.createTopic(body);
+  async createTopic(@Body() body: CreateTopicDto) {
+    const topic = await this.topicsService.createTopic({
+      name: body.name.trim(),
+      description: body.description?.trim(),
+      level: body.level,
+    });
     return { success: true, data: topic };
   }
 

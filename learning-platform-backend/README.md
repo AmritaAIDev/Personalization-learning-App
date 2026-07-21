@@ -1,44 +1,43 @@
-# JEE Learning Platform - Backend API
+# JEE AI Competency Engine backend
 
-This is the backend server for the JEE Competency Diagnosis and Adaptive Learning Platform. It serves as the data persistence layer, API gateway, and the brain behind the AI question generation.
+NestJS and TypeORM backend for a secure Class XII Physics Electrostatics diagnostic and the broader adaptive-learning platform.
 
-## Technology Stack
+## Secure diagnostic flow
 
-- **Framework**: NestJS
-- **Database**: PostgreSQL
-- **ORM**: TypeORM
-- **AI Integrations**: 
-  - **OpenAI SDK** (configured for DeepSeek LLM for reasoning and question generation).
-  - **Qdrant Vector Database** (for storing and retrieving textbook context to ground the LLM's responses, minimizing hallucinations).
+- `AuthModule` issues opaque, random HttpOnly session cookies and persists only SHA-256 token hashes. Passwords are bcrypt-hashed.
+- `DiagnosticsModule` owns attempts, 30-minute timing, saved selections, grading, topic/Bloom analysis, recommendations, and history.
+- `PracticeModule` creates one server-owned, balanced 15-question session per learner and topic: five Easy, five Medium, and five Hard questions with Bloom/concept diversity.
+- `AdaptiveModule` owns the formative 15-coordinate Bloom × difficulty journey, five-question cache, database job queue for DeepSeek replenishment, flashcard SRS, and persisted Socratic tutor threads.
+- AI-generated questions are saved as `DRAFT` records. Only an admin reviewer can inspect answer keys and explicitly publish or archive content.
+- Learner-private generated questions are validated and stored in a separate adaptive pool; they never bypass the global question-bank review workflow.
+- Correct answers and solutions stay in PostgreSQL. They are never returned by a student diagnostic endpoint before submission.
+- Validation, restrictive credentialed CORS, Helmet headers, origin checks for unsafe cookie requests, rate limiting, and role guards are configured globally.
 
-## Core Modules
+## Setup
 
-- **UsersModule**: Manages student profiles and auth metadata.
-- **TopicsModule**: Manages the deep hierarchical syllabus structure (Subjects -> Chapters -> Subtopics).
-- **SessionsModule**: Manages `TestSession` records, tracking student scores and completion status. It includes complex business logic (e.g., `SessionsService`) to dynamically compute and return Gamified Journey Maps and Skill Tree payloads for the frontend.
-- **QuestionsModule / AgentModule**: Exposes endpoints to trigger the AI Agent. The Agent queries Qdrant for context, then prompts DeepSeek to generate a dynamic, JSON-structured multiple-choice question.
-
-## Getting Started
-
-1. Install dependencies:
+1. Copy `.env.example` to `.env` and set your private `DATABASE_URL`.
+2. Install dependencies with `npm install`.
+3. Run the migrations:
    ```bash
-   npm install
+   npm run migration:run
    ```
-
-2. Database Setup:
-   Ensure you have a local PostgreSQL instance running. You can configure your database URL in the `.env` file (or `app.module.ts` for prototyping).
-   
-   To seed the database with mock students and the entire Physics, Math, and Chemistry syllabus hierarchy, run:
+4. Load the safe, idempotent diagnostic bank and resources:
    ```bash
-   npm run seed
+   npm run seed:diagnostic
    ```
-
-3. Start the server:
+5. Load the adaptive baseline questions and flashcards:
    ```bash
-   npm run start:dev
+   npm run seed:adaptive
    ```
-   The API will listen on `http://localhost:4000`.
+6. Start the API with `npm run start:dev`.
 
-## Best Practices
-- Every structural database change requires a proper TypeORM migration. Do not rely on `synchronize: true` in production.
-- Keep controllers thin. Heavy logic (like assembling the journey map) should be isolated in Services.
+Use `npm test` for unit tests and `npm run build` for a production compilation check.
+
+## Migration and seed policy
+
+`synchronize` is disabled. Every structural change must be represented by a TypeORM migration. `seed:diagnostic` and `seed:adaptive` only upsert reviewed content; neither deletes learner data. The older journey seed is explicitly guarded behind `ALLOW_DESTRUCTIVE_SEED=true` and must not be used against production data.
+
+For deployment, terminate TLS at the application or trusted proxy and run with
+`NODE_ENV=production`; session cookies then use the `Secure` attribute. Local
+HTTP development deliberately runs without that attribute so `localhost` can
+exercise the same session flow.

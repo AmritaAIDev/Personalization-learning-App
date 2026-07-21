@@ -7,9 +7,16 @@ dotenv.config();
 const AppDataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl:
+    process.env.DATABASE_SSL === 'false'
+      ? false
+      : {
+          rejectUnauthorized:
+            process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false',
+        },
   entities: [Question],
-  synchronize: true, // Auto-create tables for this seed
+  // Schema changes are managed only through TypeORM migrations.
+  synchronize: false,
 });
 
 const mockQuestions = [
@@ -107,18 +114,17 @@ async function seed() {
     
     const questionRepo = AppDataSource.getRepository(Question);
     
-    // Clear existing to avoid duplicates during testing
-    await questionRepo.clear();
-
-    console.log("Inserting mock Gauss Law questions...");
-    await questionRepo.save(mockQuestions);
+    console.log("Upserting legacy Gauss Law questions...");
+    await questionRepo.upsert(mockQuestions, ['question_id']);
     
     console.log(`Successfully seeded ${mockQuestions.length} questions into PostgreSQL!`);
   } catch (error) {
     console.error("Error during Data Source initialization", error);
   } finally {
-    await AppDataSource.destroy();
+    if (AppDataSource.isInitialized) {
+      await AppDataSource.destroy();
+    }
   }
 }
 
-seed();
+void seed();

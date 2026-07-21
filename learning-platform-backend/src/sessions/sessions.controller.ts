@@ -1,12 +1,14 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/auth.types';
 import { SessionsService } from './sessions.service';
 
 @Controller('api/sessions')
 export class SessionsController {
   constructor(private readonly sessionsService: SessionsService) {}
 
-  @Get('journey/:userId')
-  async getJourney(@Param('userId') userId: string) {
-    return this.sessionsService.getJourneyForUser(userId);
+  @Get('journey')
+  async getJourney(@CurrentUser() user: AuthenticatedUser) {
+    return this.sessionsService.getJourneyForUser(user.id);
   }
 }

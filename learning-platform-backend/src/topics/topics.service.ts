@@ -22,7 +22,7 @@ export class TopicsService {
     // Create a map for quick lookup
     const topicMap = new Map<string, TopicTreeNode>();
     allTopics.forEach((topic) => {
-      topicMap.set(topic.id, { ...topic, children: [] } as TopicTreeNode);
+      topicMap.set(topic.id, { ...topic, children: [] });
     });
 
     const rootTopics: TopicTreeNode[] = [];

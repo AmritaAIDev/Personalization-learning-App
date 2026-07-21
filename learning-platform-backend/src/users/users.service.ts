@@ -10,15 +10,10 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
   ) {}
 
-  async getMockUser(): Promise<User> {
-    // For prototyping: simply fetch the first student user from the DB
-    const user = await this.userRepository.findOne({
-      where: { role: 'student' },
-    });
+  async findById(userId: string): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
-      throw new NotFoundException(
-        'No mock user found in database. Did you run the seeder?',
-      );
+      throw new NotFoundException('User not found.');
     }
     return user;
   }

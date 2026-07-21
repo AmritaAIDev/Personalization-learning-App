@@ -20,6 +20,7 @@ describe('AssessmentService', () => {
     };
     questionsRepository = {
       find: jest.fn(),
+      findOne: jest.fn(),
     };
     topicsRepository = {
       findOne: jest.fn(),
@@ -44,6 +45,10 @@ describe('AssessmentService', () => {
     }).compile();
 
     service = module.get<AssessmentService>(AssessmentService);
+    questionsRepository.findOne?.mockResolvedValue({
+      id: 'q1',
+      correct_answer: 'Correct option',
+    });
   });
 
   it('should be defined', () => {
@@ -66,11 +71,10 @@ describe('AssessmentService', () => {
       sessionsRepository.findOne.mockResolvedValue(mockSession);
       sessionsRepository.save.mockResolvedValue(mockSession);
 
-      const result = await service.submitAnswer('u1', 't1', 'q1', true);
+      await service.submitAnswer('u1', 't1', 'q1', 'Correct option');
 
       expect(mockSession.streak_counter).toBe(0);
       expect(mockSession.current_taxonomy).toBe(2); // Promoted!
-      expect(result.status).toBe('active');
     });
 
     it('should trigger Socratic pause on first failed attempt', async () => {
@@ -88,7 +92,12 @@ describe('AssessmentService', () => {
       sessionsRepository.findOne.mockResolvedValue(mockSession);
       sessionsRepository.save.mockResolvedValue(mockSession);
 
-      const result = await service.submitAnswer('u1', 't1', 'q1', false);
+      const result = await service.submitAnswer(
+        'u1',
+        't1',
+        'q1',
+        'Incorrect option',
+      );
 
       expect(mockSession.failed_attempts).toBe(1);
       expect(mockSession.current_taxonomy).toBe(3); // State preserved
@@ -110,7 +119,7 @@ describe('AssessmentService', () => {
       sessionsRepository.findOne.mockResolvedValue(mockSession);
       sessionsRepository.save.mockResolvedValue(mockSession);
 
-      const result = await service.submitAnswer('u1', 't1', 'q1', false);
+      await service.submitAnswer('u1', 't1', 'q1', 'Incorrect option');
 
       expect(mockSession.failed_attempts).toBe(0); // Reset
       expect(mockSession.streak_counter).toBe(0); // Reset
@@ -132,7 +141,7 @@ describe('AssessmentService', () => {
       sessionsRepository.findOne.mockResolvedValue(mockSession);
       sessionsRepository.save.mockResolvedValue(mockSession);
 
-      await service.submitAnswer('u1', 't1', 'q1', true);
+      await service.submitAnswer('u1', 't1', 'q1', 'Correct option');
 
       // Reached T6 limit on D1. Next state is T1 on D2.
       expect(mockSession.current_taxonomy).toBe(1);

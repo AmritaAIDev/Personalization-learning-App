@@ -1,37 +1,26 @@
-# JEE Learning Platform - Frontend
+# JEE AI Competency Engine frontend
 
-This is the frontend application for the JEE Competency Diagnosis and Adaptive Learning Platform. It provides a highly visual, gamified, and responsive user interface for students.
+The Next.js student application for the JEE competency platform. The current production flow implements a secure, reference-aligned Class XII Physics Electrostatics diagnostic.
 
-## Technology Stack
+## Student flow
 
-- **Framework**: Next.js (App Router)
-- **Styling**: Tailwind CSS for utility-first styling.
-- **Icons**: Lucide React.
-- **UI Architecture**: Modular component design. Uses extensive custom glassmorphism, micro-animations, and dynamic data rendering to provide a premium SaaS look.
+1. Register or sign in through the backend session API.
+2. Search a reviewed topic and choose a database-backed Bloom × difficulty entry coordinate in the 15-level adaptive journey.
+3. Complete five-question rounds with server-owned grading, Socratic retry rules, a compact persisted helper, and spaced-recall flashcards.
+4. Use the separate balanced 15-question practice set for post-learning review; answer keys remain server-side until submission.
+5. Start or resume a 15-question baseline diagnostic, then view database-backed recommendations and history.
 
-## Core Modules
+Admins also receive a separate content-review route. It can generate an AI draft,
+inspect its answer key, and publish or archive it; students cannot access that
+workflow.
 
-### Dashboard (`/`)
-Provides a high-level overview of the student's progress. It prominently features a "Resume Practice" call-to-action that dynamically points to the exact chapter the student needs to work on, along with a horizontal "Learning Journey" roadmap showing their path through the current subject.
+Correct answers, solutions, session tokens, timing authority, scoring, generated pools, chat history, and flashcards are never held as frontend fixture data.
 
-### Gamified Syllabus (`/topics`)
-An immersive "Skill Tree" view replacing a traditional table of contents.
-- **Tier 1**: Hub view with dynamic Bento Box cards for Physics, Mathematics, and Chemistry.
-- **Tier 2**: Winding vertical timelines mapping out chapters, showing locked, active, and completed statuses. Includes a global search bar for quick subtopic lookups.
+## Local development
 
-### Arena (`/arena`)
-*In development.* The core learning interface where students solve dynamic AI-generated questions and receive immediate, personalized feedback.
+1. Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_API_URL`.
+2. Install dependencies with `npm install`.
+3. Start the app with `npm run dev`.
+4. Run `npm test` for API-client coverage and `npm run build` for a production build.
 
-## Running Locally
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Start the development server:
-   ```bash
-   npm run dev
-   ```
-3. Open `http://localhost:3000` in your browser.
-
-*Note: Ensure the backend API is running on `http://localhost:4000` for dynamic data (Syllabus, User Profiles, etc.) to load correctly.*
+The NestJS API must be running, and its `FRONTEND_ORIGIN` must include the frontend origin (normally `http://localhost:3000`).

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Search, ChevronRight, Lock, CheckCircle2, PlayCircle, Sparkles, BookOpen, FlaskConical, Calculator, Trophy, Medal, Award, Flame } from 'lucide-react';
 import Link from 'next/link';
 import { useJourney, JourneyNode, Subtopic } from '@/context/JourneyContext';

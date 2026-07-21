@@ -17,13 +17,24 @@ export class AssessmentService {
   ) {}
 
   private mapTaxonomyToEnum(t: number): string {
-    const map = { 1: 'Remember', 2: 'Understand', 3: 'Apply', 4: 'Analyze', 5: 'Evaluate', 6: 'Create' };
-    return map[t] || 'Remember';
+    const map: Record<number, string> = {
+      1: 'Remember',
+      2: 'Understand',
+      3: 'Apply',
+      4: 'Analyze',
+      5: 'Evaluate',
+      6: 'Create',
+    };
+    return map[t] ?? 'Remember';
   }
 
   private mapDifficultyToEnum(d: number): string {
-    const map = { 1: 'Easy', 2: 'Medium', 3: 'Hard' };
-    return map[d] || 'Easy';
+    const map: Record<number, string> = {
+      1: 'Easy',
+      2: 'Medium',
+      3: 'Hard',
+    };
+    return map[d] ?? 'Easy';
   }
 
   async startAssessment(userId: string, topicId: string) {
@@ -45,7 +56,9 @@ export class AssessmentService {
     }
 
     const bloomLevel = this.mapTaxonomyToEnum(session.current_taxonomy);
-    const difficultyLevel = this.mapDifficultyToEnum(session.current_difficulty);
+    const difficultyLevel = this.mapDifficultyToEnum(
+      session.current_difficulty,
+    );
 
     const questions = await this.questionsRepository.find({
       where: { bloom_level: bloomLevel, difficulty: difficultyLevel },
@@ -54,16 +67,36 @@ export class AssessmentService {
 
     return {
       session,
-      queue: questions,
+      // This endpoint is legacy, but answer keys remain server-only regardless
+      // of the caller role.
+      queue: questions.map((question) =>
+        Object.fromEntries(
+          Object.entries(question).filter(
+            ([key]) => key !== 'correct_answer' && key !== 'solution',
+          ),
+        ),
+      ),
     };
   }
 
-  async submitAnswer(userId: string, topicId: string, questionId: string, isCorrect: boolean) {
+  async submitAnswer(
+    userId: string,
+    topicId: string,
+    questionId: string,
+    selectedOption: string,
+  ) {
     const session = await this.sessionsRepository.findOne({
       where: { user_id: userId, topic_id: topicId },
     });
 
     if (!session) throw new NotFoundException('Session not found');
+
+    const question = await this.questionsRepository.findOne({
+      where: { id: questionId },
+    });
+    if (!question) throw new NotFoundException('Question not found');
+
+    const isCorrect = question.correct_answer === selectedOption;
 
     if (isCorrect) {
       session.streak_counter += 1;
@@ -125,10 +158,14 @@ export class AssessmentService {
     };
   }
 
-  private async handleDagFallback(userId: string, currentTopicId: string, currentSession: TestSession) {
+  private async handleDagFallback(
+    userId: string,
+    currentTopicId: string,
+    currentSession: TestSession,
+  ) {
     const topic = await this.topicsRepository.findOne({
       where: { id: currentTopicId },
-      relations: ['prerequisites'],
+      relations: { prerequisites: true },
     });
 
     if (!topic || !topic.prerequisites || topic.prerequisites.length === 0) {
@@ -137,7 +174,7 @@ export class AssessmentService {
 
     // Direct Prerequisite Routing
     const prereq = topic.prerequisites[0];
-    
+
     // Pause current
     currentSession.status = 'paused_for_prereq';
     await this.sessionsRepository.save(currentSession);

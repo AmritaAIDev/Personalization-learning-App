@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { join } from 'node:path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { Question } from './question.entity';
@@ -11,6 +12,27 @@ import { Topic } from './topics/topic.entity';
 import { TopicsModule } from './topics/topics.module';
 import { TestSession } from './sessions/test-session.entity';
 import { SessionsModule } from './sessions/sessions.module';
+import { AuthModule } from './auth/auth.module';
+import { AuthSession } from './auth/auth-session.entity';
+import { DiagnosticsModule } from './diagnostics/diagnostics.module';
+import { DiagnosticAttempt } from './diagnostics/diagnostic-attempt.entity';
+import { DiagnosticAnswer } from './diagnostics/diagnostic-answer.entity';
+import { LearningResource } from './diagnostics/learning-resource.entity';
+import { PracticeModule } from './practice/practice.module';
+import { PracticeAttempt } from './practice/practice-attempt.entity';
+import { PracticeAnswer } from './practice/practice-answer.entity';
+import { normalizeDatabaseUrl } from './database/database-url';
+import { AdaptiveModule } from './adaptive/adaptive.module';
+import { LearningTopicState } from './adaptive/learning-topic-state.entity';
+import { LearningSession } from './adaptive/learning-session.entity';
+import { LearningSessionItem } from './adaptive/learning-session-item.entity';
+import { LearningAnswer } from './adaptive/learning-answer.entity';
+import { GeneratedLearningQuestion } from './adaptive/generated-learning-question.entity';
+import { GenerationJob } from './adaptive/generation-job.entity';
+import { Flashcard } from './adaptive/flashcard.entity';
+import { FlashcardReview } from './adaptive/flashcard-review.entity';
+import { TutorConversation } from './adaptive/tutor-conversation.entity';
+import { TutorMessage } from './adaptive/tutor-message.entity';
 
 @Module({
   imports: [
@@ -19,13 +41,46 @@ import { SessionsModule } from './sessions/sessions.module';
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        url: configService.get<string>('DATABASE_URL'),
-        ssl: { rejectUnauthorized: false },
-        entities: [Question, User, Topic, TestSession],
-        synchronize: true,
-      }),
+      useFactory: (configService: ConfigService) => {
+        const sslEnabled =
+          configService.get<string>('DATABASE_SSL') !== 'false';
+        const rejectUnauthorized =
+          configService.get<string>('DATABASE_SSL_REJECT_UNAUTHORIZED') !==
+          'false';
+        return {
+          type: 'postgres' as const,
+          url: normalizeDatabaseUrl(
+            configService.getOrThrow<string>('DATABASE_URL'),
+            sslEnabled,
+          ),
+          ssl: sslEnabled ? { rejectUnauthorized } : false,
+          entities: [
+            Question,
+            User,
+            Topic,
+            TestSession,
+            AuthSession,
+            DiagnosticAttempt,
+            DiagnosticAnswer,
+            LearningResource,
+            PracticeAttempt,
+            PracticeAnswer,
+            LearningTopicState,
+            LearningSession,
+            LearningSessionItem,
+            LearningAnswer,
+            GeneratedLearningQuestion,
+            GenerationJob,
+            Flashcard,
+            FlashcardReview,
+            TutorConversation,
+            TutorMessage,
+          ],
+          migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
+          synchronize: false,
+          migrationsRun: false,
+        };
+      },
       inject: [ConfigService],
     }),
     TypeOrmModule.forFeature([Question]),
@@ -33,6 +88,10 @@ import { SessionsModule } from './sessions/sessions.module';
     UsersModule,
     TopicsModule,
     SessionsModule,
+    AuthModule,
+    DiagnosticsModule,
+    PracticeModule,
+    AdaptiveModule,
   ],
   controllers: [AppController],
   providers: [AppService],

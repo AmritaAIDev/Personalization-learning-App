@@ -1,4 +1,4 @@
-import { pipeline } from '@xenova/transformers';
+import { pipeline } from '@huggingface/transformers';
 
 /**
  * Real local text embeddings using the `all-MiniLM-L6-v2` sentence-transformer.

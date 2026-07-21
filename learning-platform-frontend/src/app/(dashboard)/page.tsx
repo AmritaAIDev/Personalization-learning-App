@@ -1,211 +1,295 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Search, Sparkles, Brain, Lock, Play, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useJourney } from '@/context/JourneyContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Activity,
+  ArrowRight,
+  BookOpenCheck,
+  CircleAlert,
+  ClipboardCheck,
+  Clock3,
+  LoaderCircle,
+  Sparkles,
+} from 'lucide-react';
+import TopicSearch from '@/components/search/TopicSearch';
+import LearningOverview from '@/components/learning/LearningOverview';
+import { useAuth } from '@/context/AuthContext';
+import { apiFetch } from '@/lib/api';
+import type {
+  DashboardPayload,
+  DiagnosticAttemptPayload,
+} from '@/lib/diagnostic-types';
+import { formatDate } from '@/lib/format';
+
+function Metric({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  icon: typeof Activity;
+}) {
+  return (
+    <article className="rounded-2xl border border-[#e9e2e4] bg-white p-4 shadow-[0_8px_22px_rgba(49,51,55,0.04)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8f939b]">
+            {label}
+          </p>
+          <p className="mt-2 font-heading text-2xl font-bold tracking-tight text-[#313337]">
+            {value}
+          </p>
+        </div>
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#f9e5ea] text-[#e31540]">
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </span>
+      </div>
+    </article>
+  );
+}
 
 export default function DashboardPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
   const router = useRouter();
-  const { user, journeyNodes } = useJourney();
-  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [launching, setLaunching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Close the search panel if clicked outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
-        setIsFocused(false);
-      }
+  const loadDashboard = useCallback(async () => {
+    try {
+      const data = await apiFetch<DashboardPayload>('/api/diagnostics/dashboard');
+      setDashboard(data);
+      setError(null);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : 'Your learning dashboard could not be loaded.',
+      );
+    } finally {
+      setLoading(false);
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [searchContainerRef]);
+  }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    router.push(`/arena?topic=${encodeURIComponent(searchQuery.trim())}`);
+  useEffect(() => {
+    let active = true;
+    void apiFetch<DashboardPayload>('/api/diagnostics/dashboard')
+      .then((data) => {
+        if (!active) return;
+        setDashboard(data);
+        setError(null);
+      })
+      .catch((reason: unknown) => {
+        if (!active) return;
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : 'Your learning dashboard could not be loaded.',
+        );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const startDiagnostic = async () => {
+    setLaunching(true);
+    setError(null);
+    try {
+      const payload = await apiFetch<DiagnosticAttemptPayload>('/api/diagnostics', {
+        method: 'POST',
+        body: JSON.stringify({ subject: 'Physics' }),
+      });
+      router.push('/diagnostic/' + payload.attempt.id);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : 'The diagnostic could not be started.',
+      );
+      setLaunching(false);
+    }
   };
 
-  // Extract history and next-steps for the panel
-  const allSubtopics = journeyNodes?.flatMap(n => n.subtopics || []) || [];
-  const historyTopics = allSubtopics.filter(s => s.nodeType === 'history');
-  const suggestedTopics = allSubtopics.filter(s => s.nodeType === 'next-step' || s.nodeType === 'recommended').slice(0, 4);
-  
-  // Live filter based on search query
-  const searchResults = searchQuery.trim() 
-    ? allSubtopics.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : [];
+  const firstName = user?.name.split(' ')[0] || 'learner';
+  const diagnostic = dashboard?.diagnostic;
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-6 bg-[#fafafa] relative overflow-hidden">
-      
-      {/* Decorative background blobs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-400/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div className="min-h-screen overflow-hidden bg-[#fafafa] pb-16">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[34rem] bg-[radial-gradient(circle_at_top,rgba(227,21,64,0.09),transparent_58%)]" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[42rem] bg-[linear-gradient(to_right,rgba(49,51,55,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(49,51,55,0.035)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:linear-gradient(to_bottom,white,transparent_88%)]" />
 
-      {/* User Stats Bar (Floating) */}
-      <div className="absolute top-6 right-6 flex items-center gap-3 z-20">
-        <div className="flex items-center gap-1.5 bg-orange-50 px-4 py-2 rounded-full border border-orange-100 shadow-sm">
-          <span className="text-orange-500 font-bold text-sm">🔥 {user?.streak ?? 0}</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600 hidden sm:inline">Day Streak</span>
-        </div>
-        <div className="flex items-center gap-1.5 bg-blue-50 px-4 py-2 rounded-full border border-blue-100 shadow-sm">
-          <span className="text-blue-600 font-bold text-sm">✨ {(user?.xp ?? 0).toLocaleString()}</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-blue-700 hidden sm:inline">XP</span>
-        </div>
-        <div className="flex items-center gap-1.5 bg-[var(--color-primary)] px-4 py-2 rounded-full shadow-md hover:scale-105 transition-transform cursor-pointer">
-          <span className="text-white font-bold text-sm">Lvl {user?.level ?? 1}</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/70 hidden sm:inline">Scholar</span>
-        </div>
-      </div>
-
-      <motion.div 
-        className="w-full flex flex-col items-center text-center relative z-10"
-        animate={{ y: isFocused ? -80 : 0 }}
-        transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-      >
-        <h1 className="text-4xl sm:text-5xl font-black font-heading tracking-tight text-slate-900 mb-10">
-          What do you want to master today?
-        </h1>
-        
-        {/* Dynamic Search Container */}
-        <div 
-          ref={searchContainerRef}
-          className="relative w-full max-w-5xl flex justify-center items-start h-[400px]"
-        >
-          {/* Main Search Input */}
-          <motion.div 
-            className="absolute top-0 z-20 w-full max-w-3xl"
-            animate={{ 
-              x: isFocused ? -200 : 0, 
-              width: isFocused ? '50%' : '100%' 
-            }}
-            transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+      <main className="relative mx-auto w-full max-w-7xl px-5 pt-8 sm:px-8 sm:pt-12 lg:px-12">
+        <header className="flex flex-col gap-5 border-b border-[#e8e2e4] pb-8 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#e31540]">
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+              JEE learning studio
+            </p>
+            <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight text-[#313337] sm:text-4xl">
+              Good to see you, {firstName}.
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[#6b6e75]">
+              Search a verified concept to begin an adaptive journey, or take a
+              baseline diagnostic to map the next best step.
+            </p>
+          </div>
+          <Link
+            href="/profile"
+            className="inline-flex items-center gap-2 self-start text-sm font-bold text-[#6b6e75] transition hover:text-[#e31540] sm:self-auto"
           >
-            <form onSubmit={handleSearch} className="w-full relative group">
-              <div className={`absolute -inset-1 bg-gradient-to-r from-blue-500 to-[var(--color-primary)] rounded-full blur transition duration-1000 ${isFocused ? 'opacity-50' : 'opacity-25 group-hover:opacity-40'}`}></div>
-              <div className="relative flex items-center bg-white rounded-full shadow-xl border border-slate-200 overflow-hidden">
-                <Search className="absolute left-6 text-slate-400" size={24} />
-                <input 
-                  type="text" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => setIsFocused(true)}
-                  placeholder="Search any concept or topic..."
-                  className="w-full bg-transparent border-none py-6 pl-16 pr-32 text-lg focus:ring-0 outline-none text-slate-800 placeholder:text-slate-400"
-                  autoComplete="off"
-                />
-                <button 
-                  type="submit"
-                  disabled={!searchQuery.trim()}
-                  className={`absolute right-3 bg-[var(--color-primary)] text-white font-bold px-6 py-3 rounded-full hover:bg-[var(--color-primary-light)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center shadow-md ${isFocused ? 'scale-90 right-2' : ''}`}
-                >
-                  Start
-                </button>
-              </div>
-            </form>
-          </motion.div>
+            View learning history
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </header>
 
-          {/* Interactive Slide-Out Results Panel */}
-          <AnimatePresence>
-            {isFocused && (
-              <motion.div 
-                initial={{ opacity: 0, x: 50, scale: 0.95 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 50, scale: 0.95 }}
-                transition={{ type: 'spring', stiffness: 250, damping: 25, delay: 0.05 }}
-                className="absolute right-0 top-0 w-[45%] h-[400px] bg-white/80 backdrop-blur-xl border border-white rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10"
+        <section className="pt-10 text-center sm:pt-14">
+          <p className="text-sm font-bold uppercase tracking-[0.22em] text-[#8f939b]">
+            Find your next challenge
+          </p>
+          <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight text-[#313337] sm:text-5xl">
+            What do you want to master today?
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-[#6b6e75] sm:text-base">
+            Pick a topic, continue practice, or review your progress.
+          </p>
+          <div className="mt-8 text-left sm:mt-10">
+            <TopicSearch />
+          </div>
+        </section>
+
+        {error && (
+          <div className="mt-8 flex items-start gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-800" role="alert">
+            <CircleAlert className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+            <div>
+              <p className="font-bold">Something needs attention</p>
+              <p className="mt-1">{error}</p>
+              <button
+                type="button"
+                onClick={() => void loadDashboard()}
+                className="mt-3 font-bold underline underline-offset-4"
               >
-                <div className="p-6 border-b border-slate-200/60 bg-white/50 backdrop-blur-md">
-                  <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                    <Sparkles size={18} className="text-[var(--color-primary)]" />
-                    {searchQuery.trim() ? 'Neural Matches' : 'Command Center'}
-                  </h3>
-                </div>
+                Try again
+              </button>
+            </div>
+          </div>
+        )}
 
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                  
-                  {/* LIVE SEARCH RESULTS */}
-                  {searchQuery.trim() && searchResults.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      {searchResults.map(topic => (
-                        <div 
-                          key={topic.id}
-                          onClick={() => router.push(`/arena?topic=${topic.id}`)}
-                          className="group flex items-center justify-between p-3 rounded-xl hover:bg-blue-50 border border-transparent hover:border-blue-100 cursor-pointer transition-all"
-                        >
-                          <span className="font-semibold text-slate-700 group-hover:text-blue-700">{topic.name}</span>
-                          <ChevronRight size={16} className="text-slate-400 group-hover:text-blue-500 transform group-hover:translate-x-1 transition-all" />
-                        </div>
-                      ))}
-                    </div>
-                  ) : searchQuery.trim() && searchResults.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-400 text-sm">
-                      <p>No exact matches found.</p>
-                      <p className="mt-1">Press <strong className="text-slate-600">Enter</strong> to let AI generate it!</p>
-                    </div>
-                  ) : (
-                    <>
-                      {/* DEFAULT IDLE STATE: HISTORY & SUGGESTIONS */}
-                      {historyTopics.length > 0 && (
-                        <div className="mb-6">
-                          <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-2">Recent Journey</h4>
-                          <div className="grid grid-cols-1 gap-2">
-                            {historyTopics.slice(0,2).map(topic => (
-                              <div 
-                                key={topic.id}
-                                onClick={() => router.push(`/arena?topic=${topic.id}`)}
-                                className="group relative bg-white border border-slate-200 rounded-xl p-3 cursor-pointer hover:border-orange-300 hover:shadow-md transition-all flex items-center justify-between"
-                              >
-                                <div className="absolute left-0 top-0 w-1 h-full bg-orange-400 rounded-l-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                <div>
-                                  <div className="font-bold text-sm text-slate-800">{topic.name}</div>
-                                  <div className="text-[9px] font-bold text-orange-500 mt-0.5 uppercase tracking-wider">
-                                    Mastery: {topic.score ?? 0}/100
-                                  </div>
-                                </div>
-                                <Brain size={16} className="text-slate-300 group-hover:text-orange-500" />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+        <section className="mt-12 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+          <article className="overflow-hidden rounded-[2rem] bg-[#313337] p-6 text-white shadow-[0_24px_54px_rgba(49,51,55,0.18)] sm:p-8">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#f7b9c8]">
+              <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
+              Baseline diagnostic
+            </p>
+            <h2 className="mt-3 max-w-xl font-heading text-3xl font-bold tracking-tight sm:text-4xl">
+              Baseline check
+            </h2>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-[#d6d7da]">
+              A focused assessment for your current Physics readiness.
+            </p>
 
-                      {suggestedTopics.length > 0 && (
-                        <div>
-                          <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-2">Suggested Next Steps</h4>
-                          <div className="flex flex-col gap-2">
-                            {suggestedTopics.map(topic => (
-                              <div 
-                                key={topic.id}
-                                onClick={() => { if (topic.state !== 'locked') router.push(`/arena?topic=${topic.id}`) }}
-                                className={`group flex items-center justify-between p-3 rounded-xl border border-dashed transition-all ${
-                                  topic.state === 'locked' ? 'border-slate-200 bg-slate-50/50 grayscale opacity-60 cursor-not-allowed' : 'border-blue-200 bg-blue-50/30 cursor-pointer hover:bg-white hover:shadow-sm hover:border-blue-400'
-                                }`}
-                              >
-                                <span className={`font-semibold text-sm ${topic.state === 'locked' ? 'text-slate-500' : 'text-slate-700'}`}>{topic.name}</span>
-                                {topic.state === 'locked' ? (
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                                ) : (
-                                  <Play size={14} className="text-blue-500 opacity-50 group-hover:opacity-100" fill="currentColor" />
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </motion.div>
+            <div className="mt-7 grid max-w-md gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="flex items-center gap-2 text-xs font-semibold text-[#d6d7da]">
+                  <ClipboardCheck className="h-4 w-4 text-[#f7b9c8]" aria-hidden="true" />
+                  Questions
+                </p>
+                <p className="mt-2 font-heading text-2xl font-bold">
+                  {loading ? '...' : diagnostic?.questionCount ?? '—'}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="flex items-center gap-2 text-xs font-semibold text-[#d6d7da]">
+                  <Clock3 className="h-4 w-4 text-[#f7b9c8]" aria-hidden="true" />
+                  Time limit
+                </p>
+                <p className="mt-2 font-heading text-2xl font-bold">
+                  {loading ? '...' : diagnostic?.durationMinutes ?? '—'} min
+                </p>
+              </div>
+            </div>
+
+            {dashboard?.activeAttempt ? (
+              <Link
+                href={'/diagnostic/' + dashboard.activeAttempt.id}
+                className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-[#313337] transition hover:-translate-y-px hover:bg-[#fff2f5]"
+              >
+                Resume diagnostic
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void startDiagnostic()}
+                disabled={launching || Boolean(diagnostic && !diagnostic.ready)}
+                className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#e31540] px-5 py-3 text-sm font-bold text-white shadow-[0_12px_24px_rgba(227,21,64,0.28)] transition hover:-translate-y-px hover:bg-[#c61137] disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                {launching ? (
+                  <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <ClipboardCheck className="h-5 w-5" aria-hidden="true" />
+                )}
+                Start baseline
+              </button>
             )}
-          </AnimatePresence>
-        </div>
-      </motion.div>
+          </article>
+
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+            <Metric
+              label="Diagnostics completed"
+              value={loading ? '...' : dashboard?.stats.testsTaken || 0}
+              icon={Activity}
+            />
+            <Metric
+              label="Best score"
+              value={
+                loading
+                  ? '...'
+                  : dashboard?.stats.bestScore === null || dashboard?.stats.bestScore === undefined
+                    ? 'Not yet'
+                    : String(dashboard.stats.bestScore) + '%'
+              }
+              icon={BookOpenCheck}
+            />
+            <article className="rounded-2xl border border-[#e9e2e4] bg-white p-5 shadow-[0_8px_22px_rgba(49,51,55,0.04)] sm:col-span-2 lg:col-span-1">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8f939b]">
+                Last diagnostic
+              </p>
+              {loading ? (
+                <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-[#6b6e75]">
+                  <LoaderCircle className="h-4 w-4 animate-spin text-[#e31540]" aria-hidden="true" />
+                  Loading progress
+                </p>
+              ) : dashboard?.recentAttempts[0] ? (
+                <Link
+                  href={'/analysis/' + dashboard.recentAttempts[0].id}
+                  className="mt-3 block rounded-xl bg-[#f7f4f5] p-3 transition hover:bg-[#f9e5ea]"
+                >
+                  <span className="block text-sm font-bold text-[#313337]">
+                    {dashboard.recentAttempts[0].scorePercent}% score
+                  </span>
+                  <span className="mt-1 block text-xs text-[#6b6e75]">
+                    {formatDate(dashboard.recentAttempts[0].completedAt)}
+                  </span>
+                </Link>
+              ) : (
+                <p className="mt-3 text-sm leading-6 text-[#6b6e75]">
+                  No baseline completed yet.
+                </p>
+              )}
+            </article>
+          </section>
+        </section>
+
+        <LearningOverview />
+      </main>
     </div>
   );
 }

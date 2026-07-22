@@ -4,7 +4,7 @@ export type LearningScope = {
   topic: string;
 };
 
-export type LearningTab = 'overview' | 'review' | 'practice';
+export type LearningTab = 'overview' | 'flashcards' | 'practice';
 
 export type LearningCoordinate = {
   level: number;

@@ -67,6 +67,14 @@ export class FlashcardQueryDto {
   limit?: number;
 }
 
+export class GenerateFlashcardsDto extends CreateLearningSessionDto {
+  @IsOptional()
+  @IsInt()
+  @Min(3)
+  @Max(12)
+  count?: number;
+}
+
 export class ReviewFlashcardDto {
   @IsIn(Object.values(FlashcardRating))
   rating: FlashcardRating;

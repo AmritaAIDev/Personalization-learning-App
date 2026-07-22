@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BrainCircuit,
   CircleAlert,
@@ -23,10 +23,36 @@ export default function FlashcardDeck({ scope }: { scope: LearningScope }) {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const [rating, setRating] = useState<keyof typeof ratingStyles | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const autoGenerateAttemptedRef = useRef(false);
+  const { subject, chapter, topic } = scope;
 
   const query = useMemo(() => new URLSearchParams(scope).toString(), [scope]);
+  const generate = useCallback(async () => {
+    if (generating) return;
+    setGenerating(true);
+    setError(null);
+    try {
+      const data = await apiFetch<Flashcard[]>('/api/learning/flashcards/generate', {
+        method: 'POST',
+        body: JSON.stringify({ subject, chapter, topic, count: 6 }),
+      });
+      setCards(data);
+      setIndex(0);
+      setFlipped(false);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : 'AI flashcards could not be generated.',
+      );
+    } finally {
+      setGenerating(false);
+    }
+  }, [chapter, generating, subject, topic]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -43,9 +69,17 @@ export default function FlashcardDeck({ scope }: { scope: LearningScope }) {
   }, [query]);
 
   useEffect(() => {
+    autoGenerateAttemptedRef.current = false;
     const timeout = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timeout);
   }, [load]);
+
+  useEffect(() => {
+    if (loading || generating || error || cards.length > 0) return;
+    if (autoGenerateAttemptedRef.current) return;
+    autoGenerateAttemptedRef.current = true;
+    void generate();
+  }, [cards.length, error, generate, generating, loading]);
 
   const card = cards[index] ?? null;
   const review = async (nextRating: keyof typeof ratingStyles) => {
@@ -77,18 +111,35 @@ export default function FlashcardDeck({ scope }: { scope: LearningScope }) {
           </p>
           <h2 className="mt-1 font-heading text-lg font-bold text-[#313337]">Topic flashcards</h2>
         </div>
-        {!loading && cards.length > 0 && (
-          <span className="rounded-full bg-[#f7f4f5] px-2.5 py-1 text-[11px] font-bold text-[#6b6e75]">
-            {index + 1}/{cards.length}
-          </span>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {!loading && cards.length > 0 && (
+            <span className="rounded-full bg-[#f7f4f5] px-2.5 py-1 text-[11px] font-bold text-[#6b6e75]">
+              {index + 1}/{cards.length}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => void generate()}
+            disabled={loading || generating}
+            className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-[#f0c4cf] bg-[#fff5f7] px-3 py-1 text-[11px] font-bold text-[#a61231] transition hover:bg-[#f9e5ea] disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            {generating ? (
+              <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : null}
+            {cards.length > 0 ? 'Generate more' : 'Generate AI'}
+          </button>
+        </div>
       </div>
 
       {loading && (
-        <p className="mt-5 flex items-center gap-2 text-sm font-semibold text-[#6b6e75]">
-          <LoaderCircle className="h-4 w-4 animate-spin text-[#e31540]" aria-hidden="true" />
-          Loading flashcards
-        </p>
+        <div className="mt-5 space-y-3" aria-label="Loading flashcards">
+          <div className="h-48 animate-pulse rounded-2xl bg-[#f7f4f5]" />
+          <div className="grid grid-cols-2 gap-2">
+            {[0, 1, 2, 3].map((item) => (
+              <div key={item} className="h-10 animate-pulse rounded-xl bg-[#f1ecee]" />
+            ))}
+          </div>
+        </div>
       )}
       {error && (
         <div className="mt-5 rounded-xl border border-rose-100 bg-rose-50 p-3 text-xs font-semibold text-rose-700" role="alert">
@@ -98,7 +149,9 @@ export default function FlashcardDeck({ scope }: { scope: LearningScope }) {
       )}
       {!loading && !error && !card && (
         <p className="mt-5 rounded-2xl bg-[#f7f4f5] p-4 text-sm leading-6 text-[#6b6e75]">
-          No published flashcards are available for this topic yet.
+          {generating
+            ? 'Preparing grounded flashcards from reviewed material...'
+            : 'No published flashcards are available for this topic yet.'}
         </p>
       )}
       {card && (

@@ -20,6 +20,14 @@ import { LearningTopicState } from './learning-topic-state.entity';
 @Entity('learning_sessions')
 @Index('IDX_learning_sessions_user_status', ['userId', 'status'])
 @Index('IDX_learning_sessions_state_status', ['stateId', 'status'])
+@Index('IDX_learning_sessions_user_scope_coordinate', [
+  'userId',
+  'subject',
+  'chapter',
+  'topic',
+  'bloomLevel',
+  'difficulty',
+])
 export class LearningSession {
   @PrimaryGeneratedColumn('uuid')
   id: string;

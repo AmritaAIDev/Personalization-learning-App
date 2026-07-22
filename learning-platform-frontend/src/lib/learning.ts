@@ -24,7 +24,8 @@ export function learningTabFromSearchParams(
   searchParams: ReadonlyURLSearchParams,
 ): LearningTab {
   const value = searchParams.get('tab');
-  return value === 'review' || value === 'practice' || value === 'overview'
+  if (value === 'review') return 'flashcards';
+  return value === 'flashcards' || value === 'practice' || value === 'overview'
     ? value
     : 'overview';
 }

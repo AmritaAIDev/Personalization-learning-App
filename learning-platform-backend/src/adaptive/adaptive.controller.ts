@@ -14,6 +14,7 @@ import {
   AskTutorDto,
   CreateLearningSessionDto,
   FlashcardQueryDto,
+  GenerateFlashcardsDto,
   ReviewFlashcardDto,
   SubmitLearningAnswerDto,
 } from './adaptive.dto';
@@ -34,6 +35,15 @@ export class AdaptiveController {
     @Query() query: FlashcardQueryDto,
   ) {
     return { data: await this.adaptiveService.getFlashcards(user.id, query) };
+  }
+
+  @Throttle({ default: { limit: 4, ttl: 60_000 } })
+  @Post('flashcards/generate')
+  async generateFlashcards(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: GenerateFlashcardsDto,
+  ) {
+    return { data: await this.adaptiveService.generateFlashcards(user.id, body) };
   }
 
   @Post('flashcards/:flashcardId/review')

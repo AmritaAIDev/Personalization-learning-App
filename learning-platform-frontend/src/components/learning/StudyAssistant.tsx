@@ -273,18 +273,28 @@ export default function StudyAssistant({
       aria-label={title}
       className={
         variant === 'panel'
-          ? 'flex h-full min-h-[34rem] flex-col overflow-hidden rounded-[1.75rem] border border-[#eadde0] bg-white shadow-[0_18px_45px_rgba(49,51,55,0.08)]'
+          ? 'flex h-full min-h-[38rem] flex-col overflow-hidden rounded-[1.5rem] border border-[#eadde0] bg-white shadow-[0_16px_40px_rgba(49,51,55,0.06)]'
           : 'mb-3 flex h-[min(39rem,calc(100vh-9rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-[1.75rem] border border-[#eadde0] bg-white shadow-[0_24px_70px_rgba(49,51,55,0.24)]'
       }
     >
-      <header className="flex items-center justify-between gap-3 border-b border-[#eee8e9] bg-[#313337] px-4 py-3 text-white">
+      <header
+        className={`flex items-center justify-between gap-3 border-b border-[#eee8e9] px-4 py-3 ${
+          variant === 'panel'
+            ? 'bg-[#fff7f9] text-[#313337]'
+            : 'bg-[#313337] text-white'
+        }`}
+      >
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#e31540]">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#e31540] text-white shadow-[0_8px_18px_rgba(227,21,64,0.18)]">
             <Sparkles className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
             <h3 className="truncate font-heading text-base font-bold">{title}</h3>
-            <p className="text-[11px] font-semibold text-[#f7b9c8]">
+            <p
+              className={`text-[11px] font-semibold ${
+                variant === 'panel' ? 'text-[#a61231]' : 'text-[#f7b9c8]'
+              }`}
+            >
               Connected to this question
             </p>
           </div>
@@ -304,7 +314,7 @@ export default function StudyAssistant({
         ) : null}
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[#fcfbfb] p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#fff,#fcfbfb)] p-4">
         {loading && (
           <p className="flex items-center gap-2 text-sm font-semibold text-[#6b6e75]">
             <LoaderCircle

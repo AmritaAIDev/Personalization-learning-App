@@ -7,7 +7,6 @@ import {
   CircleAlert,
   LoaderCircle,
   Search,
-  Sparkles,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { learningUrl } from '@/lib/learning';
@@ -26,8 +25,9 @@ export default function TopicSearch() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<QuestionCatalogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [opened, setOpened] = useState(false);
 
   const loadCatalog = useCallback(async (value: string) => {
     setLoading(true);
@@ -53,23 +53,25 @@ export default function TopicSearch() {
   }, []);
 
   useEffect(() => {
+    if (!opened) return;
     const timeout = window.setTimeout(() => {
       void loadCatalog(query);
     }, query.trim() ? 250 : 0);
     return () => window.clearTimeout(timeout);
-  }, [loadCatalog, query]);
+  }, [loadCatalog, opened, query]);
 
   const startFirstMatch = () => {
     const firstMatch = results[0];
     if (firstMatch) {
       router.push(learningUrl(toLearningScope(firstMatch)));
+      setOpened(false);
     }
   };
 
   return (
-    <section className="relative mx-auto w-full max-w-5xl">
+    <section className="relative mx-auto w-full max-w-3xl">
       <div aria-hidden="true" className="pointer-events-none absolute -inset-8 rounded-[2.5rem] bg-[radial-gradient(circle_at_center,rgba(227,21,64,0.13),transparent_66%)] blur-2xl" />
-      <div className="relative overflow-hidden rounded-[2rem] border border-[#e7dfe1] bg-white/90 p-4 shadow-[0_24px_60px_rgba(49,51,55,0.10)] ring-1 ring-white/80 backdrop-blur-xl sm:p-5">
+      <div className="relative overflow-hidden rounded-[2rem] border border-[#e7dfe1] bg-white/90 p-4 shadow-[0_24px_60px_rgba(49,51,55,0.10)] ring-1 ring-white/80 backdrop-blur-xl transition-all duration-300 ease-out sm:p-5">
         <form
           className="flex flex-col gap-3 sm:flex-row sm:items-center"
           onSubmit={(event) => {
@@ -83,7 +85,11 @@ export default function TopicSearch() {
             <input
               type="search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setOpened(true);
+              }}
+              onFocus={() => setOpened(true)}
               placeholder="Search a concept, chapter, or practice unit"
               className="h-14 w-full rounded-2xl border border-[#e6e1e2] bg-[#fbfafb] py-3 pl-14 pr-4 text-sm font-medium text-[#313337] outline-none transition placeholder:text-[#a1a5ab] focus:border-[#e31540] focus:bg-white focus:ring-4 focus:ring-[#e31540]/10"
             />
@@ -98,11 +104,11 @@ export default function TopicSearch() {
           </button>
         </form>
 
-        <div className="mt-4 border-t border-[#eee9ea] pt-4">
+        {opened ? (
+        <div className="mt-4 animate-in fade-in slide-in-from-top-1 border-t border-[#eee9ea] pt-4 duration-200">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[#8f939b]">
-              <Sparkles className="h-3.5 w-3.5 text-[#e31540]" aria-hidden="true" />
-              {query.trim() ? 'Matched learning units' : 'Ready from your bank'}
+              {query.trim() ? 'Matched learning units' : 'Suggested topics'}
             </p>
             {loading && (
               <span className="flex items-center gap-2 text-xs font-medium text-[#8f939b]">
@@ -119,20 +125,42 @@ export default function TopicSearch() {
             </p>
           )}
 
+          {loading && results.length === 0 && (
+            <div className="grid gap-2 md:grid-cols-2">
+              {[0, 1, 2, 3].map((item) => (
+                <div
+                  key={item}
+                  className="min-h-24 rounded-2xl border border-[#ebe4e6] bg-white px-4 py-3"
+                >
+                  <div className="h-4 w-32 animate-pulse rounded-full bg-[#eee8ea]" />
+                  <div className="mt-3 h-3 w-44 animate-pulse rounded-full bg-[#f3eef0]" />
+                  <div className="mt-4 flex gap-1.5">
+                    <div className="h-5 w-14 animate-pulse rounded-full bg-[#f4f5f7]" />
+                    <div className="h-5 w-16 animate-pulse rounded-full bg-[#f4f5f7]" />
+                    <div className="h-5 w-14 animate-pulse rounded-full bg-[#f4f5f7]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {!loading && !error && results.length === 0 && (
             <p className="rounded-xl bg-[#f7f4f5] px-4 py-5 text-sm text-[#6b6e75]">
               No matching topic yet.
             </p>
           )}
 
-          {results.length > 0 && (
+          {!loading && results.length > 0 && (
             <div className="grid gap-2 md:grid-cols-2">
               {results.map((entry) => (
                 <button
                   key={[entry.subject, entry.chapter, entry.topic].join('-')}
                   type="button"
-                  onClick={() => router.push(learningUrl(toLearningScope(entry)))}
-                  className="group flex min-h-24 items-center justify-between gap-4 rounded-2xl border border-[#ebe4e6] bg-white px-4 py-3 text-left transition hover:border-[#e31540]/40 hover:bg-[#fff9fa] hover:shadow-[0_10px_24px_rgba(49,51,55,0.07)]"
+                  onClick={() => {
+                    setOpened(false);
+                    router.push(learningUrl(toLearningScope(entry)));
+                  }}
+                  className="group flex min-h-24 items-center justify-between gap-4 rounded-2xl border border-[#ebe4e6] bg-white px-4 py-3 text-left transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#e31540]/40 hover:bg-[#fff9fa] hover:shadow-[0_10px_24px_rgba(49,51,55,0.07)]"
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-bold text-[#313337]">
@@ -161,6 +189,7 @@ export default function TopicSearch() {
             </div>
           )}
         </div>
+        ) : null}
       </div>
     </section>
   );

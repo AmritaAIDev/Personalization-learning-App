@@ -19,8 +19,10 @@ describe('learning helpers', () => {
 
   it('keeps an invalid tab query at the overview baseline', () => {
     const bad = new URLSearchParams('tab=matrix');
-    const good = new URLSearchParams('tab=review');
+    const good = new URLSearchParams('tab=flashcards');
+    const legacy = new URLSearchParams('tab=review');
     expect(learningTabFromSearchParams(bad as never)).toBe('overview');
-    expect(learningTabFromSearchParams(good as never)).toBe('review');
+    expect(learningTabFromSearchParams(good as never)).toBe('flashcards');
+    expect(learningTabFromSearchParams(legacy as never)).toBe('flashcards');
   });
 });

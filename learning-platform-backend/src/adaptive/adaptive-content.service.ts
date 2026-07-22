@@ -79,6 +79,7 @@ export class AdaptiveContentService {
     coordinate: LearningCoordinate,
     count = LEARNING_QUESTIONS_PER_SESSION,
   ): Promise<LearningQuestionReference[]> {
+    const used = await this.getUsedQuestionIds(userId, scope, coordinate);
     const [generated, curated] = await Promise.all([
       this.generatedQuestionsRepository.find({
         where: {
@@ -108,7 +109,11 @@ export class AdaptiveContentService {
     const candidates: LearningQuestionReference[] = [
       ...generated.map((question) => this.toGeneratedReference(question)),
       ...curated.map((question) => this.toCuratedReference(question)),
-    ];
+    ].filter((question) =>
+      question.source === LearningQuestionSource.CURATED
+        ? !used.curated.has(question.id)
+        : !used.generated.has(question.id),
+    );
     if (candidates.length < count) return [];
     return this.shuffle(candidates).slice(0, count);
   }
@@ -118,6 +123,7 @@ export class AdaptiveContentService {
     scope: LearningScope,
     count = LEARNING_QUESTIONS_PER_SESSION,
   ): Promise<LearningQuestionReference[]> {
+    const used = await this.getUsedQuestionIds(userId, scope);
     const [generated, curated] = await Promise.all([
       this.generatedQuestionsRepository.find({
         where: {
@@ -142,7 +148,11 @@ export class AdaptiveContentService {
     const exactTopicCandidates = [
       ...generated.map((question) => this.toGeneratedReference(question)),
       ...curated.map((question) => this.toCuratedReference(question)),
-    ];
+    ].filter((question) =>
+      question.source === LearningQuestionSource.CURATED
+        ? !used.curated.has(question.id)
+        : !used.generated.has(question.id),
+    );
     if (exactTopicCandidates.length >= count) {
       return this.shuffle(exactTopicCandidates).slice(0, count);
     }
@@ -158,7 +168,7 @@ export class AdaptiveContentService {
     });
     const chapterCandidates = chapterQuestions.map((question) =>
       this.toCuratedReference(question),
-    );
+    ).filter((question) => !used.curated.has(question.id));
     if (chapterCandidates.length < count) return [];
     return this.shuffle(chapterCandidates).slice(0, count);
   }
@@ -339,8 +349,10 @@ export class AdaptiveContentService {
     scope: LearningScope,
     coordinate: LearningCoordinate,
   ): Promise<number> {
+    const used = await this.getUsedQuestionIds(userId, scope, coordinate);
     const [generated, curated] = await Promise.all([
-      this.generatedQuestionsRepository.count({
+      this.generatedQuestionsRepository.find({
+        select: { id: true },
         where: {
           userId,
           subject: scope.subject,
@@ -351,7 +363,8 @@ export class AdaptiveContentService {
           status: GeneratedLearningQuestionStatus.READY,
         },
       }),
-      this.questionsRepository.count({
+      this.questionsRepository.find({
+        select: { id: true },
         where: {
           subject: scope.subject,
           chapter: scope.chapter,
@@ -362,7 +375,51 @@ export class AdaptiveContentService {
         },
       }),
     ]);
-    return generated + curated;
+    return (
+      generated.filter((question) => !used.generated.has(question.id)).length +
+      curated.filter((question) => !used.curated.has(question.id)).length
+    );
+  }
+
+  private async getUsedQuestionIds(
+    userId: string,
+    scope: LearningScope,
+    coordinate?: LearningCoordinate,
+  ): Promise<{ curated: Set<string>; generated: Set<string> }> {
+    const builder = this.dataSource
+      .getRepository(LearningSessionItem)
+      .createQueryBuilder('item')
+      .innerJoin('item.session', 'session')
+      .select(['item.questionId AS "questionId"', 'item.generatedQuestionId AS "generatedQuestionId"'])
+      .where('session.user_id = :userId', { userId })
+      .andWhere('session.subject = :subject', { subject: scope.subject })
+      .andWhere('session.chapter = :chapter', { chapter: scope.chapter })
+      .andWhere('session.topic = :topic', { topic: scope.topic });
+    if (coordinate) {
+      builder
+        .andWhere('session.bloom_level = :bloomLevel', {
+          bloomLevel: coordinate.bloomLevel,
+        })
+        .andWhere('session.difficulty = :difficulty', {
+          difficulty: coordinate.difficulty,
+        });
+    }
+    const rows = await builder.getRawMany<{
+      questionId: string | null;
+      generatedQuestionId: string | null;
+    }>();
+    return {
+      curated: new Set(
+        rows
+          .map((row) => row.questionId)
+          .filter((id): id is string => typeof id === 'string'),
+      ),
+      generated: new Set(
+        rows
+          .map((row) => row.generatedQuestionId)
+          .filter((id): id is string => typeof id === 'string'),
+      ),
+    };
   }
 
   private async buildSourceMaterial(scope: LearningScope): Promise<string> {

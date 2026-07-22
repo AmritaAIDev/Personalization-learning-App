@@ -11,10 +11,12 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 import { Question, QuestionPublicationStatus } from '../question.entity';
 import { Topic } from '../topics/topic.entity';
 import { User } from '../users/user.entity';
+import { AgentService } from '../agent/agent.service';
 import {
   AskTutorDto,
   CreateLearningSessionDto,
   FlashcardQueryDto,
+  GenerateFlashcardsDto,
   ReviewFlashcardDto,
   SubmitLearningAnswerDto,
 } from './adaptive.dto';
@@ -25,6 +27,7 @@ import {
 } from './adaptive-content.service';
 import {
   FlashcardRating,
+  FlashcardSource,
   FlashcardStatus,
   GeneratedLearningQuestionStatus,
   LearningQuestionSource,
@@ -132,6 +135,7 @@ export class AdaptiveService {
     private readonly contentService: AdaptiveContentService,
     private readonly generationWorker: GenerationWorkerService,
     private readonly tutorService: TutorService,
+    private readonly agentService: AgentService,
     @InjectRepository(LearningTopicState)
     private readonly statesRepository: Repository<LearningTopicState>,
     @InjectRepository(LearningSession)
@@ -235,7 +239,7 @@ export class AdaptiveService {
       coordinate.level,
       questions,
     );
-    void this.prefetchNextCoordinate(user.id, scope, coordinate.level).catch(
+    void this.prefetchPracticeContinuity(user.id, scope, coordinate.level).catch(
       () => undefined,
     );
     return this.getSession(user.id, sessionId);
@@ -279,7 +283,7 @@ export class AdaptiveService {
       );
     }
     if (mutation.prefetchScope && mutation.prefetchLevel) {
-      void this.prefetchCoordinate(
+      void this.prefetchPracticeContinuity(
         userId,
         mutation.prefetchScope,
         mutation.prefetchLevel,
@@ -432,6 +436,49 @@ export class AdaptiveService {
     }
     const saved = await this.flashcardReviewsRepository.save(review);
     return this.toFlashcardPayload(card, saved);
+  }
+
+  async generateFlashcards(userId: string, input: GenerateFlashcardsDto) {
+    const scope = this.toScope(input);
+    const count = input.count ?? 6;
+    const existing = await this.flashcardsRepository.find({
+      where: {
+        subject: scope.subject,
+        chapter: scope.chapter,
+        topic: scope.topic,
+        status: FlashcardStatus.PUBLISHED,
+      },
+      order: { createdAt: 'ASC' },
+      take: 30,
+    });
+    if (existing.length >= count) {
+      return this.getFlashcards(userId, { ...scope, limit: 12 });
+    }
+
+    const sourceMaterial = await this.buildFlashcardSourceMaterial(scope);
+    const generated = await this.agentService.generateFlashcards({
+      ...scope,
+      count: count - existing.length,
+      sourceMaterial,
+    });
+    const existingFronts = new Set(
+      existing.map((card) => card.front.trim().toLocaleLowerCase()),
+    );
+    const records = generated
+      .filter((card) => !existingFronts.has(card.front.trim().toLocaleLowerCase()))
+      .map((card) =>
+        this.flashcardsRepository.create({
+          ...scope,
+          front: card.front,
+          back: card.back,
+          hint: card.hint,
+          tags: card.tags,
+          source: FlashcardSource.AI_GENERATED,
+          status: FlashcardStatus.PUBLISHED,
+        }),
+      );
+    if (records.length) await this.flashcardsRepository.save(records);
+    return this.getFlashcards(userId, { ...scope, limit: 12 });
   }
 
   private async applyAnswer(
@@ -926,6 +973,15 @@ export class AdaptiveService {
     await this.prefetchCoordinate(userId, scope, following.level);
   }
 
+  private async prefetchPracticeContinuity(
+    userId: string,
+    scope: LearningScope,
+    level: number,
+  ): Promise<void> {
+    await this.prefetchCoordinate(userId, scope, level);
+    await this.prefetchNextCoordinate(userId, scope, level);
+  }
+
   private async findNearestReadyQuestionSet(
     userId: string,
     scope: LearningScope,
@@ -1022,6 +1078,47 @@ export class AdaptiveService {
           : `Related to your ${row.chapter} learning activity`,
       }))
       .slice(0, 3);
+  }
+
+  private async buildFlashcardSourceMaterial(scope: LearningScope): Promise<string> {
+    const [questions, flashcards] = await Promise.all([
+      this.questionsRepository.find({
+        where: {
+          subject: scope.subject,
+          chapter: scope.chapter,
+          topic: scope.topic,
+          status: QuestionPublicationStatus.PUBLISHED,
+        },
+        order: { created_at: 'ASC' },
+        take: 12,
+      }),
+      this.flashcardsRepository.find({
+        where: {
+          subject: scope.subject,
+          chapter: scope.chapter,
+          topic: scope.topic,
+          status: FlashcardStatus.PUBLISHED,
+        },
+        order: { createdAt: 'ASC' },
+        take: 12,
+      }),
+    ]);
+    const blocks = [
+      ...questions.map(
+        (question) =>
+          `Question concept: ${question.question_text}\nCorrect reasoning: ${question.solution}\nTags: ${(question.concept_tags ?? []).join(', ')}`,
+      ),
+      ...flashcards.map(
+        (card) =>
+          `Flashcard: ${card.front}\nAnswer: ${card.back}\nTags: ${(card.tags ?? []).join(', ')}`,
+      ),
+    ];
+    if (blocks.length === 0) {
+      throw new ServiceUnavailableException(
+        'This topic has no reviewed database material for grounded flashcard generation.',
+      );
+    }
+    return blocks.join('\n\n');
   }
 
   private nextReviewSchedule(

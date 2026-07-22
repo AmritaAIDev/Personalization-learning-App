@@ -11,12 +11,14 @@ import { LearningSession } from './learning-session.entity';
 import { LearningTopicState } from './learning-topic-state.entity';
 import {
   FlashcardRating,
+  FlashcardSource,
   FlashcardStatus,
   LearningQuestionSource,
 } from './adaptive.types';
 import { TutorService } from './tutor.service';
 import { Question } from '../question.entity';
 import { Topic } from '../topics/topic.entity';
+import { AgentService } from '../agent/agent.service';
 
 describe('AdaptiveService flashcard reviews', () => {
   const card: Flashcard = {
@@ -24,11 +26,11 @@ describe('AdaptiveService flashcard reviews', () => {
     subject: 'Physics',
     chapter: 'Electrostatics',
     topic: "Coulomb's Law and Charge",
-    front: 'State Coulomb’s law.',
-    back: 'F = k|q₁q₂|/r².',
+    front: "State Coulomb's law.",
+    back: 'F = k|q1q2|/r^2.',
     hint: 'Use separation squared.',
     tags: ['formula'],
-    source: 'CURATED',
+    source: FlashcardSource.CURATED,
     status: FlashcardStatus.PUBLISHED,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -59,6 +61,7 @@ describe('AdaptiveService flashcard reviews', () => {
       {} as AdaptiveContentService,
       {} as GenerationWorkerService,
       {} as TutorService,
+      {} as AgentService,
       {} as Repository<LearningTopicState>,
       {} as Repository<LearningSession>,
       flashcards,
@@ -105,6 +108,71 @@ describe('AdaptiveService flashcard reviews', () => {
       }),
     );
   });
+
+  it('generates grounded AI flashcards and stores them in the database', async () => {
+    const flashcards = {
+      find: jest.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([]),
+      create: jest.fn((value: Partial<Flashcard>) => value as Flashcard),
+      save: jest.fn(async (values: Flashcard[]) => values),
+    } as unknown as Repository<Flashcard>;
+    const questions = {
+      find: jest.fn(async () => [
+        {
+          question_text: 'What does Gauss law connect in electrostatics?',
+          solution:
+            'Gauss law connects electric flux through a closed surface to enclosed charge.',
+          concept_tags: ['gauss-law', 'flux'],
+        },
+      ]),
+    } as unknown as Repository<Question>;
+    const agent = {
+      generateFlashcards: jest.fn(async () => [
+        {
+          front: 'What does Gauss law relate?',
+          back: 'It relates net electric flux through a closed surface to enclosed charge.',
+          hint: 'Think closed surface and charge inside.',
+          tags: ['gauss-law'],
+        },
+      ]),
+    } as unknown as AgentService;
+    const service = new AdaptiveService(
+      {} as DataSource,
+      {} as AdaptiveContentService,
+      {} as GenerationWorkerService,
+      {} as TutorService,
+      agent,
+      {} as Repository<LearningTopicState>,
+      {} as Repository<LearningSession>,
+      flashcards,
+      {} as Repository<FlashcardReview>,
+      questions,
+      {} as Repository<Topic>,
+    );
+    jest.spyOn(service, 'getFlashcards').mockResolvedValue([]);
+
+    await service.generateFlashcards('user-id', {
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic: 'Gauss Law',
+      count: 6,
+    });
+
+    expect(agent.generateFlashcards).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: 'Physics',
+        chapter: 'Electrostatics',
+        topic: 'Gauss Law',
+        count: 6,
+      }),
+    );
+    expect(flashcards.save).toHaveBeenCalledWith([
+      expect.objectContaining({
+        source: FlashcardSource.AI_GENERATED,
+        status: FlashcardStatus.PUBLISHED,
+        front: 'What does Gauss law relate?',
+      }),
+    ]);
+  });
 });
 
 describe('AdaptiveService second-attempt tutor routing', () => {
@@ -130,6 +198,7 @@ describe('AdaptiveService second-attempt tutor routing', () => {
       {} as AdaptiveContentService,
       {} as GenerationWorkerService,
       tutor,
+      {} as AgentService,
       {} as Repository<LearningTopicState>,
       {} as Repository<LearningSession>,
       {} as Repository<Flashcard>,

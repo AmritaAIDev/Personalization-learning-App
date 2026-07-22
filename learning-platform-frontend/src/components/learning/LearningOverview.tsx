@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   CircleAlert,
   Compass,
-  LoaderCircle,
   Sparkles,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
@@ -42,7 +41,7 @@ export default function LearningOverview() {
   }, [load]);
 
   return (
-    <section className="mt-12">
+    <section className="mt-12 transition-all duration-300 ease-out">
       <div className="flex flex-col gap-4 border-b border-[#e8e2e4] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#e31540]">
@@ -61,11 +60,40 @@ export default function LearningOverview() {
       </div>
 
       {loading ? (
-        <div className="grid min-h-40 place-items-center text-sm font-semibold text-[#6b6e75]">
-          <span className="flex items-center gap-2">
-            <LoaderCircle className="h-4 w-4 animate-spin text-[#e31540]" aria-hidden="true" />
-            Loading your route
-          </span>
+        <div className="mt-6 grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="rounded-[1.75rem] border border-[#e8e1e3] bg-white p-5 shadow-[0_12px_28px_rgba(49,51,55,0.05)]">
+            <div className="flex items-center justify-between">
+              <div className="h-5 w-40 animate-pulse rounded-full bg-[#eee8ea]" />
+              <div className="h-4 w-16 animate-pulse rounded-full bg-[#eee8ea]" />
+            </div>
+            <div className="mt-5 space-y-3">
+              {[0, 1].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-[#ece6e8] p-4"
+                >
+                  <div className="h-4 w-36 animate-pulse rounded-full bg-[#eee8ea]" />
+                  <div className="mt-3 h-3 w-56 animate-pulse rounded-full bg-[#f3eef0]" />
+                  <div className="mt-4 h-1.5 w-36 animate-pulse rounded-full bg-[#eee8ea]" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-[1.75rem] border border-[#e8e1e3] bg-white p-5 shadow-[0_12px_28px_rgba(49,51,55,0.05)]">
+            <div className="h-4 w-44 animate-pulse rounded-full bg-[#f2dfe4]" />
+            <div className="mt-5 space-y-3">
+              {[0, 1].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-[#ece6e8] bg-[#fffafb] p-4"
+                >
+                  <div className="h-4 w-32 animate-pulse rounded-full bg-[#eee8ea]" />
+                  <div className="mt-3 h-3 w-full animate-pulse rounded-full bg-[#f3eef0]" />
+                  <div className="mt-2 h-3 w-3/4 animate-pulse rounded-full bg-[#f3eef0]" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       ) : null}
       {error ? (
@@ -88,7 +116,7 @@ export default function LearningOverview() {
         </div>
       ) : null}
       {!loading && !error && data ? (
-        <div className="mt-6 grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="mt-6 grid gap-5 animate-in fade-in slide-in-from-bottom-2 duration-300 lg:grid-cols-[1.05fr_0.95fr]">
           <section className="rounded-[1.75rem] border border-[#e8e1e3] bg-white p-5 shadow-[0_12px_28px_rgba(49,51,55,0.05)]">
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-heading text-lg font-bold text-[#313337]">
@@ -108,7 +136,7 @@ export default function LearningOverview() {
                   <Link
                     key={topic.id}
                     href={learningUrl(topic, { tab: 'overview' })}
-                    className="group flex items-center justify-between gap-4 rounded-2xl border border-[#ece6e8] p-4 transition hover:border-[#e31540]/40 hover:bg-[#fffafb]"
+                    className="group flex items-center justify-between gap-4 rounded-2xl border border-[#ece6e8] p-4 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#e31540]/40 hover:bg-[#fffafb] hover:shadow-[0_12px_28px_rgba(49,51,55,0.06)]"
                   >
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-bold text-[#313337]">
@@ -133,13 +161,13 @@ export default function LearningOverview() {
               </div>
             )}
           </section>
-          <section className="rounded-[1.75rem] bg-[#313337] p-5 text-white shadow-[0_16px_34px_rgba(49,51,55,0.15)]">
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[#f7b9c8]">
+          <section className="rounded-[1.75rem] border border-[#e8e1e3] bg-white p-5 shadow-[0_12px_28px_rgba(49,51,55,0.05)]">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[#e31540]">
               <Sparkles className="h-4 w-4" aria-hidden="true" />
               Suggested next topics
             </p>
             {data.suggestions.length === 0 ? (
-              <p className="mt-5 text-sm leading-6 text-[#d6d7da]">
+              <p className="mt-5 text-sm leading-6 text-[#6b6e75]">
                 No suggestions yet.
               </p>
             ) : (
@@ -148,21 +176,21 @@ export default function LearningOverview() {
                   <Link
                     key={[topic.subject, topic.chapter, topic.topic].join('-')}
                     href={learningUrl(topic, { tab: 'overview' })}
-                    className="group block rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/10"
+                    className="group block rounded-2xl border border-[#ece6e8] bg-[#fffafb] p-4 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#e31540]/40 hover:bg-white hover:shadow-[0_12px_28px_rgba(49,51,55,0.06)]"
                   >
                     <span className="flex items-start justify-between gap-3">
                       <span>
-                        <span className="block text-sm font-bold">{topic.topic}</span>
-                        <span className="mt-1 block text-xs leading-5 text-[#d6d7da]">
+                        <span className="block text-sm font-bold text-[#313337]">{topic.topic}</span>
+                        <span className="mt-1 block text-xs leading-5 text-[#6b6e75]">
                           {topic.reason}
                         </span>
                       </span>
                       <ArrowRight
-                        className="mt-0.5 h-4 w-4 shrink-0 text-[#f7b9c8] transition group-hover:translate-x-0.5"
+                        className="mt-0.5 h-4 w-4 shrink-0 text-[#e31540] transition group-hover:translate-x-0.5"
                         aria-hidden="true"
                       />
                     </span>
-                    <span className="mt-3 inline-block rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#f7b9c8]">
+                    <span className="mt-3 inline-block rounded-full bg-[#f9e5ea] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#e31540]">
                       {topic.questionCount} reviewed questions
                     </span>
                   </Link>

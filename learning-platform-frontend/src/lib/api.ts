@@ -1,6 +1,14 @@
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(
-  /\/$/,
-  '',
+function normalizeApiUrl(value: string): string {
+  const trimmed = value.trim().replace(/\/$/, '');
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.includes('localhost') || trimmed.startsWith('127.0.0.1')) {
+    return `http://${trimmed}`;
+  }
+  return `https://${trimmed}`;
+}
+
+const API_URL = normalizeApiUrl(
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
 );
 
 type ApiEnvelope<T> = { data: T };

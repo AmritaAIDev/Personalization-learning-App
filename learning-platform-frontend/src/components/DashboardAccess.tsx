@@ -18,9 +18,9 @@ export default function DashboardAccess({ children }: { children: ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen flex-1 items-center justify-center bg-[#fafafa]">
-        <div className="flex items-center gap-3 text-sm font-semibold text-[#6b6e75]" role="status">
-          <LoaderCircle className="h-5 w-5 animate-spin text-[#e31540]" />
+      <div className="flex min-h-screen flex-1 items-center justify-center bg-[#fbfbfd]">
+        <div className="flex items-center gap-3 text-sm font-semibold text-[#52525b]" role="status">
+          <LoaderCircle className="h-5 w-5 animate-spin text-[#3f6f57]" />
           Loading your learning workspace…
         </div>
       </div>

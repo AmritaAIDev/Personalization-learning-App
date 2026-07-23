@@ -8,7 +8,7 @@ export type LearningTab = 'overview' | 'flashcards' | 'practice';
 
 export type LearningCoordinate = {
   level: number;
-  bloomLevel: 'Remember' | 'Understand' | 'Apply' | 'Analyze' | 'Evaluate';
+  bloomLevel: 'Recall' | 'Comprehension' | 'Application' | 'Higher-Order';
   difficulty: 'Easy' | 'Medium' | 'Hard';
   label: string;
 };

@@ -7,41 +7,41 @@ import {
 } from './adaptive.types';
 
 describe('adaptive coordinate matrix', () => {
-  it('implements five Bloom levels inside each of the three difficulty tiers', () => {
-    expect(LEARNING_LEVEL_COUNT).toBe(15);
+  it('implements four proficiency levels across three difficulty tiers (Easy→Medium→Hard within each)', () => {
+    expect(LEARNING_LEVEL_COUNT).toBe(12);
     expect(LEARNING_COORDINATES.map((coordinate) => coordinate.label)).toEqual([
-      'Level 1: Remember · Easy',
-      'Level 2: Understand · Easy',
-      'Level 3: Apply · Easy',
-      'Level 4: Analyze · Easy',
-      'Level 5: Evaluate · Easy',
-      'Level 6: Remember · Medium',
-      'Level 7: Understand · Medium',
-      'Level 8: Apply · Medium',
-      'Level 9: Analyze · Medium',
-      'Level 10: Evaluate · Medium',
-      'Level 11: Remember · Hard',
-      'Level 12: Understand · Hard',
-      'Level 13: Apply · Hard',
-      'Level 14: Analyze · Hard',
-      'Level 15: Evaluate · Hard',
+      'Level 1: Recall · Easy',
+      'Level 2: Recall · Medium',
+      'Level 3: Recall · Hard',
+      'Level 4: Comprehension · Easy',
+      'Level 5: Comprehension · Medium',
+      'Level 6: Comprehension · Hard',
+      'Level 7: Application · Easy',
+      'Level 8: Application · Medium',
+      'Level 9: Application · Hard',
+      'Level 10: Higher-Order · Easy',
+      'Level 11: Higher-Order · Medium',
+      'Level 12: Higher-Order · Hard',
     ]);
   });
 
   it('uses explicit floor and ceiling boundaries', () => {
     expect(previousCoordinate(1)).toBeNull();
-    expect(nextCoordinate(15)).toBeNull();
-    expect(nextCoordinate(5)).toMatchObject({
-      level: 6,
-      bloomLevel: 'Remember',
-      difficulty: 'Medium',
-    });
-    expect(previousCoordinate(6)).toMatchObject({
-      level: 5,
-      bloomLevel: 'Evaluate',
+    expect(nextCoordinate(12)).toBeNull();
+    expect(nextCoordinate(3)).toMatchObject({
+      level: 4,
+      bloomLevel: 'Comprehension',
       difficulty: 'Easy',
     });
-    expect(() => coordinateForLevel(0)).toThrow(RangeError);
-    expect(() => coordinateForLevel(16)).toThrow(RangeError);
+    expect(previousCoordinate(4)).toMatchObject({
+      level: 3,
+      bloomLevel: 'Recall',
+      difficulty: 'Hard',
+    });
+  });
+
+  it('clamps out-of-range levels instead of throwing (resilient to legacy state)', () => {
+    expect(coordinateForLevel(0).level).toBe(1);
+    expect(coordinateForLevel(99).level).toBe(LEARNING_LEVEL_COUNT);
   });
 });

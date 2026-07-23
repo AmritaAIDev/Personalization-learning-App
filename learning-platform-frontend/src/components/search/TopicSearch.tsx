@@ -52,6 +52,13 @@ export default function TopicSearch() {
     }
   }, []);
 
+  // Warm the catalog in the background on mount so suggestions are instant
+  // the moment the field is focused — no visible fetch lag.
+  useEffect(() => {
+    const timeout = window.setTimeout(() => void loadCatalog(''), 150);
+    return () => window.clearTimeout(timeout);
+  }, [loadCatalog]);
+
   useEffect(() => {
     if (!opened) return;
     const timeout = window.setTimeout(() => {
@@ -69,49 +76,47 @@ export default function TopicSearch() {
   };
 
   return (
-    <section className="relative mx-auto w-full max-w-3xl">
-      <div aria-hidden="true" className="pointer-events-none absolute -inset-8 rounded-[2.5rem] bg-[radial-gradient(circle_at_center,rgba(227,21,64,0.13),transparent_66%)] blur-2xl" />
-      <div className="relative overflow-hidden rounded-[2rem] border border-[#e7dfe1] bg-white/90 p-4 shadow-[0_24px_60px_rgba(49,51,55,0.10)] ring-1 ring-white/80 backdrop-blur-xl transition-all duration-300 ease-out sm:p-5">
-        <form
-          className="flex flex-col gap-3 sm:flex-row sm:items-center"
-          onSubmit={(event) => {
-            event.preventDefault();
-            startFirstMatch();
-          }}
+    <section className="mx-auto w-full">
+      <form
+        className="flex flex-col gap-2.5 sm:flex-row sm:items-center"
+        onSubmit={(event) => {
+          event.preventDefault();
+          startFirstMatch();
+        }}
+      >
+        <label className="relative block min-w-0 flex-1">
+          <span className="sr-only">Search the question bank</span>
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink-mute" aria-hidden="true" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setOpened(true);
+            }}
+            onFocus={() => setOpened(true)}
+            placeholder="Search a concept, chapter, or practice unit"
+            className="h-13 w-full rounded-xl border border-hairline bg-surface py-3.5 pl-12 pr-4 text-[15px] text-ink outline-none transition duration-200 placeholder:text-ink-mute focus:border-primary/40"
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={results.length === 0}
+          className="inline-flex h-13 items-center justify-center gap-2 rounded-xl bg-ink px-6 py-3.5 text-sm font-semibold text-white transition duration-200 hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <label className="relative block min-w-0 flex-1">
-            <span className="sr-only">Search the question bank</span>
-            <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8f939b]" aria-hidden="true" />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setOpened(true);
-              }}
-              onFocus={() => setOpened(true)}
-              placeholder="Search a concept, chapter, or practice unit"
-              className="h-14 w-full rounded-2xl border border-[#e6e1e2] bg-[#fbfafb] py-3 pl-14 pr-4 text-sm font-medium text-[#313337] outline-none transition placeholder:text-[#a1a5ab] focus:border-[#e31540] focus:bg-white focus:ring-4 focus:ring-[#e31540]/10"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={results.length === 0}
-            className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#e31540] px-6 text-sm font-bold text-white shadow-[0_12px_24px_rgba(227,21,64,0.22)] transition hover:-translate-y-px hover:bg-[#c61137] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Start journey
-            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </form>
+          Start journey
+          <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </form>
 
-        {opened ? (
-        <div className="mt-4 animate-in fade-in slide-in-from-top-1 border-t border-[#eee9ea] pt-4 duration-200">
+      {opened ? (
+        <div className="mt-4 animate-fade">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[#8f939b]">
+            <p className="text-[13px] font-medium text-ink-mute">
               {query.trim() ? 'Matched learning units' : 'Suggested topics'}
             </p>
             {loading && (
-              <span className="flex items-center gap-2 text-xs font-medium text-[#8f939b]">
+              <span className="flex items-center gap-2 text-xs font-medium text-ink-mute">
                 <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                 Searching
               </span>
@@ -126,18 +131,15 @@ export default function TopicSearch() {
           )}
 
           {loading && results.length === 0 && (
-            <div className="grid gap-2 md:grid-cols-2">
+            <div className="grid gap-2.5 md:grid-cols-2">
               {[0, 1, 2, 3].map((item) => (
-                <div
-                  key={item}
-                  className="min-h-24 rounded-2xl border border-[#ebe4e6] bg-white px-4 py-3"
-                >
-                  <div className="h-4 w-32 animate-pulse rounded-full bg-[#eee8ea]" />
-                  <div className="mt-3 h-3 w-44 animate-pulse rounded-full bg-[#f3eef0]" />
+                <div key={item} className="min-h-24 rounded-2xl bg-surface px-4 py-4 hairline">
+                  <div className="h-4 w-32 rounded-full skeleton" />
+                  <div className="mt-3 h-3 w-44 rounded-full skeleton" />
                   <div className="mt-4 flex gap-1.5">
-                    <div className="h-5 w-14 animate-pulse rounded-full bg-[#f4f5f7]" />
-                    <div className="h-5 w-16 animate-pulse rounded-full bg-[#f4f5f7]" />
-                    <div className="h-5 w-14 animate-pulse rounded-full bg-[#f4f5f7]" />
+                    <div className="h-5 w-14 rounded-full skeleton" />
+                    <div className="h-5 w-16 rounded-full skeleton" />
+                    <div className="h-5 w-14 rounded-full skeleton" />
                   </div>
                 </div>
               ))}
@@ -145,13 +147,13 @@ export default function TopicSearch() {
           )}
 
           {!loading && !error && results.length === 0 && (
-            <p className="rounded-xl bg-[#f7f4f5] px-4 py-5 text-sm text-[#6b6e75]">
+            <p className="rounded-xl bg-surface px-4 py-5 text-sm text-ink-soft hairline">
               No matching topic yet.
             </p>
           )}
 
           {!loading && results.length > 0 && (
-            <div className="grid gap-2 md:grid-cols-2">
+            <div className="grid gap-2.5 md:grid-cols-2">
               {results.map((entry) => (
                 <button
                   key={[entry.subject, entry.chapter, entry.topic].join('-')}
@@ -160,28 +162,28 @@ export default function TopicSearch() {
                     setOpened(false);
                     router.push(learningUrl(toLearningScope(entry)));
                   }}
-                  className="group flex min-h-24 items-center justify-between gap-4 rounded-2xl border border-[#ebe4e6] bg-white px-4 py-3 text-left transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#e31540]/40 hover:bg-[#fff9fa] hover:shadow-[0_10px_24px_rgba(49,51,55,0.07)]"
+                  className="group flex min-h-24 items-center justify-between gap-4 rounded-2xl bg-surface px-4 py-4 text-left transition-all duration-200 hairline hover:border-ink/15 hover:shadow-[0_8px_24px_rgba(20,20,30,0.06)]"
                 >
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-bold text-[#313337]">
+                    <span className="block truncate text-[15px] font-semibold text-ink">
                       {entry.topic}
                     </span>
-                    <span className="mt-1 block truncate text-xs text-[#8f939b]">
+                    <span className="mt-0.5 block truncate text-xs text-ink-mute">
                       {entry.chapter}
                     </span>
-                    <span className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold">
-                      <span className="rounded-full bg-[#f4f5f7] px-2 py-0.5 text-[#6b6e75]">
+                    <span className="mt-2.5 flex flex-wrap gap-1.5 text-[11px] font-medium">
+                      <span className="rounded-full bg-canvas px-2 py-0.5 text-ink-soft">
                         Easy {entry.easyCount}
                       </span>
-                      <span className="rounded-full bg-[#f4f5f7] px-2 py-0.5 text-[#6b6e75]">
+                      <span className="rounded-full bg-canvas px-2 py-0.5 text-ink-soft">
                         Medium {entry.mediumCount}
                       </span>
-                      <span className="rounded-full bg-[#f4f5f7] px-2 py-0.5 text-[#6b6e75]">
+                      <span className="rounded-full bg-canvas px-2 py-0.5 text-ink-soft">
                         Hard {entry.hardCount}
                       </span>
                     </span>
                   </span>
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#f9e5ea] text-[#e31540] transition group-hover:bg-[#e31540] group-hover:text-white">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-canvas text-ink-soft transition group-hover:bg-ink group-hover:text-white">
                     <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
                   </span>
                 </button>
@@ -189,8 +191,7 @@ export default function TopicSearch() {
             </div>
           )}
         </div>
-        ) : null}
-      </div>
+      ) : null}
     </section>
   );
 }

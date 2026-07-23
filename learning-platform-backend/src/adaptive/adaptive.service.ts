@@ -150,6 +150,73 @@ export class AdaptiveService {
     private readonly topicsRepository: Repository<Topic>,
   ) {}
 
+  /**
+   * Interactive concept breakdown for a topic. Prefers explicit `subtopic`
+   * tags; falls back to `concept_tags` so most topics still surface an
+   * explorable structure. Returns an empty set when nothing is available.
+   */
+  async getConceptBreakdown(scope: LearningScope): Promise<{
+    source: 'subtopic' | 'concept' | 'none';
+    items: Array<{
+      name: string;
+      questionCount: number;
+      easy: number;
+      medium: number;
+      hard: number;
+    }>;
+  }> {
+    type Row = {
+      name: string;
+      n: string;
+      easy: string;
+      medium: string;
+      hard: string;
+    };
+    const params = [scope.subject, scope.chapter, scope.topic];
+    const difficultySums = `
+      COUNT(*)::int AS n,
+      SUM(CASE WHEN q.difficulty = 'Easy' THEN 1 ELSE 0 END)::int AS easy,
+      SUM(CASE WHEN q.difficulty = 'Medium' THEN 1 ELSE 0 END)::int AS medium,
+      SUM(CASE WHEN q.difficulty = 'Hard' THEN 1 ELSE 0 END)::int AS hard`;
+
+    const map = (rows: Row[]) =>
+      rows.map((row) => ({
+        name: row.name,
+        questionCount: Number(row.n),
+        easy: Number(row.easy),
+        medium: Number(row.medium),
+        hard: Number(row.hard),
+      }));
+
+    const subtopicRows = (await this.dataSource.query(
+      `SELECT q.subtopic AS name, ${difficultySums}
+       FROM questions q
+       WHERE q.status = 'PUBLISHED' AND q.subject = $1 AND q.chapter = $2 AND q.topic = $3
+         AND q.subtopic IS NOT NULL AND q.subtopic <> ''
+       GROUP BY q.subtopic
+       ORDER BY n DESC`,
+      params,
+    )) as Row[];
+    if (subtopicRows.length > 0) {
+      return { source: 'subtopic', items: map(subtopicRows) };
+    }
+
+    const conceptRows = (await this.dataSource.query(
+      `SELECT tag AS name, ${difficultySums}
+       FROM questions q, jsonb_array_elements_text(q.concept_tags) AS tag
+       WHERE q.status = 'PUBLISHED' AND q.subject = $1 AND q.chapter = $2 AND q.topic = $3
+       GROUP BY tag
+       ORDER BY n DESC
+       LIMIT 12`,
+      params,
+    )) as Row[];
+    if (conceptRows.length > 0) {
+      return { source: 'concept', items: map(conceptRows) };
+    }
+
+    return { source: 'none', items: [] };
+  }
+
   async createOrResume(
     user: AuthenticatedUser,
     input: CreateLearningSessionDto,

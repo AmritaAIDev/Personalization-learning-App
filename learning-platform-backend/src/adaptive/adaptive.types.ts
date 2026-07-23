@@ -1,15 +1,78 @@
+/**
+ * Four-level proficiency model (collapsed Bloom taxonomy).
+ *
+ *   PL1 Recall         ← Remember
+ *   PL2 Comprehension  ← Understand
+ *   PL3 Application    ← Apply
+ *   PL4 Higher-Order   ← Analyze + Evaluate + Create
+ *
+ * Each proficiency level is practised across all three difficulty tiers
+ * (Easy → Medium → Hard) before advancing to the next level.
+ */
 export const BLOOM_LEVELS = [
-  'Remember',
-  'Understand',
-  'Apply',
-  'Analyze',
-  'Evaluate',
+  'Recall',
+  'Comprehension',
+  'Application',
+  'Higher-Order',
 ] as const;
 
 export const DIFFICULTY_LEVELS = ['Easy', 'Medium', 'Hard'] as const;
 
 export type BloomLevel = (typeof BLOOM_LEVELS)[number];
 export type DifficultyLevel = (typeof DIFFICULTY_LEVELS)[number];
+
+/**
+ * Maps any legacy or model-emitted Bloom label onto one of the four canonical
+ * proficiency levels. Keeps the engine resilient to older data and to LLM
+ * output that still uses the classic six-category Bloom vocabulary.
+ */
+const BLOOM_ALIASES: Record<string, BloomLevel> = {
+  recall: 'Recall',
+  remember: 'Recall',
+  knowledge: 'Recall',
+  comprehension: 'Comprehension',
+  understand: 'Comprehension',
+  understanding: 'Comprehension',
+  application: 'Application',
+  apply: 'Application',
+  applying: 'Application',
+  'higher-order': 'Higher-Order',
+  higherorder: 'Higher-Order',
+  analyze: 'Higher-Order',
+  analyse: 'Higher-Order',
+  analysis: 'Higher-Order',
+  evaluate: 'Higher-Order',
+  evaluation: 'Higher-Order',
+  create: 'Higher-Order',
+  creating: 'Higher-Order',
+  synthesis: 'Higher-Order',
+};
+
+export function normalizeBloomLevel(value: string | null | undefined): BloomLevel {
+  const key = (value ?? '').trim().toLowerCase().replace(/\s+/g, '-');
+  return BLOOM_ALIASES[key] ?? BLOOM_ALIASES[key.replace(/-/g, '')] ?? 'Recall';
+}
+
+/**
+ * All raw Bloom labels (legacy + canonical) that resolve to a given
+ * proficiency level. Used to match stored question rows regardless of the
+ * vocabulary they were tagged with.
+ */
+export function bloomLevelAliases(level: BloomLevel): string[] {
+  const canonical = new Set<string>([level]);
+  for (const [raw, mapped] of Object.entries(BLOOM_ALIASES)) {
+    if (mapped === level) canonical.add(raw);
+  }
+  // Add the human-cased legacy spellings the question bank actually stores.
+  const legacyByLevel: Record<BloomLevel, string[]> = {
+    Recall: ['Remember'],
+    Comprehension: ['Understand'],
+    Application: ['Apply'],
+    'Higher-Order': ['Analyze', 'Analyse', 'Evaluate', 'Create'],
+  };
+  for (const legacy of legacyByLevel[level]) canonical.add(legacy);
+  return Array.from(canonical);
+}
 
 export interface LearningCoordinate {
   level: number;
@@ -19,14 +82,17 @@ export interface LearningCoordinate {
 }
 
 /**
- * The master specification orders cognitive depth first inside every
- * difficulty tier: T1/D1 ... T5/D1, then T1/D2 ... T5/D3.
+ * Proficiency-first ordering: a learner clears Easy → Medium → Hard within a
+ * proficiency level before the next level unlocks.
+ *
+ *   L1 Recall·Easy   L2 Recall·Medium   L3 Recall·Hard
+ *   L4 Comprehension·Easy … L12 Higher-Order·Hard
  */
 export const LEARNING_COORDINATES: readonly LearningCoordinate[] =
-  DIFFICULTY_LEVELS.flatMap((difficulty) =>
-    BLOOM_LEVELS.map((bloomLevel, index) => {
+  BLOOM_LEVELS.flatMap((bloomLevel, bloomIndex) =>
+    DIFFICULTY_LEVELS.map((difficulty, difficultyIndex) => {
       const level =
-        DIFFICULTY_LEVELS.indexOf(difficulty) * BLOOM_LEVELS.length + index + 1;
+        bloomIndex * DIFFICULTY_LEVELS.length + difficultyIndex + 1;
       return {
         level,
         bloomLevel,
@@ -108,13 +174,10 @@ export enum TutorMessageType {
 }
 
 export function coordinateForLevel(level: number): LearningCoordinate {
-  const coordinate = LEARNING_COORDINATES[level - 1];
-  if (!coordinate) {
-    throw new RangeError(
-      `Learning level must be between 1 and ${LEARNING_LEVEL_COUNT}.`,
-    );
-  }
-  return coordinate;
+  // Clamp into range so legacy state saved on the old 15-level scale (or any
+  // out-of-range value) degrades gracefully instead of crashing the session.
+  const bounded = Math.min(Math.max(Math.round(level) || 1, 1), LEARNING_LEVEL_COUNT);
+  return LEARNING_COORDINATES[bounded - 1];
 }
 
 export function previousCoordinate(level: number): LearningCoordinate | null {

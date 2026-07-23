@@ -59,7 +59,7 @@ describe('TutorService answer-reveal boundary', () => {
     expect(generateTutorResponse).toHaveBeenCalledWith(
       expect.objectContaining({ answerRevealed: false }),
     );
-    const tutorPrompt = generateTutorResponse.mock.calls[0]?.[0] as {
+    const tutorPrompt = (generateTutorResponse.mock.calls as unknown[][])[0]?.[0] as {
       correctAnswer?: string;
     };
     expect(tutorPrompt.correctAnswer).toBeUndefined();

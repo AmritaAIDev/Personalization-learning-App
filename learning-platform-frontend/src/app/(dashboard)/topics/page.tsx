@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, ChevronRight, Lock, CheckCircle2, PlayCircle, Sparkles, BookOpen, FlaskConical, Calculator, Trophy, Medal, Award, Flame } from 'lucide-react';
+import { Search, ChevronRight, Lock, CheckCircle2, PlayCircle, BookOpen, FlaskConical, Calculator, Trophy, Medal, Award, Flame } from 'lucide-react';
 import Link from 'next/link';
 import { useJourney, JourneyNode, Subtopic } from '@/context/JourneyContext';
 
@@ -28,7 +28,7 @@ export default function SyllabusPage() {
     if (s.includes('physic')) return { bg: 'bg-blue-500', text: 'text-blue-500', hex: '#3b82f6', icon: <BookOpen className="text-blue-500" size={32} /> };
     if (s.includes('chemist')) return { bg: 'bg-orange-500', text: 'text-orange-500', hex: '#f97316', icon: <FlaskConical className="text-orange-500" size={32} /> };
     if (s.includes('math')) return { bg: 'bg-emerald-500', text: 'text-emerald-500', hex: '#10b981', icon: <Calculator className="text-emerald-500" size={32} /> };
-    return { bg: 'bg-[var(--color-primary)]', text: 'text-[var(--color-primary)]', hex: '#e31540', icon: <Flame className="text-[var(--color-primary)]" size={32} /> };
+    return { bg: 'bg-[var(--color-primary)]', text: 'text-[var(--color-primary)]', hex: '#3f6f57', icon: <Flame className="text-[var(--color-primary)]" size={32} /> };
   };
 
   const getMasteryBadge = (mastery: number) => {
@@ -39,7 +39,7 @@ export default function SyllabusPage() {
   };
 
   if (loading) {
-    return <div className="p-8 flex justify-center text-[#8f939b]">Loading Skill Tree...</div>;
+    return <div className="p-8 flex justify-center text-[#86868b]">Loading Skill Tree...</div>;
   }
 
   const renderChapterCard = (chapter: JourneyNode) => {
@@ -51,11 +51,11 @@ export default function SyllabusPage() {
       <div key={chapter.id} className={`snap-start shrink-0 w-[300px] sm:w-[350px] bg-white rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] relative group flex flex-col ${isActive ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/10' : 'border-[#e4e5e7]'}`}>
         
         <div className="flex justify-between items-start mb-4">
-          <h3 className={`font-heading text-[15px] font-bold leading-snug line-clamp-2 ${isLocked ? 'text-[#8f939b]' : 'text-foreground'}`}>{chapter.name}</h3>
-          <div className="shrink-0 ml-2 bg-[#f4f5f7] p-1.5 rounded-full">
-            {isLocked && <Lock size={16} className="text-[#8f939b]" />}
+          <h3 className={`font-heading text-[15px] font-bold leading-snug line-clamp-2 ${isLocked ? 'text-[#86868b]' : 'text-foreground'}`}>{chapter.name}</h3>
+          <div className="shrink-0 ml-2 bg-[#f4f4f6] p-1.5 rounded-full">
+            {isLocked && <Lock size={16} className="text-[#86868b]" />}
             {isCompleted && <CheckCircle2 size={16} className="text-green-500" />}
-            {isActive && <Sparkles size={16} className="text-orange-500 animate-pulse" />}
+            {isActive && <PlayCircle size={16} className="text-[#3f6f57]" />}
           </div>
         </div>
 
@@ -64,9 +64,9 @@ export default function SyllabusPage() {
             const isMatch = searchQuery && sub.name.toLowerCase().includes(searchQuery.toLowerCase());
             return (
               <div key={i} className={`flex items-center justify-between p-2 rounded-lg transition-all text-xs ${
-                isLocked ? 'bg-[#f4f5f7] opacity-50' : 
+                isLocked ? 'bg-[#f4f4f6] opacity-50' : 
                 isMatch ? 'bg-blue-50 ring-1 ring-blue-500 text-blue-700 font-bold' :
-                'bg-[#f4f5f7] hover:bg-[#e4e5e7] text-[#313337] cursor-pointer'
+                'bg-[#f4f4f6] hover:bg-[#e4e5e7] text-[#1a1a1f] cursor-pointer'
               }`}>
                 <span className="truncate pr-2 font-medium">{sub.name}</span>
                 {!isLocked && (
@@ -78,7 +78,7 @@ export default function SyllabusPage() {
             );
           })}
           {chapter.subtopics && chapter.subtopics.length > 3 && (
-            <div className="text-[10px] text-center font-bold text-[#8f939b] pt-1">
+            <div className="text-[10px] text-center font-bold text-[#86868b] pt-1">
               +{chapter.subtopics.length - 3} MORE TOPICS
             </div>
           )}
@@ -111,20 +111,13 @@ export default function SyllabusPage() {
             placeholder="Search topics..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#f4f5f7] border border-transparent rounded-full py-1.5 pl-9 pr-4 text-xs focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+            className="w-full bg-[#f4f4f6] border border-transparent rounded-full py-1.5 pl-9 pr-4 text-xs focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
           />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8f939b]" size={14} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#86868b]" size={14} />
         </div>
       </header>
 
-      <div className="p-6 h-[calc(100vh-3.5rem)] overflow-y-auto relative bg-[#fafafa]">
-        {selectedSubject && (
-          <div
-            className="absolute inset-0 pointer-events-none transition-colors duration-1000 opacity-20"
-            style={{ background: `radial-gradient(circle at top right, ${getThemeForSubject(selectedSubject).hex}33, transparent 40%)` }}
-          ></div>
-        )}
-        
+      <div className="p-6 h-[calc(100vh-3.5rem)] overflow-y-auto relative bg-canvas">
         <div className="mx-auto max-w-6xl flex flex-col gap-8 pb-20 relative z-10">
 
           {!selectedSubject ? (
@@ -154,7 +147,7 @@ export default function SyllabusPage() {
 
                     <div className="flex-1">
                       <h2 className="font-heading text-2xl font-bold text-foreground mb-1">{subject}</h2>
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#8f939b]">JEE Advanced Core</p>
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#86868b]">JEE Advanced Core</p>
                     </div>
 
                     <div className="mt-6">
@@ -163,13 +156,13 @@ export default function SyllabusPage() {
                           <div className={`text-3xl font-heading font-black tracking-tight ${theme.text}`}>{stats.averageMastery}%</div>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm font-bold text-foreground">{stats.completed}/{stats.total} <span className="text-[#8f939b] font-medium">Done</span></div>
+                          <div className="text-sm font-bold text-foreground">{stats.completed}/{stats.total} <span className="text-[#86868b] font-medium">Done</span></div>
                         </div>
                       </div>
                       
-                      <div className="h-2.5 w-full bg-[#f4f5f7] rounded-full overflow-hidden flex shadow-inner">
+                      <div className="h-2.5 w-full bg-[#f4f4f6] rounded-full overflow-hidden flex shadow-inner">
                         <div className={`h-full ${theme.bg}`} style={{ width: `${(stats.completed / stats.total) * 100}%` }}></div>
-                        <div className="h-full bg-[var(--color-primary)] animate-pulse" style={{ width: `${(stats.active / stats.total) * 100}%` }}></div>
+                        <div className="h-full bg-[var(--color-primary)]" style={{ width: `${(stats.active / stats.total) * 100}%` }}></div>
                       </div>
                     </div>
                   </div>
@@ -186,7 +179,7 @@ export default function SyllabusPage() {
                   </div>
                   <div>
                     <h2 className={`font-heading text-3xl font-bold text-foreground`}>{selectedSubject} Matrix</h2>
-                    <p className="text-sm font-medium text-[#6b6e75] mt-1">Select a chapter to enter the Arena.</p>
+                    <p className="text-sm font-medium text-[#52525b] mt-1">Select a chapter to enter the Arena.</p>
                   </div>
                 </div>
                 
@@ -199,8 +192,8 @@ export default function SyllabusPage() {
               {/* In Progress / Active */}
               {getSubjectStats(selectedSubject).chapters.filter(c => c.state === 'active').length > 0 && (
                 <div className="mb-10">
-                  <h3 className="font-heading text-lg font-bold text-foreground mb-4 pl-3 border-l-4 border-orange-500 flex items-center gap-2">
-                    <Sparkles size={18} className="text-orange-500" /> In Progress
+                  <h3 className="font-heading text-lg font-bold text-foreground mb-4 pl-3 border-l-4 border-[#3f6f57] flex items-center gap-2">
+                    In Progress
                   </h3>
                   <div className="flex gap-5 overflow-x-auto pb-6 custom-scrollbar snap-x snap-mandatory px-1">
                     {getSubjectStats(selectedSubject).chapters.filter(c => c.state === 'active').map(renderChapterCard)}
@@ -223,8 +216,8 @@ export default function SyllabusPage() {
               {/* Locked / Up Next */}
               {getSubjectStats(selectedSubject).chapters.filter(c => c.state === 'locked').length > 0 && (
                 <div className="mb-10 opacity-70 hover:opacity-100 transition-opacity duration-300">
-                  <h3 className="font-heading text-lg font-bold text-foreground mb-4 pl-3 border-l-4 border-[#8f939b] flex items-center gap-2">
-                    <Lock size={18} className="text-[#8f939b]" /> Locked & Upcoming
+                  <h3 className="font-heading text-lg font-bold text-foreground mb-4 pl-3 border-l-4 border-[#86868b] flex items-center gap-2">
+                    <Lock size={18} className="text-[#86868b]" /> Locked & Upcoming
                   </h3>
                   <div className="flex gap-5 overflow-x-auto pb-6 custom-scrollbar snap-x snap-mandatory px-1">
                     {getSubjectStats(selectedSubject).chapters.filter(c => c.state === 'locked').map(renderChapterCard)}

@@ -12,6 +12,7 @@ import {
   Question,
   QuestionPublicationStatus,
 } from '../question.entity';
+import { BLOOM_LEVELS, normalizeBloomLevel } from '../adaptive/adaptive.types';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { DiagnosticAnswer } from './diagnostic-answer.entity';
 import { DiagnosticAttempt } from './diagnostic-attempt.entity';
@@ -505,13 +506,14 @@ export class DiagnosticsService {
       if (correct) topic.correct += 1;
       topics.set(question.topic, topic);
 
-      const bloom = blooms.get(question.bloom_level) ?? {
+      const bloomKey = normalizeBloomLevel(question.bloom_level);
+      const bloom = blooms.get(bloomKey) ?? {
         correct: 0,
         total: 0,
       };
       bloom.total += 1;
       if (correct) bloom.correct += 1;
-      blooms.set(question.bloom_level, bloom);
+      blooms.set(bloomKey, bloom);
     }
 
     const scorePercent = Math.round((correctCount / questions.length) * 100);
@@ -532,16 +534,9 @@ export class DiagnosticsService {
     const topicPerformance = Array.from(topics.entries())
       .map(([label, values]) => makePerformance(label, values))
       .sort((left, right) => left.label.localeCompare(right.label));
-    const bloomOrder = [
-      'Remember',
-      'Understand',
-      'Apply',
-      'Analyze',
-      'Evaluate',
-    ];
-    const bloomPerformance = bloomOrder
-      .filter((level) => blooms.has(level))
-      .map((level) => makePerformance(level, blooms.get(level)!));
+    const bloomPerformance = BLOOM_LEVELS.filter((level) =>
+      blooms.has(level),
+    ).map((level) => makePerformance(level, blooms.get(level)!));
 
     return {
       total: questions.length,

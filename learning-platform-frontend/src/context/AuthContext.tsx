@@ -32,16 +32,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refreshAuth = useCallback(async () => {
-    try {
-      const response = await apiFetch<{ user: AuthenticatedUser }>('/api/auth/me');
-      setUser(response.user);
-    } catch (error) {
-      if (!(error instanceof ApiError) || error.status !== 401) {
-        console.error('Unable to restore the authenticated session.', error);
+    // Only a genuine 401 means "signed out". Transient failures (backend
+    // restarting, a network blip) must NOT drop an active session — otherwise
+    // a momentary hiccup bounces the learner to /login mid-flow.
+    const maxAttempts = 4;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const response = await apiFetch<{ user: AuthenticatedUser }>('/api/auth/me');
+        setUser(response.user);
+        setLoading(false);
+        return;
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+        // Transient (network / 5xx): retry with backoff, keep any existing user.
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
+          continue;
+        }
+        console.warn('Auth check failed transiently; keeping current session.', error);
+        setLoading(false);
       }
-      setUser(null);
-    } finally {
-      setLoading(false);
     }
   }, []);
 

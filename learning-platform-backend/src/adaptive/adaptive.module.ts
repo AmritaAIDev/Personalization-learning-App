@@ -7,6 +7,7 @@ import { User } from '../users/user.entity';
 import { AdaptiveContentService } from './adaptive-content.service';
 import { AdaptiveController } from './adaptive.controller';
 import { AdaptiveService } from './adaptive.service';
+import { CompetencyService } from './competency.service';
 import { Flashcard } from './flashcard.entity';
 import { FlashcardReview } from './flashcard-review.entity';
 import { GeneratedLearningQuestion } from './generated-learning-question.entity';
@@ -43,6 +44,7 @@ import { TutorService } from './tutor.service';
   providers: [
     AdaptiveService,
     AdaptiveContentService,
+    CompetencyService,
     GenerationWorkerService,
     TutorService,
   ],

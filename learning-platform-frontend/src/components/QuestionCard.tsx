@@ -20,8 +20,8 @@ export default function QuestionCard({
   onSelect: (option: string) => void;
 }) {
   return (
-    <section className="rounded-[1.75rem] border border-[#e8e1e3] bg-white p-5 shadow-[0_16px_38px_rgba(49,51,55,0.06)] sm:p-7">
-      <h2 className="font-heading text-xl font-bold leading-8 text-[#313337] sm:text-2xl">{questionText}</h2>
+    <section className="rounded-[1.75rem] border border-[#ececf0] bg-white p-5 shadow-[0_16px_38px_rgba(20, 20, 30,0.06)] sm:p-7">
+      <h2 className="font-heading text-xl font-bold leading-8 text-[#1a1a1f] sm:text-2xl">{questionText}</h2>
       <div className="mt-6 space-y-3" role="radiogroup" aria-label="Answer options">
         {options.map((option) => {
           const selected = option === selectedOption;
@@ -33,10 +33,10 @@ export default function QuestionCard({
               aria-checked={selected}
               disabled={disabled}
               onClick={() => onSelect(option)}
-              className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left text-sm font-medium transition sm:p-5 ${selected ? 'border-[#e31540] bg-[#fff5f7] text-[#83112b] ring-1 ring-[#e31540]' : 'border-[#e6e1e2] text-[#313337] hover:border-[#e31540]/45 hover:bg-[#fffafb]'} disabled:cursor-not-allowed disabled:opacity-60`}
+              className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left text-sm font-medium transition sm:p-5 ${selected ? 'border-[#3f6f57] bg-[#eef3f0] text-[#83112b] ring-1 ring-[#3f6f57]' : 'border-[#ececf0] text-[#1a1a1f] hover:border-[#3f6f57]/45 hover:bg-[#f7faf8]'} disabled:cursor-not-allowed disabled:opacity-60`}
             >
               {option}
-              {selected && <Check className="h-5 w-5 text-[#e31540]" aria-hidden="true" />}
+              {selected && <Check className="h-5 w-5 text-[#3f6f57]" aria-hidden="true" />}
             </button>
           );
         })}

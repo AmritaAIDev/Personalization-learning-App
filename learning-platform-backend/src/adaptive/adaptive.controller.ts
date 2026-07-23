@@ -19,14 +19,28 @@ import {
   SubmitLearningAnswerDto,
 } from './adaptive.dto';
 import { AdaptiveService } from './adaptive.service';
+import { CompetencyService } from './competency.service';
 
 @Controller('api/learning')
 export class AdaptiveController {
-  constructor(private readonly adaptiveService: AdaptiveService) {}
+  constructor(
+    private readonly adaptiveService: AdaptiveService,
+    private readonly competencyService: CompetencyService,
+  ) {}
 
   @Get('dashboard')
   async getDashboard(@CurrentUser() user: AuthenticatedUser) {
     return { data: await this.adaptiveService.getDashboard(user.id) };
+  }
+
+  @Get('growth')
+  async getGrowth(@CurrentUser() user: AuthenticatedUser) {
+    return { data: await this.competencyService.getGrowth(user.id) };
+  }
+
+  @Get('subtopics')
+  async getSubtopics(@Query() query: CreateLearningSessionDto) {
+    return { data: await this.adaptiveService.getConceptBreakdown(query) };
   }
 
   @Get('flashcards')

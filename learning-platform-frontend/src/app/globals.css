@@ -1,88 +1,225 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-urbanist), ui-sans-serif, system-ui, sans-serif;
-  --font-accent: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* One family, used everywhere. Weights carry the hierarchy. */
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-accent: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-  --color-primary: #e31540;
-  --color-primary-light: #f7b9c8;
+  /* Muted green accent — used sparingly, for primary intent only. */
+  --color-primary: #3f6f57;
+  --color-primary-strong: #315844;
+  --color-primary-tint: #eef3f0;
+
+  /* Ink & surface — calm, high-contrast, Apple-like neutrals. */
+  --color-ink: #1a1a1f;
+  --color-ink-soft: #52525b;
+  --color-ink-mute: #86868b;
+  --color-surface: #ffffff;
+  --color-canvas: #fbfbfd;
+  --color-hairline: #ececf0;
+
+  /* Motion — a single expressive easing curve, used consistently. */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Radii — generous, consistent. */
+  --radius-lg: 1.25rem;
+  --radius-md: 0.875rem;
 }
 
 :root {
-  --background: #fafafa;
-  --foreground: #313337;
+  --background: #fbfbfd;
+  --foreground: #1a1a1f;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
+  letter-spacing: -0.011em;
+}
+
+/* Headings read tighter and calmer. */
+h1, h2, h3, h4 {
+  letter-spacing: -0.021em;
 }
 
 button,
 a,
-input {
+input,
+select,
+textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* A quiet, refined focus ring — not a heavy neon halo. */
 button:focus-visible,
 a:focus-visible,
-input:focus-visible {
-  outline: 3px solid rgb(227 21 64 / 0.42);
-  outline-offset: 3px;
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
-/* Glassmorphism utility */
-.glass {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  color: var(--color-ink);
 }
 
-.glass-card {
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+/* Soft, layered elevation — barely-there depth rather than drop shadows. */
+.elevate {
+  box-shadow:
+    0 1px 2px rgba(20, 20, 30, 0.04),
+    0 12px 32px rgba(20, 20, 30, 0.05);
 }
 
-/* Dynamic Animations */
-@keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0px); }
+.elevate-sm {
+  box-shadow: 0 1px 2px rgba(20, 20, 30, 0.05);
 }
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
+.hairline {
+  border: 1px solid var(--color-hairline);
 }
 
-@keyframes pulse-glow {
-  0% { box-shadow: 0 0 0 0 rgba(227, 21, 64, 0.35); }
-  70% { box-shadow: 0 0 0 10px rgba(227, 21, 64, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(227, 21, 64, 0); }
+/* Entrance motion — subtle, quick, eased. Respects reduced-motion. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.animate-pulse-glow {
-  animation: pulse-glow 2s infinite;
+.animate-rise {
+  animation: rise 0.5s var(--ease-out-soft) both;
 }
 
-/* Hide scrollbar for Journey Map but allow scrolling */
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade {
+  animation: fade 0.4s var(--ease-out-soft) both;
+}
+
+/* Connector path draw-in — premium, once, on arrival. */
+@keyframes draw-path {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Playful, refined node entrance (no pulsing). */
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.6); }
+  60% { transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-pop {
+  animation: pop-in 0.5s var(--ease-out-soft) both;
+}
+
+/* Very slow, subtle idle float for the hero marker only. */
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.animate-bob {
+  animation: bob 4.5s ease-in-out infinite;
+}
+
+/* Flashcard 3D flip. */
+.flip-card {
+  perspective: 1400px;
+}
+.flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.55s var(--ease-out-soft);
+}
+.flip-inner.is-flipped {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-face--back {
+  transform: rotateY(180deg);
+}
+
+/* Living, curvy chapter markers — the outline slowly morphs and breathes. */
+@keyframes blob-morph {
+  0% {
+    border-radius: 62% 38% 54% 46% / 58% 52% 48% 42%;
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    border-radius: 42% 58% 42% 58% / 46% 44% 56% 54%;
+    transform: translateY(-4px) rotate(-1.2deg);
+  }
+  100% {
+    border-radius: 55% 45% 60% 40% / 52% 58% 42% 48%;
+    transform: translateY(0) rotate(0.8deg);
+  }
+}
+.animate-blob {
+  animation: blob-morph 9s ease-in-out infinite;
+}
+
+/* Shimmer for skeleton loaders — calm, low-contrast. */
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #f2f2f5;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.65),
+    transparent
+  );
+  animation: shimmer 1.6s var(--ease-out-soft) infinite;
+}
+
+/* Hide scrollbar where a clean canvas matters, but keep scrolling. */
 .custom-scrollbar::-webkit-scrollbar {
   display: none;
 }
 .custom-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-@keyframes energy-dash {
-  to {
-    stroke-dashoffset: -1000;
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-fade,
+  .skeleton::after {
+    animation: none;
   }
-}
-.animate-energy-dash {
-  animation: energy-dash 10s linear infinite;
+  .animate-rise {
+    opacity: 1;
+    transform: none;
+  }
 }

@@ -13,6 +13,7 @@ import { Topic } from '../topics/topic.entity';
 import {
   BloomLevel,
   DifficultyLevel,
+  normalizeBloomLevel,
   TutorMessageType,
 } from '../adaptive/adaptive.types';
 import { EmbeddingService } from './embedding.service';
@@ -153,7 +154,7 @@ export class AgentService {
   /** Backward-compatible single-question path used by the protected admin queue. */
   async generateDynamicQuestion(
     topic: string,
-    bloomLevel = 'Understand',
+    bloomLevel = 'Comprehension',
     difficulty = 'Medium',
   ): Promise<GeneratedQuestion> {
     this.assertConfigured();
@@ -566,14 +567,7 @@ export class AgentService {
   }
 
   private toBloomLevel(value: string): BloomLevel {
-    const match = [
-      'Remember',
-      'Understand',
-      'Apply',
-      'Analyze',
-      'Evaluate',
-    ].find((level) => level === value);
-    return (match ?? 'Understand') as BloomLevel;
+    return normalizeBloomLevel(value);
   }
 
   private toDifficultyLevel(value: string): DifficultyLevel {

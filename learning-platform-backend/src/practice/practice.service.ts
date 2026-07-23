@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { randomInt } from 'node:crypto';
 import { In, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import { BLOOM_LEVELS, normalizeBloomLevel } from '../adaptive/adaptive.types';
 import {
   Question,
   QuestionPublicationStatus,
@@ -389,7 +390,7 @@ export class PracticeService {
       const correct =
         answers.get(question.id)?.selectedOption === question.correct_answer;
       this.addScore(difficulties, question.difficulty, correct);
-      this.addScore(blooms, question.bloom_level, correct);
+      this.addScore(blooms, normalizeBloomLevel(question.bloom_level), correct);
       for (const concept of question.concept_tags ?? []) {
         this.addScore(concepts, concept, correct);
       }
@@ -412,16 +413,9 @@ export class PracticeService {
     const difficultyPerformance = PRACTICE_DIFFICULTIES
       .filter((difficulty) => difficulties.has(difficulty))
       .map((difficulty) => makePerformance(difficulty, difficulties.get(difficulty)!));
-    const bloomOrder = [
-      'Remember',
-      'Understand',
-      'Apply',
-      'Analyze',
-      'Evaluate',
-    ];
-    const bloomPerformance = bloomOrder
-      .filter((level) => blooms.has(level))
-      .map((level) => makePerformance(level, blooms.get(level)!));
+    const bloomPerformance = BLOOM_LEVELS.filter((level) =>
+      blooms.has(level),
+    ).map((level) => makePerformance(level, blooms.get(level)!));
     const conceptPerformance = Array.from(concepts.entries()).map(
       ([label, value]) => makePerformance(label, value),
     );

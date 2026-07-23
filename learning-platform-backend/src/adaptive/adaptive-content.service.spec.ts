@@ -13,9 +13,9 @@ import {
 describe('AdaptiveContentService question selection', () => {
   const coordinate: LearningCoordinate = {
     level: 1,
-    bloomLevel: 'Remember',
+    bloomLevel: 'Recall',
     difficulty: 'Easy',
-    label: 'Level 1: Remember - Easy',
+    label: 'Level 1: Recall · Easy',
   };
 
   it('does not select questions already used by the learner for the topic coordinate', async () => {
@@ -24,7 +24,7 @@ describe('AdaptiveContentService question selection', () => {
       subject: 'Physics',
       chapter: 'Electrostatics',
       topic: 'Gauss Law',
-      bloom_level: 'Remember',
+      bloom_level: 'Recall',
       difficulty: 'Easy',
       question_text: 'Used question',
       options: ['A', 'B', 'C', 'D'],
@@ -33,12 +33,12 @@ describe('AdaptiveContentService question selection', () => {
       concept_tags: [],
       common_errors: [],
       status: QuestionPublicationStatus.PUBLISHED,
-    } as Question;
+    } as unknown as Question;
     const freshQuestions = Array.from({ length: 5 }, (_, index) => ({
       ...usedQuestion,
       id: `fresh-${index}`,
       question_text: `Fresh question ${index}`,
-    })) as Question[];
+    })) as unknown as Question[];
     const queryBuilder = {
       innerJoin: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),

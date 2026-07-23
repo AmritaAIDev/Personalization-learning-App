@@ -63,7 +63,7 @@ export default function ExplorerBubblePage() {
   }, [journeyNodes]);
 
   if (loading) {
-    return <div className="p-8 flex justify-center text-[#8f939b] bg-[#020617] h-[calc(100vh-3.5rem)] items-center">Igniting Universe...</div>;
+    return <div className="p-8 flex justify-center text-[#86868b] bg-[#020617] h-[calc(100vh-3.5rem)] items-center">Igniting Universe...</div>;
   }
 
   return (

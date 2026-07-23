@@ -35,18 +35,18 @@ export default function LearningHistoryPanel() {
 
   return (
     <section className="mt-9">
-      <div className="flex items-center gap-2 border-b border-[#e8e2e4] pb-5 text-[#e31540]">
+      <div className="flex items-center gap-2 border-b border-[#ececf0] pb-5 text-[#3f6f57]">
         <History className="h-4 w-4" aria-hidden="true" />
         <div>
           <p className="text-sm font-bold">Adaptive history</p>
-          <h2 className="mt-1 font-heading text-2xl font-bold text-[#313337]">
+          <h2 className="mt-1 font-heading text-2xl font-bold text-[#1a1a1f]">
             Saved topic progress
           </h2>
         </div>
       </div>
       {loading ? (
-        <p className="mt-5 flex items-center gap-2 text-sm font-semibold text-[#6b6e75]">
-          <LoaderCircle className="h-4 w-4 animate-spin text-[#e31540]" aria-hidden="true" />
+        <p className="mt-5 flex items-center gap-2 text-sm font-semibold text-[#52525b]">
+          <LoaderCircle className="h-4 w-4 animate-spin text-[#3f6f57]" aria-hidden="true" />
           Loading saved routes
         </p>
       ) : null}
@@ -62,7 +62,7 @@ export default function LearningHistoryPanel() {
       {!loading && !error && data ? (
         <div className="mt-5 grid gap-3">
           {data.history.length === 0 && data.completedTopics.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-[#dcdde0] bg-white p-6 text-sm leading-6 text-[#6b6e75]">
+            <p className="rounded-2xl border border-dashed border-[#dedee3] bg-white p-6 text-sm leading-6 text-[#52525b]">
               No adaptive checkpoint has been completed yet. Start a topic
               workspace from the dashboard to create one.
             </p>
@@ -79,19 +79,19 @@ export default function LearningHistoryPanel() {
                     },
                     { tab: 'overview' },
                   )}
-                  className="group flex items-center justify-between gap-4 rounded-2xl border border-[#e8e1e3] bg-white p-4 shadow-[0_8px_22px_rgba(49,51,55,0.04)] transition hover:border-[#e31540]/40"
+                  className="group flex items-center justify-between gap-4 rounded-2xl border border-[#ececf0] bg-white p-4 shadow-[0_8px_22px_rgba(20, 20, 30,0.04)] transition hover:border-[#3f6f57]/40"
                 >
                   <span>
-                    <span className="block text-sm font-bold text-[#313337]">
+                    <span className="block text-sm font-bold text-[#1a1a1f]">
                       {item.topic}
                     </span>
-                    <span className="mt-1 block text-xs text-[#6b6e75]">
+                    <span className="mt-1 block text-xs text-[#52525b]">
                       {item.coordinate.label} ·{' '}
                       {item.transition.toLowerCase().replace('_', ' ')}
                     </span>
                   </span>
                   <ArrowRight
-                    className="h-4 w-4 shrink-0 text-[#e31540] transition group-hover:translate-x-0.5"
+                    className="h-4 w-4 shrink-0 text-[#3f6f57] transition group-hover:translate-x-0.5"
                     aria-hidden="true"
                   />
                 </Link>

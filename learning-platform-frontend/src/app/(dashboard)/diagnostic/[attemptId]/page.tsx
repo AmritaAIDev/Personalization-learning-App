@@ -124,16 +124,16 @@ export default function DiagnosticAttemptPage() {
   };
 
   if (loading) {
-    return <div className="grid min-h-screen place-items-center text-sm font-semibold text-[#6b6e75]"><span className="flex items-center gap-3"><LoaderCircle className="h-5 w-5 animate-spin text-[#e31540]" /> Preparing your diagnostic…</span></div>;
+    return <div className="grid min-h-screen place-items-center text-sm font-semibold text-[#52525b]"><span className="flex items-center gap-3"><LoaderCircle className="h-5 w-5 animate-spin text-[#3f6f57]" /> Preparing your diagnostic…</span></div>;
   }
 
   if (!payload) {
     return (
       <div className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center p-6 text-center">
         <CircleHelp className="h-8 w-8 text-rose-600" aria-hidden="true" />
-        <h1 className="mt-4 font-heading text-2xl font-bold text-[#313337]">We couldn&apos;t open this diagnostic</h1>
-        <p className="mt-2 text-sm text-[#6b6e75]">{error ?? 'The attempt may no longer be available.'}</p>
-        <button type="button" onClick={() => void loadAttempt()} className="mt-5 rounded-xl bg-[#e31540] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#c61137]">Try again</button>
+        <h1 className="mt-4 font-heading text-2xl font-bold text-[#1a1a1f]">We couldn&apos;t open this diagnostic</h1>
+        <p className="mt-2 text-sm text-[#52525b]">{error ?? 'The attempt may no longer be available.'}</p>
+        <button type="button" onClick={() => void loadAttempt()} className="mt-5 rounded-xl bg-[#3f6f57] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#315844]">Try again</button>
       </div>
     );
   }
@@ -145,13 +145,13 @@ export default function DiagnosticAttemptPage() {
 
   return (
     <div className="mx-auto max-w-7xl p-4 sm:p-7 lg:p-10">
-      <header className="flex flex-col gap-4 border-b border-[#e8e2e4] pb-5 lg:flex-row lg:items-center lg:justify-between">
+      <header className="flex flex-col gap-4 border-b border-[#ececf0] pb-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#e31540]">Secure diagnostic</p>
-          <h1 className="mt-1 font-heading text-xl font-bold text-[#313337] sm:text-2xl">{payload.attempt.title}</h1>
-          <p className="mt-1 text-sm text-[#6b6e75]">{answeredCount}/{payload.attempt.totalQuestions} answers saved</p>
+          <p className="text-xs font-medium text-ink-mute">Secure diagnostic</p>
+          <h1 className="mt-1 font-heading text-xl font-bold text-[#1a1a1f] sm:text-2xl">{payload.attempt.title}</h1>
+          <p className="mt-1 text-sm text-[#52525b]">{answeredCount}/{payload.attempt.totalQuestions} answers saved</p>
         </div>
-        <div className={`flex items-center gap-3 self-start rounded-xl border px-4 py-3 font-heading text-2xl font-bold tabular-nums ${remainingSeconds <= 300 ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-[#f2b6c5] bg-[#fff5f7] text-[#a61231]'}`} aria-live="polite">
+        <div className={`flex items-center gap-3 self-start rounded-xl border px-4 py-3 font-heading text-2xl font-bold tabular-nums ${remainingSeconds <= 300 ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-[#f2b6c5] bg-[#eef3f0] text-[#2c4c3d]'}`} aria-live="polite">
           <Clock3 className="h-5 w-5" aria-hidden="true" /> {formatDuration(remainingSeconds)}
         </div>
       </header>
@@ -159,18 +159,18 @@ export default function DiagnosticAttemptPage() {
       {error && <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700" role="alert">{error}</p>}
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_17rem]">
-        <section className="rounded-[1.75rem] border border-[#e8e1e3] bg-white p-5 shadow-[0_14px_34px_rgba(49,51,55,0.05)] sm:p-8">
+        <section className="rounded-[1.75rem] border border-[#ececf0] bg-white p-5 shadow-[0_14px_34px_rgba(20, 20, 30,0.05)] sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2 text-xs font-bold">
-              <span className="rounded-full bg-[#f9e5ea] px-3 py-1.5 text-[#a61231]">{question.chapter}</span>
-              <span className="rounded-full bg-[#f4f5f7] px-3 py-1.5 text-[#55585f]">{question.topic}</span>
-              <span className="rounded-full bg-[#f4f5f7] px-3 py-1.5 text-[#55585f]">{question.difficulty}</span>
-              <span className="rounded-full bg-[#f4f5f7] px-3 py-1.5 text-[#55585f]">{question.bloomLevel}</span>
+              <span className="rounded-full bg-[#e7efe9] px-3 py-1.5 text-[#2c4c3d]">{question.chapter}</span>
+              <span className="rounded-full bg-[#f4f4f6] px-3 py-1.5 text-[#52525b]">{question.topic}</span>
+              <span className="rounded-full bg-[#f4f4f6] px-3 py-1.5 text-[#52525b]">{question.difficulty}</span>
+              <span className="rounded-full bg-[#f4f4f6] px-3 py-1.5 text-[#52525b]">{question.bloomLevel}</span>
             </div>
-            <p className="text-sm font-semibold text-[#6b6e75]">Question {currentIndex + 1} of {payload.questions.length}</p>
+            <p className="text-sm font-semibold text-[#52525b]">Question {currentIndex + 1} of {payload.questions.length}</p>
           </div>
 
-          <h2 className="mt-8 font-heading text-xl font-bold leading-8 text-[#313337] sm:text-2xl">{question.questionText}</h2>
+          <h2 className="mt-8 font-heading text-xl font-bold leading-8 text-[#1a1a1f] sm:text-2xl">{question.questionText}</h2>
 
           <div className="mt-8 space-y-3" role="radiogroup" aria-label="Answer options">
             {question.options.map((option, index) => {
@@ -184,42 +184,42 @@ export default function DiagnosticAttemptPage() {
                   disabled={isSavingCurrent || submitting || remainingSeconds === 0}
                   onClick={() => void saveSelection(option)}
                   className={`flex w-full items-center gap-4 rounded-2xl border p-4 text-left text-sm font-medium transition sm:p-5 ${
-                    selected ? 'border-[#e31540] bg-[#fff5f7] text-[#83112b] ring-1 ring-[#e31540]' : 'border-[#e6e1e2] bg-white text-[#313337] hover:border-[#e31540]/45 hover:bg-[#fffafb]'
+                    selected ? 'border-[#3f6f57] bg-[#eef3f0] text-[#83112b] ring-1 ring-[#3f6f57]' : 'border-[#ececf0] bg-white text-[#1a1a1f] hover:border-[#3f6f57]/45 hover:bg-[#f7faf8]'
                   } disabled:cursor-not-allowed disabled:opacity-70`}
                 >
-                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs font-bold ${selected ? 'border-[#e31540] bg-[#e31540] text-white' : 'border-[#d5d6d9] text-[#6b6e75]'}`}>{String.fromCharCode(65 + index)}</span>
+                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs font-bold ${selected ? 'border-[#3f6f57] bg-[#3f6f57] text-white' : 'border-[#d5d6d9] text-[#52525b]'}`}>{String.fromCharCode(65 + index)}</span>
                   <span className="leading-6">{option}</span>
-                  {selected && <Check className="ml-auto h-5 w-5 shrink-0 text-[#e31540]" aria-hidden="true" />}
+                  {selected && <Check className="ml-auto h-5 w-5 shrink-0 text-[#3f6f57]" aria-hidden="true" />}
                 </button>
               );
             })}
           </div>
-          <p className="mt-4 flex items-center gap-2 text-xs font-medium text-[#6b6e75]"><Save className="h-4 w-4 text-[#e31540]" aria-hidden="true" /> {isSavingCurrent ? 'Saving answer…' : answers[question.id] ? 'Answer saved securely.' : 'Select an option to save it.'}</p>
+          <p className="mt-4 flex items-center gap-2 text-xs font-medium text-[#52525b]"><Save className="h-4 w-4 text-[#3f6f57]" aria-hidden="true" /> {isSavingCurrent ? 'Saving answer…' : answers[question.id] ? 'Answer saved securely.' : 'Select an option to save it.'}</p>
 
-          <div className="mt-9 flex flex-col-reverse gap-3 border-t border-[#ece7e8] pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <button type="button" onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))} disabled={currentIndex === 0 || submitting} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dcdde0] px-4 py-2.5 text-sm font-bold text-[#55585f] hover:bg-[#f7f4f5] disabled:cursor-not-allowed disabled:opacity-50"><ArrowLeft className="h-4 w-4" aria-hidden="true" /> Previous</button>
+          <div className="mt-9 flex flex-col-reverse gap-3 border-t border-[#ececf0] pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <button type="button" onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))} disabled={currentIndex === 0 || submitting} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dedee3] px-4 py-2.5 text-sm font-bold text-[#52525b] hover:bg-[#f4f4f6] disabled:cursor-not-allowed disabled:opacity-50"><ArrowLeft className="h-4 w-4" aria-hidden="true" /> Previous</button>
             {isLastQuestion ? (
-              <button type="button" onClick={() => void submitAttempt()} disabled={submitting || savingQuestionId !== null} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#e31540] px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(227,21,64,0.22)] transition hover:bg-[#c61137] disabled:cursor-not-allowed disabled:opacity-60">{submitting ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" /> : <>Submit diagnostic <Send className="h-4 w-4" aria-hidden="true" /></>}</button>
+              <button type="button" onClick={() => void submitAttempt()} disabled={submitting || savingQuestionId !== null} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#3f6f57] px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20, 20, 30,0.22)] transition hover:bg-[#315844] disabled:cursor-not-allowed disabled:opacity-60">{submitting ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" /> : <>Submit diagnostic <Send className="h-4 w-4" aria-hidden="true" /></>}</button>
             ) : (
-              <button type="button" onClick={() => setCurrentIndex((index) => Math.min(payload.questions.length - 1, index + 1))} disabled={submitting} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#313337] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#4a4b50] disabled:cursor-not-allowed disabled:opacity-60">Next <ArrowRight className="h-4 w-4" aria-hidden="true" /></button>
+              <button type="button" onClick={() => setCurrentIndex((index) => Math.min(payload.questions.length - 1, index + 1))} disabled={submitting} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a1a1f] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#2a2a30] disabled:cursor-not-allowed disabled:opacity-60">Next <ArrowRight className="h-4 w-4" aria-hidden="true" /></button>
             )}
           </div>
         </section>
 
-        <aside className="rounded-[1.75rem] border border-[#e8e1e3] bg-white p-5 shadow-[0_14px_34px_rgba(49,51,55,0.05)] xl:self-start">
-          <div className="flex items-center justify-between"><h2 className="font-heading text-lg font-bold text-[#313337]">Question map</h2><span className="text-xs font-semibold text-[#6b6e75]">{answeredCount} saved</span></div>
+        <aside className="rounded-[1.75rem] border border-[#ececf0] bg-white p-5 shadow-[0_14px_34px_rgba(20, 20, 30,0.05)] xl:self-start">
+          <div className="flex items-center justify-between"><h2 className="font-heading text-lg font-bold text-[#1a1a1f]">Question map</h2><span className="text-xs font-semibold text-[#52525b]">{answeredCount} saved</span></div>
           <div className="mt-5 grid grid-cols-5 gap-2" aria-label="Question navigation">
             {payload.questions.map((item, index) => {
               const isCurrent = index === currentIndex;
               const isAnswered = Boolean(answers[item.id]);
-              return <button key={item.id} type="button" onClick={() => setCurrentIndex(index)} disabled={submitting} aria-label={`Go to question ${index + 1}${isAnswered ? ', answered' : ''}`} aria-current={isCurrent ? 'step' : undefined} className={`grid aspect-square place-items-center rounded-lg text-xs font-bold transition ${isCurrent ? 'bg-[#e31540] text-white ring-2 ring-[#f7b9c8]' : isAnswered ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-[#f4f5f7] text-[#6b6e75] hover:bg-[#e7e8ea]'}`}>{index + 1}</button>;
+              return <button key={item.id} type="button" onClick={() => setCurrentIndex(index)} disabled={submitting} aria-label={`Go to question ${index + 1}${isAnswered ? ', answered' : ''}`} aria-current={isCurrent ? 'step' : undefined} className={`grid aspect-square place-items-center rounded-lg text-xs font-bold transition ${isCurrent ? 'bg-[#3f6f57] text-white ring-2 ring-[#a8c4b6]' : isAnswered ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-[#f4f4f6] text-[#52525b] hover:bg-[#e7e8ea]'}`}>{index + 1}</button>;
             })}
           </div>
-          <div className="mt-6 space-y-2 border-t border-[#ece7e8] pt-5 text-xs text-[#6b6e75]">
+          <div className="mt-6 space-y-2 border-t border-[#ececf0] pt-5 text-xs text-[#52525b]">
             <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /> Answer saved</p>
             <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-slate-300" /> Not yet answered</p>
           </div>
-          <button type="button" onClick={() => void submitAttempt()} disabled={submitting || savingQuestionId !== null} className="mt-6 inline-flex w-full min-h-11 items-center justify-center gap-2 rounded-xl border border-[#f2b6c5] bg-[#fff5f7] px-4 py-2.5 text-sm font-bold text-[#a61231] hover:bg-[#f9e5ea] disabled:cursor-not-allowed disabled:opacity-60">{submitting ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />} Submit now</button>
+          <button type="button" onClick={() => void submitAttempt()} disabled={submitting || savingQuestionId !== null} className="mt-6 inline-flex w-full min-h-11 items-center justify-center gap-2 rounded-xl border border-[#f2b6c5] bg-[#eef3f0] px-4 py-2.5 text-sm font-bold text-[#2c4c3d] hover:bg-[#e7efe9] disabled:cursor-not-allowed disabled:opacity-60">{submitting ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />} Submit now</button>
         </aside>
       </div>
     </div>

@@ -20,7 +20,7 @@ export default function ScoreRing({ score }: { score: number }) {
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className="text-[#f7b9c8] transition-all duration-700"
+          className="text-[#a8c4b6] transition-all duration-700"
         />
       </svg>
       <span className="absolute font-heading text-4xl font-bold tracking-tight text-white">{boundedScore}%</span>

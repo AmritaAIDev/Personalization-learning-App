@@ -14,12 +14,20 @@ import {
   QuestionSource,
 } from './question.entity';
 
+// Accept both the four canonical proficiency levels and the legacy Bloom
+// vocabulary so historical clients and seeded data continue to validate.
 export const BLOOM_LEVELS = [
+  'Recall',
+  'Comprehension',
+  'Application',
+  'Higher-Order',
+  // legacy aliases (normalized server-side)
   'Remember',
   'Understand',
   'Apply',
   'Analyze',
   'Evaluate',
+  'Create',
 ];
 
 export const QUESTION_DIFFICULTIES = ['Easy', 'Medium', 'Hard'];

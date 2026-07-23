@@ -8,10 +8,10 @@ import {
   CircleAlert,
   ClipboardCheck,
   LoaderCircle,
-  Sparkles,
 } from 'lucide-react';
 import TopicSearch from '@/components/search/TopicSearch';
 import LearningOverview from '@/components/learning/LearningOverview';
+import GrowthPanel from '@/components/dashboard/GrowthPanel';
 import { useAuth } from '@/context/AuthContext';
 import { apiFetch } from '@/lib/api';
 import type {
@@ -98,40 +98,26 @@ export default function DashboardPage() {
     );
 
   return (
-    <div className="min-h-screen overflow-hidden bg-[#fafafa] pb-16">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[34rem] bg-[radial-gradient(circle_at_top,rgba(227,21,64,0.09),transparent_58%)]"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[42rem] bg-[linear-gradient(to_right,rgba(49,51,55,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(49,51,55,0.035)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:linear-gradient(to_bottom,white,transparent_88%)]"
-      />
-
-      <main className="relative mx-auto w-full max-w-7xl px-5 pt-8 sm:px-8 sm:pt-12 lg:px-12">
-        <header className="flex flex-col gap-5 border-b border-[#e8e2e4] pb-8 sm:flex-row sm:items-end sm:justify-between">
+    <div className="min-h-screen bg-canvas pb-20">
+      <main className="mx-auto w-full max-w-6xl px-5 pt-10 sm:px-8 sm:pt-16 lg:px-10">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between animate-rise">
           <div>
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#e31540]">
-              <Sparkles className="h-4 w-4" aria-hidden="true" />
-              JEE learning studio
-            </p>
-            <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight text-[#313337] sm:text-4xl">
+            <p className="text-[13px] font-medium text-ink-mute">JEE learning studio</p>
+            <h1 className="mt-1.5 font-heading text-[2.25rem] font-semibold leading-[1.1] tracking-tight text-ink sm:text-[2.75rem]">
               Good to see you, {firstName}.
             </h1>
           </div>
           <Link
             href="/profile"
-            className="inline-flex items-center gap-2 self-start text-sm font-bold text-[#6b6e75] transition hover:text-[#e31540] sm:self-auto"
+            className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-ink-soft transition hover:text-ink sm:self-auto"
           >
             View learning history
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </header>
 
-        <section className="pt-7 text-center sm:pt-10">
-          <div className="text-left">
-            <TopicSearch />
-          </div>
+        <section className="mt-9 animate-rise" style={{ animationDelay: '60ms' }}>
+          <TopicSearch />
         </section>
 
         {error ? (
@@ -141,12 +127,12 @@ export default function DashboardPage() {
           >
             <CircleAlert className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
             <div>
-              <p className="font-bold">Something needs attention</p>
+              <p className="font-semibold">Something needs attention</p>
               <p className="mt-1">{error}</p>
               <button
                 type="button"
                 onClick={() => void loadDashboard()}
-                className="mt-3 font-bold underline underline-offset-4"
+                className="mt-3 font-semibold underline underline-offset-4"
               >
                 Try again
               </button>
@@ -155,20 +141,20 @@ export default function DashboardPage() {
         ) : null}
 
         {shouldShowBaselinePrompt ? (
-          <section className="mt-7 rounded-2xl border border-[#f0d6dc] bg-[#fff7f9] px-4 py-3 shadow-[0_14px_32px_rgba(227,21,64,0.08)] transition-all duration-300 ease-out">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#e31540] text-white">
-                  <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
+          <section className="mt-6 rounded-2xl bg-surface p-5 hairline elevate-sm animate-rise" style={{ animationDelay: '120ms' }}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-4">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary-tint text-primary">
+                  <ClipboardCheck className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-[#313337]">
+                  <p className="text-[15px] font-semibold text-ink">
                     New here? Start with a baseline diagnostic.
                   </p>
                   {loading ? (
-                    <div className="mt-2 h-3 w-32 animate-pulse rounded-full bg-[#f0d6dc]" />
+                    <div className="mt-2 h-3 w-32 rounded-full skeleton" />
                   ) : (
-                    <p className="mt-0.5 text-xs font-semibold text-[#6b6e75]">
+                    <p className="mt-0.5 text-[13px] text-ink-soft">
                       {diagnostic?.questionCount ?? '-'} questions ·{' '}
                       {diagnostic?.durationMinutes ?? '-'} min
                     </p>
@@ -180,7 +166,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => void startDiagnostic()}
                 disabled={launching || loading || Boolean(diagnostic && !diagnostic.ready)}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#e31540] px-4 py-2 text-sm font-bold text-white shadow-[0_10px_22px_rgba(227,21,64,0.20)] transition hover:bg-[#c61137] disabled:cursor-not-allowed disabled:opacity-55"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition duration-200 hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-55"
               >
                 {launching ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -191,6 +177,7 @@ export default function DashboardPage() {
           </section>
         ) : null}
 
+        <GrowthPanel />
         <LearningOverview />
       </main>
     </div>

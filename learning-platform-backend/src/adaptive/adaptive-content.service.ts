@@ -13,6 +13,7 @@ import {
 import { Question, QuestionPublicationStatus } from '../question.entity';
 import {
   BloomLevel,
+  bloomLevelAliases,
   DifficultyLevel,
   GeneratedLearningQuestionStatus,
   GenerationJobStatus,
@@ -87,7 +88,7 @@ export class AdaptiveContentService {
           subject: scope.subject,
           chapter: scope.chapter,
           topic: scope.topic,
-          bloomLevel: coordinate.bloomLevel,
+          bloomLevel: In(bloomLevelAliases(coordinate.bloomLevel)),
           difficulty: coordinate.difficulty,
           status: GeneratedLearningQuestionStatus.READY,
         },
@@ -98,7 +99,7 @@ export class AdaptiveContentService {
           subject: scope.subject,
           chapter: scope.chapter,
           topic: scope.topic,
-          bloom_level: coordinate.bloomLevel,
+          bloom_level: In(bloomLevelAliases(coordinate.bloomLevel)),
           difficulty: coordinate.difficulty,
           status: QuestionPublicationStatus.PUBLISHED,
         },
@@ -397,8 +398,8 @@ export class AdaptiveContentService {
       .andWhere('session.topic = :topic', { topic: scope.topic });
     if (coordinate) {
       builder
-        .andWhere('session.bloom_level = :bloomLevel', {
-          bloomLevel: coordinate.bloomLevel,
+        .andWhere('session.bloom_level IN (:...bloomLevels)', {
+          bloomLevels: bloomLevelAliases(coordinate.bloomLevel),
         })
         .andWhere('session.difficulty = :difficulty', {
           difficulty: coordinate.difficulty,

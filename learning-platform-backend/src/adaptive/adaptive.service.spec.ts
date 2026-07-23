@@ -41,8 +41,8 @@ describe('AdaptiveService flashcard reviews', () => {
     save: jest.Mock;
   } {
     const save = jest.fn(async (value: FlashcardReview) => ({
-      id: 'review-id',
       ...value,
+      id: 'review-id',
       createdAt: new Date(),
       updatedAt: new Date(),
     }));

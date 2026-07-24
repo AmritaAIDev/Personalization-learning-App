@@ -7,7 +7,7 @@ This module implements the student-facing, database-backed JEE learning journey.
 
 ## Mastery matrix
 
-There are 15 coordinates: Remember through Evaluate at Easy, then the same five Bloom levels at Medium, then at Hard. A coordinate is cleared only after a five-answer correct streak. A first miss resets the streak and opens a Socratic hint without sending the key to the browser. A second miss reveals a structured explanation, then demotes one coordinate; the floor can route to a graph prerequisite when one exists.
+There are 12 coordinates: Recall, Comprehension, Application, and Higher-Order, each practised at Easy, Medium, and Hard. A coordinate is cleared only after a five-answer correct streak. A first miss resets the streak and opens a Socratic hint without sending the key to the browser. A second miss reveals a structured explanation, then demotes one coordinate; the floor can route to a graph prerequisite when one exists.
 
 ## Data and AI lifecycle
 
@@ -19,7 +19,7 @@ When a practice round starts or completes, the service also prefetches unused qu
 
 `learning_generation_jobs` is a durable database queue. The worker claims jobs with PostgreSQL row locking, retries failed DeepSeek calls up to three times, and builds a private `learning_generated_questions` pool for that learner and coordinate. It uses reviewed PostgreSQL material plus optional Qdrant context as grounding. These questions are not inserted into the public `questions` bank; global publication remains an explicit admin review action.
 
-`flashcards` and `flashcard_reviews` implement database-backed spaced recall. New flashcards can be generated through DeepSeek only from server-assembled reviewed database material, then stored as `AI_GENERATED` published records. `tutor_conversations` and `tutor_messages` preserve the side-assistant thread for a session.
+Flashcards are generated live through DeepSeek from server-assembled reviewed question material and returned directly to the current learner screen. New AI flashcards are not stored in the database. `tutor_conversations` and `tutor_messages` preserve the side-assistant thread for a session.
 
 For a first miss, the correct answer and stored solution are never included in the tutor prompt. A server-side response boundary also replaces a model response that repeats the exact stored answer with a database-backed Socratic hint. The full explanation is available only after the allowed second attempt.
 
@@ -30,10 +30,10 @@ For a first miss, the correct answer and stored solution are never included in t
 - `POST /api/learning/sessions/:sessionId/items/:sessionItemId/answer` - grades and routes server-side.
 - `GET|POST /api/learning/sessions/:sessionId/tutor` - persisted Socratic chat.
 - `GET /api/learning/dashboard` - active, completed, historic, and suggested topics.
-- `GET /api/learning/flashcards` - recall deck.
-- `POST /api/learning/flashcards/generate` - generates grounded flashcards and persists them in the database.
-- `POST /api/learning/flashcards/:id/review` - SRS rating.
+- `GET /api/learning/flashcards` - returns no stored deck for the live-only flashcard flow.
+- `POST /api/learning/flashcards/generate` - generates grounded live flashcards without persisting them.
+- `POST /api/learning/flashcards/:id/review` - legacy stored-card review endpoint; the current frontend does not call it for live cards.
 
 ## Operations
 
-Run `npm run migration:run`, then `npm run seed:adaptive` to install the reviewed baseline coordinate and flashcards. Higher coordinates are populated by the DeepSeek worker as real database records, never by frontend sample data. Run `npm test` and `npm run build` after changes.
+Run `npm run migration:run`, then `npm run seed:adaptive` to install the reviewed baseline coordinate. Higher coordinates are populated by reviewed database rows and the DeepSeek worker as real database records, never by frontend sample data. Run `npm test` and `npm run build` after changes.

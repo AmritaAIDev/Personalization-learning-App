@@ -90,11 +90,13 @@ export default function FlashcardDeck({
     if (!card || rating) return;
     setRating(nextRating);
     try {
-      const updated = await apiFetch<Flashcard>(`/api/learning/flashcards/${card.id}/review`, {
-        method: 'POST',
-        body: JSON.stringify({ rating: nextRating }),
-      });
-      setCards((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      if (!card.id.startsWith('live-')) {
+        const updated = await apiFetch<Flashcard>(`/api/learning/flashcards/${card.id}/review`, {
+          method: 'POST',
+          body: JSON.stringify({ rating: nextRating }),
+        });
+        setCards((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      }
       setFlipped(false);
       setIndex((current) => (cards.length > 1 ? (current + 1) % cards.length : current));
       setError(null);

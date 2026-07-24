@@ -10,9 +10,12 @@ type CreateNestAppOptions = {
 
 export async function createNestApp(options: CreateNestAppOptions = {}) {
   const app = await NestFactory.create(AppModule);
-  const allowedOrigins = (
-    process.env.FRONTEND_ORIGIN ?? 'http://localhost:3000'
-  )
+  const configuredOrigins = process.env.FRONTEND_ORIGIN?.trim();
+  const defaultOrigins = [
+    'http://localhost:3000',
+    'https://personalization-learning-app.vercel.app',
+  ];
+  const allowedOrigins = (configuredOrigins || defaultOrigins.join(','))
     .split(',')
     .map((value) => value.trim().replace(/\/$/, ''))
     .filter(Boolean);
@@ -24,7 +27,7 @@ export async function createNestApp(options: CreateNestAppOptions = {}) {
       origin: string | undefined,
       callback: (error: Error | null, allow?: boolean) => void,
     ) => {
-      if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ''))) {
+      if (isAllowedOrigin(origin, allowedOrigins)) {
         callback(null, true);
         return;
       }
@@ -46,4 +49,27 @@ export async function createNestApp(options: CreateNestAppOptions = {}) {
     app.enableShutdownHooks();
   }
   return app;
+}
+
+function isAllowedOrigin(
+  origin: string | undefined,
+  allowedOrigins: string[],
+): boolean {
+  if (!origin) return true;
+  const normalized = origin.replace(/\/$/, '');
+  if (allowedOrigins.includes(normalized)) return true;
+
+  try {
+    const url = new URL(normalized);
+    const host = url.hostname.toLowerCase();
+    return (
+      url.protocol === 'https:' &&
+      host.endsWith('.vercel.app') &&
+      (host === 'personalization-learning-app.vercel.app' ||
+        host.startsWith('personalization-learning-app-') ||
+        host.startsWith('personalization-learning-'))
+    );
+  } catch {
+    return false;
+  }
 }

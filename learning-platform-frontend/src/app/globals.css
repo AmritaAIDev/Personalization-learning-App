@@ -30,6 +30,7 @@
 :root {
   --background: #fbfbfd;
   --foreground: #1a1a1f;
+  --font-jakarta: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 html {

@@ -1,2 +1,4 @@
 students-sample/
 tmp/
+.vercel
+.env*

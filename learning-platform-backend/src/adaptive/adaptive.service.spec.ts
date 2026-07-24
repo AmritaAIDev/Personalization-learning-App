@@ -109,9 +109,8 @@ describe('AdaptiveService flashcard reviews', () => {
     );
   });
 
-  it('generates grounded AI flashcards and stores them in the database', async () => {
+  it('generates grounded AI flashcards live without storing them in the database', async () => {
     const flashcards = {
-      find: jest.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([]),
       create: jest.fn((value: Partial<Flashcard>) => value as Flashcard),
       save: jest.fn(async (values: Flashcard[]) => values),
     } as unknown as Repository<Flashcard>;
@@ -148,9 +147,7 @@ describe('AdaptiveService flashcard reviews', () => {
       questions,
       {} as Repository<Topic>,
     );
-    jest.spyOn(service, 'getFlashcards').mockResolvedValue([]);
-
-    await service.generateFlashcards('user-id', {
+    const result = await service.generateFlashcards('user-id', {
       subject: 'Physics',
       chapter: 'Electrostatics',
       topic: 'Gauss Law',
@@ -165,11 +162,12 @@ describe('AdaptiveService flashcard reviews', () => {
         count: 6,
       }),
     );
-    expect(flashcards.save).toHaveBeenCalledWith([
+    expect(flashcards.save).not.toHaveBeenCalled();
+    expect(result).toEqual([
       expect.objectContaining({
-        source: FlashcardSource.AI_GENERATED,
-        status: FlashcardStatus.PUBLISHED,
+        id: expect.stringMatching(/^live-/),
         front: 'What does Gauss law relate?',
+        review: null,
       }),
     ]);
   });

@@ -1,836 +1,850 @@
-# Dashboard Experience Specification
+# Learning Platform Product Flow Specification
 
-This document explains the current dashboard behavior and the product reasoning behind it. It is intentionally written without technical implementation detail.
+This document explains the application in a simple product-flow format. It says what the student sees, what each page or button does, what happens after every important action, and how the learning engine changes the student's saved level and learning state.
 
-## 1. Dashboard Purpose
+The document avoids deep engineering language wherever possible. Technical details are included only when they explain product behavior.
 
-The dashboard is the learner's starting point. It should not feel like an admin page or a collection of feature cards.
+## 1. Main idea of the platform
 
-Its job is to help the student answer three questions quickly:
+The platform is a personalized learning system.
 
-1. What should I learn now?
-2. Where did I leave off?
-3. Do I need a starting diagnostic first?
+The student does not manually choose a level. The system watches the student's history, topic progress, answers, mistakes, and mastered topics. From that evidence, it automatically decides where the student should start, what question should come next, when the student should move up, when the student should repeat, and when the student should go back to a prerequisite.
 
-The dashboard should feel calm, premium, and action-first. The student should not have to read long explanations before starting.
+The main learning loop is:
 
-## 2. Current Dashboard Priority
+1. The student signs in.
+2. The student searches for a topic.
+3. The platform opens a topic workspace.
+4. The student learns through practice questions, flashcards, and tutor support.
+5. Every answer updates the student's saved learning state.
+6. The platform uses that saved state to decide the next checkpoint.
 
-The dashboard is organized in this order:
+## 2. Account opening and first screen
 
-1. Welcome header
-2. Search card
-3. Baseline diagnostic prompt for new users only
-4. Learning progress
-5. Suggested next topics
-6. Completed topics
+### 2.1 If the student is not logged in
 
-This order is deliberate. Search is the main entry point because the product is topic-driven. The student usually comes with a concept in mind, so the platform should let them start from that concept immediately.
+The student first sees the login or signup experience.
 
-## 3. Search Card Behavior
+Login page:
 
-The search card is the primary dashboard action.
+- The student enters email and password.
+- The student clicks Login.
+- If the details are correct, the backend creates a secure session and the student enters the platform.
+- If the details are wrong, the page shows a clear error and stays on login.
 
-Current behavior:
+Signup page:
 
-- The search bar is visible immediately after the header.
-- The search bar is narrower than before so it feels more polished and less bulky.
-- The label "Find your next challenge" is removed.
-- The topic list is hidden by default.
-- The old "Ready from your bank" text is hidden by default.
-- Suggestions open only when the user taps or focuses the search field.
-- Suggestions also update when the user types.
-- Suggestions close after the user selects a topic.
+- The student creates an account.
+- After signup, the backend creates the user account and session.
+- The student is taken into the platform.
 
-Why this behavior is better:
+What happens in the background:
 
-- It keeps the dashboard clean on first load.
-- It avoids showing a noisy topic list before the student asks for it.
-- It makes search feel intentional, like a premium control.
-- It prevents the page from looking crowded.
+- The frontend sends the login or signup request to the backend.
+- The backend validates the request.
+- The backend stores the session securely.
+- The frontend does not store secret keys or passwords.
 
-## 4. Search Suggestions
+### 2.2 After login or signup
 
-When the search field is active, the platform shows matching learning units from the question bank.
+The student lands on the Dashboard.
 
-Each suggestion should help the student understand:
+The Dashboard is the starting point of the product. It should feel calm, premium, and direct. The main action is search. The student should not be overloaded with unnecessary cards.
 
-- the topic name
-- the chapter it belongs to
-- available question coverage across difficulty levels
+## 3. Main navigation after login
 
-The suggestions are not mock data. They come from the backend question catalog.
+The signed-in area has these main destinations:
 
-Loading behavior:
+- Dashboard: search, active learning, suggested topics, and progress.
+- Learn: the topic workspace where topic-specific learning happens.
+- Arena or diagnostic area: optional diagnostic or test-style flow when needed.
+- Profile: account and student details.
 
-- Suggestions should use skeleton cards while loading.
-- The page should not show partial or broken result sections.
-- Results should fade in smoothly when ready.
+The most important path is Dashboard -> Search topic -> Learn page -> Practice studio.
 
-## 5. Baseline Diagnostic Behavior
+## 4. Dashboard page
 
-The baseline diagnostic is not the main product action. It is a starting check for new users.
+The Dashboard should answer one question: what should the student learn next?
 
-Current behavior:
+### 4.1 What appears on the Dashboard
 
-- It appears immediately after the search card only for new users.
-- A user is treated as new when they have no completed diagnostic history and no active diagnostic attempt.
-- It is highlighted enough to be noticed, but it stays compact.
-- It shows the number of questions and time limit.
-- It has one action: start baseline.
-- Once the user has diagnostic history, the prompt is hidden.
+The Dashboard contains:
 
-Why this behavior is correct:
+- A compact search area.
+- Topic suggestions that stay hidden until the student taps or focuses on search.
+- A baseline diagnostic card only for a new student who has not completed it.
+- Continue learning cards for active topics.
+- Suggested next topic cards based on the student's saved progress.
+- Completed or history information only where it helps the student continue.
 
-- New users may need an initial level check.
-- Returning users should not keep seeing a basic setup prompt.
-- Search remains the main entry point.
-- Baseline stays useful without dominating the dashboard.
+The Dashboard should not feel like a report page. It should feel like the learning starting point.
 
-## 6. What Baseline Diagnostic Is For
+### 4.2 Search behavior
 
-The baseline diagnostic is a broad readiness check.
+What the student sees:
 
-Its purpose is to:
+- The search bar is visible near the top.
+- Suggested topics are not shown immediately.
+- When the student taps or focuses on the search bar, suggestions can open.
+- The student can type a topic name.
+- The student can select a topic result.
 
-- understand the learner's starting level
-- identify weak areas before adaptive practice
-- give the platform evidence instead of guessing
-- help guide future recommendations
+What happens after selecting a topic:
 
-It is optional from a product hierarchy point of view. The student can still search a topic and begin learning directly.
+- The app opens the Learn page for that selected subject, chapter, and topic.
+- If the student already has progress for that topic, the Learn page resumes the saved state.
+- If the topic is new, the backend creates the first learning state automatically.
 
-## 7. Learning Progress Section
+What happens in the background:
 
-The learning progress section is the main dashboard body after search and baseline.
+- Search results come from the backend/database.
+- The frontend should not hardcode topic lists as mock data.
+- The backend returns verified topics and question availability where possible.
 
-It should show:
+### 4.3 Baseline diagnostic card
 
-- active topics
-- the current stage of each active topic
-- progress inside the topic
-- a direct way to continue learning
+The baseline diagnostic is not the main product. It is useful only when the student is new and the system has no evidence.
 
-This section is more important than baseline for returning users because it reflects the student's actual current journey.
+When it appears:
 
-## 8. Continue Learning Card
+- It appears immediately below search for a new account.
+- It should be visually highlighted because it helps the platform understand the student.
+- It should not appear as a large permanent block for old users.
 
-The Continue learning card should be the strongest card inside the learning progress section.
+When it disappears:
 
-It should show active topics such as:
+- After the student completes the baseline diagnostic.
+- When the student already has enough saved learning evidence.
 
-- topic name
-- stage label
-- current level or coordinate
-- progress indicator
-- continue arrow or action
+What the button does:
 
-Why this matters:
+- Start baseline opens the diagnostic flow.
+- The diagnostic result is saved.
+- The result can influence future placement and suggestions.
 
-- It gives the student momentum.
-- It answers "what was I doing?"
-- It makes the platform feel continuous, not session-based.
+Why it exists:
 
-## 9. Suggested Next Topics
+- It gives the system an initial signal when no learning history exists.
+- It reduces random placement for the first few topics.
 
-Suggested topics should support the current learning journey without overpowering it.
+### 4.4 Continue learning card
 
-Current design direction:
+What the student sees:
 
-- Suggested topics use a light card, not a heavy dark card.
-- They sit beside Continue learning on larger screens.
-- They show why the topic is suggested.
-- They show reviewed-question availability.
-
-Why the dark card was removed:
-
-- It made suggestions feel more important than active learning.
-- It visually competed with the main progress card.
-- It made the dashboard feel heavy.
-
-## 10. Completed Topics
-
-Completed topics should appear below the active route area.
-
-They are useful for:
-
-- showing progress history
-- building learner confidence
-- helping the student revisit mastered topics
-
-They should not dominate the page. Completed work supports motivation, but the dashboard should still focus on what to do next.
-
-## 11. Loading and Smoothness Rules
-
-The dashboard should not show half-loaded UI.
-
-Current rule:
-
-- Search suggestions use skeleton cards.
-- Learning progress uses skeleton cards.
-- Baseline prompt uses skeleton text for its metadata.
-- Transitions should feel smooth when sections open, load, or hover.
-
-Why this matters:
-
-- It prevents the page from feeling broken.
-- It avoids random partial elements appearing during loading.
-- It makes the product feel polished and production-ready.
-
-## 12. What Was Removed
-
-The following dashboard elements were intentionally removed or reduced:
-
-- Large baseline diagnostic hero card
-- Static adaptive route explanation card
-- Separate diagnostics metric card
-- Separate best score metric card
-- Large learning record score card
-- "Find your next challenge" label
-- Default visible topic list under search
-- "Ready from your bank" before search interaction
-
-Why they were removed:
-
-- They made the dashboard feel like an admin dashboard.
-- They over-explained the product.
-- They distracted from search and active learning.
-- They created visual clutter.
-
-## 13. Final Dashboard Intent
-
-The final dashboard should feel like a premium learning control center.
-
-The ideal first impression:
-
-- clean welcome
-- focused search
-- helpful baseline only when needed
-- clear active learning path
-- light suggested next topics
-- smooth loading
-- no unnecessary explanation
-
-In short:
-
-The dashboard should help the student start or continue learning with almost no friction.
-
----
-
-# Learn Page Experience Specification
-
-This section explains the current Learn page behavior, the reason behind each interaction, and how the learning state changes behind the scenes. The goal is to make the Learn page feel like a professional adaptive learning workspace, not just a page with questions and a chat box.
-
-## 14. Learn Page Purpose
-
-The Learn page begins after a student selects a topic from search.
-
-Its job is to help the student:
-
-1. understand where they are in a topic
-2. practise through a short adaptive question round
-3. receive tutor support when they are stuck
-4. review the topic with flashcards
-5. move levels only when there is enough evidence
-
-The Learn page is not a quiz arena. It is a guided topic workspace.
-
-That means the design should feel focused, calm, and interactive. The student should feel like the platform is watching their progress and helping them move, not asking them to manually manage levels.
-
-## 15. Empty Learn State
-
-If the student opens the Learn page without a selected topic, the page shows a simple "Choose a topic first" state.
-
-Current behavior:
-
-- The page does not show fake topic information.
-- The page does not open practice automatically.
-- The only meaningful action is to return to search and pick a topic.
-
-Why this is correct:
-
-- Learn is topic-specific.
-- Without a topic, there is no safe way to load questions, flashcards, tutor context, or progress.
-- This avoids mock data and avoids confusing the student.
-
-## 16. Topic Workspace Header
-
-When a topic is selected, the Learn page shows a compact topic workspace header.
-
-Current behavior:
-
-- The selected topic appears clearly in the center area of the header.
-- The chapter appears as a small supporting label.
-- The current placement or stage appears as a small status label.
-- The back-to-search button is compact.
-- The old explanatory line "Progress, review, and practice for this topic" is removed.
-- The header does not contain a second large practice button.
-
-Why this is better:
-
-- The topic is the main identity of the page.
-- The header should orient the student, not consume too much screen space.
-- The student already has tabs for actions, so repeating practice actions in the header creates clutter.
-- A compact header leaves more room for the actual learning interaction.
-
-## 17. Learn Page Tabs
-
-The Learn page has three tabs:
-
-1. Dashboard
-2. Flashcards
-3. Practice
-
-The old combined "Quizzes and flashcards" idea was removed from this page.
-
-Why quizzes were removed:
-
-- The Learn page is meant for guided learning and adaptive practice.
-- Quizzes belong better in a separate assessment or arena flow.
-- Keeping quizzes here made the page feel mixed-purpose.
-- Flashcards are a better companion to learning because they support recall and revision without interrupting the adaptive route.
-
-## 18. Learn Dashboard Tab
-
-The Learn dashboard tab gives a topic-level summary.
-
-It should show:
-
-- the current route or stage
-- the current progress percentage
-- the latest accuracy signal
-- the topic status
-- recent topic trail
-- suggested next topics
-- a clear continue-practice action
-
-Why this exists:
-
-- After selecting a topic, the student needs a quick understanding of "where am I in this topic?"
-- The topic dashboard is not meant to be a full analytics page.
-- It should support the next action, not overwhelm the student with metrics.
-
-## 19. Continue Practice Button
-
-The Continue practice button opens the Practice tab.
+- Active topics they have already started.
+- Current checkpoint or stage.
+- A small progress indication.
 
 What happens when clicked:
 
-1. The visible tab changes to Practice.
-2. No question is submitted.
-3. No level is changed.
-4. No database mutation happens until the student starts or answers a practice round.
+- The Learn page opens for that topic.
+- The topic resumes from the saved level and session state.
 
-Why this is correct:
+### 4.5 Suggested next topics
 
-- Moving between tabs is only a navigation action.
-- The system should not change learning state just because the student looked at the practice area.
-- The database should change only when a meaningful learning action happens.
+What the student sees:
 
-## 20. Topic Trail
+- A small set of topics related to completed or active learning.
+- Each suggestion explains why it is being shown in simple words.
 
-The Topic trail shows recent saved checkpoint history for the selected topic.
+What happens when clicked:
 
-It should show:
+- The Learn page opens for that suggested topic.
+- The backend creates or resumes the student's topic state.
 
-- the coordinate or level label
-- the routing outcome
-- a compact level indicator
+How suggestions are chosen:
 
-Why this exists:
+- Topics from the same chapter as recent activity are preferred.
+- Topics unlocked by mastered prerequisites are preferred.
+- Completed topics are not suggested again as new topics.
 
-- It helps the student see that progress is persistent.
-- It makes the adaptive system feel continuous.
-- It gives context without requiring a full analytics screen.
+## 5. Learn page
 
-## 21. Suggested Next Topics
+The Learn page is the topic workspace.
 
-Suggested next topics appear inside the Learn dashboard when the backend has enough evidence.
+It should feel like: “I selected a topic. Now everything I need for this topic is here.”
 
-The suggestions should be light and supportive.
+### 5.1 If no topic is selected
 
-They should not dominate the page because the selected topic is still the main workspace.
+What the student sees:
 
-What happens when a suggestion is clicked:
+- A clean empty state.
+- A Find a topic action.
 
-1. The Learn page opens with the suggested topic scope.
-2. The selected topic changes.
-3. The workspace refreshes from the backend.
-4. The current question session state is cleared for the previous topic.
-5. The new topic dashboard loads from saved database state.
+What happens:
 
-Why this is correct:
+- The student is guided back to search.
+- No fake topic or mock data is shown.
 
-- A suggested topic is a topic switch.
-- The old topic's active UI state should not leak into the new topic.
-- The backend remains the source of truth.
+### 5.2 If a topic is selected
 
-## 22. Flashcards Tab Purpose
+What the student sees:
 
-The Flashcards tab is for recall and revision.
+- A compact topic workspace header.
+- The topic name.
+- Subject and chapter context.
+- Current stage, such as Foundation check or Concept builder.
+- A small Back to search action.
+- Tabs for Dashboard, Flashcards, and Practice studio.
 
-It is not a mock card deck and it is not a frontend-only feature.
+Important UI rule:
 
-Current behavior:
+- The topic workspace card should be compact.
+- It should not dominate the page.
+- The page should quickly lead the student toward practice.
 
-- Flashcards are loaded from the database.
-- The tab shows the flashcard deck directly, without a separate instructional explanation card.
-- The student can flip a card.
-- The student can rate recall.
-- The review rating is saved through the backend.
-- The next review schedule is calculated by the backend.
-- If a topic has no cards, the tab automatically requests AI-generated flashcards from the backend.
+## 6. Learn page tabs
 
-Why this is useful:
+### 6.1 Topic Dashboard tab
 
-- Adaptive questions test reasoning.
-- Flashcards strengthen memory and formulas.
-- Spaced recall helps keep mastered topics durable.
+Purpose:
 
-## 23. AI Flashcard Generation
+- Shows the student's current status for this topic.
+- Helps the student understand what is happening next.
 
-AI flashcard generation creates flashcards for the current topic.
+What appears:
 
-What happens when the tab has no cards:
+- Current checkpoint.
+- Current stage label.
+- Accuracy or progress summary.
+- Continue practice action.
+- Recent learning path or history for this topic.
+- Suggested next action.
 
-1. The frontend loads flashcards for the selected subject, chapter, and topic.
-2. If the database returns an empty deck, the frontend automatically asks the backend to generate a grounded set.
-3. The backend checks existing published flashcards for that topic.
-4. If enough flashcards already exist, the backend returns the existing database cards.
-5. If more cards are needed, the backend gathers reviewed database material for the topic.
-6. DeepSeek generates flashcards only from that trusted material.
-7. The backend validates the generated cards.
-8. The backend saves them into the `flashcards` table as AI-generated published cards.
-9. The frontend displays the saved database response.
+What happens when Continue practice is clicked:
 
-Why this flow matters:
+- The Practice studio starts or resumes an adaptive practice session.
 
-- The frontend never creates or stores fake flashcards.
-- The AI does not generate from an open student prompt.
-- The database becomes the source of truth immediately.
-- Generated flashcards become reusable records, not temporary browser content.
-- The student should not need to press a setup button just to get the first usable deck.
+What this tab should not do:
 
-## 24. Flashcard Review Buttons
+- It should not ask the student to manually choose a level.
+- It should not duplicate the global Dashboard.
+- It should not show unnecessary quiz blocks.
 
-After flipping a card, the student can rate recall:
+### 6.2 Flashcards tab
 
-- Again
-- Hard
-- Good
+Purpose:
+
+- Helps the student revise key ideas of the selected topic.
+- It supports memory and concept recall, but it is secondary to adaptive practice.
+
+What appears:
+
+- Flashcards for the current topic.
+- Flip card action.
+- Recall rating buttons such as Again, Hard, Good, and Easy.
+
+What happens when the student opens the tab:
+
+- The frontend asks the backend whether any live flashcard set is already available for the selected view.
+- The normal flow is live generation: the student taps generate, and the backend asks DeepSeek through the backend AI service.
+- The generated flashcards are returned directly to the current screen.
+- Generated flashcards are not saved in the flashcards database table.
+
+What happens when the student rates a card:
+
+- The rating moves the local live deck forward.
+- The current implementation does not save live flashcard ratings as spaced-repetition records.
+- This keeps flashcards lightweight and avoids filling the database with temporary AI cards.
+
+Important rule:
+
+- Flashcards should come from the backend/database.
+- The frontend should not contain temporary flashcard content.
+
+### 6.3 Practice studio tab
+
+Purpose:
+
+- This is the main learning feature.
+- It combines adaptive questions and tutor support in one connected space.
+
+What appears:
+
+- Left side or main area: current question card.
+- Right side or connected area: tutor chat.
+- The two areas should feel linked, not like separate tools.
+
+The student experience:
+
+- The student starts practice.
+- A question appears.
+- The student selects an answer.
+- The tutor reacts based on that exact question and answer.
+- The system decides whether to move forward, give a hint, explain, repeat, move up, move down, or route to a prerequisite.
+
+Important rule:
+
+- Practice should continue until the student chooses to stop.
+- Internally the system uses five-question checkpoints, but the experience should feel continuous.
+- After one five-question set finishes, the next set should be prepared so the student can continue without feeling blocked.
+
+## 7. Practice studio button and action behavior
+
+### 7.1 Start adaptive practice
+
+When clicked:
+
+- If there is an active session, the backend resumes it.
+- If there is no active session, the backend creates a new five-question session at the student's current saved checkpoint.
+- If the exact checkpoint does not have enough questions, the backend tries a nearby ready checkpoint.
+- If still not enough, the backend tries a calibration set from the same topic or chapter.
+- If content is still missing, the backend starts AI generation and asks the student to try again shortly only if a full set cannot be prepared yet.
+
+### 7.2 Selecting an answer
+
+When the student selects an answer:
+
+- The frontend sends the selected option to the backend.
+- The backend checks the answer.
+- The backend saves the attempt.
+- The backend updates the learning state.
+- The backend returns the updated session and tutor feedback.
+
+The correct answer is checked on the backend, not trusted from the frontend.
+
+### 7.3 Correct answer
+
+If the answer is correct:
+
+- The question is marked resolved.
+- The student's total answered count increases.
+- The student's total correct count increases.
+- The streak counter increases.
+- The student receives XP.
+- The session moves to the next question.
+- If it was the last question of the set, the backend checks whether the student should advance.
+
+### 7.4 First wrong answer
+
+If the answer is wrong for the first time on that question:
+
+- The system does not immediately reveal the final answer.
+- The attempt is saved.
+- The streak counter resets.
+- The tutor gives a Socratic hint.
+- The student gets another chance on the same question.
+
+Why:
+
+- A first mistake should become a learning moment, not a failure screen.
+- The tutor should help the student think again without breaking the flow.
+
+### 7.5 Second wrong answer
+
+If the student answers the same question wrong again:
+
+- The system saves the second attempt.
+- The question is resolved.
+- The tutor explains why the selected answer is wrong.
+- The tutor explains why the correct answer is right.
+- The current five-question session ends early.
+- The backend decides whether to reinforce, demote, or route to a prerequisite.
+
+Why:
+
+- Repeating wrong answers means the current checkpoint may be too high or a prerequisite may be weak.
+
+### 7.6 Continue next set
+
+When a set ends and the student continues:
+
+- The frontend asks the backend for the next session.
+- The backend uses the latest saved learning state.
+- The backend serves a fresh five-question set.
+- Previously used questions are excluded so questions do not repeat.
+
+### 7.7 Stop for now
+
+When the student stops:
+
+- The current saved state remains in the database.
+- The student can return later from Dashboard or Learn.
+- The next visit resumes from the latest saved checkpoint.
+
+## 8. Learning levels
+
+The current adaptive route has 12 checkpoints.
+
+It is built from 4 proficiency stages and 3 difficulty levels:
+
+- Recall: remembering definitions, facts, and basic relationships.
+- Comprehension: understanding meaning and explaining ideas.
+- Application: using the concept in standard problems.
+- Higher-Order: analyzing, evaluating, and creating multi-step reasoning.
+
+Each proficiency stage has:
+
 - Easy
+- Medium
+- Hard
 
-What happens when a rating is clicked:
+So the full route is:
 
-1. The frontend sends the selected rating to the backend.
-2. The backend finds the flashcard.
-3. The backend finds or creates the student's review record for that flashcard.
-4. The backend calculates the next due time.
-5. The backend saves the review result.
-6. The frontend moves to the next card.
+1. Recall - Easy
+2. Recall - Medium
+3. Recall - Hard
+4. Comprehension - Easy
+5. Comprehension - Medium
+6. Comprehension - Hard
+7. Application - Easy
+8. Application - Medium
+9. Application - Hard
+10. Higher-Order - Easy
+11. Higher-Order - Medium
+12. Higher-Order - Hard
 
-Why this is correct:
+The student does not pick these levels. The backend decides the current level.
 
-- Review scheduling is learner-specific.
-- The card content is shared, but review state belongs to each student.
-- The frontend should not calculate spaced repetition timing by itself.
+## 9. How the first level is chosen
 
-## 25. Practice Tab Purpose
+When a student opens a topic for the first time, the backend creates a learning topic state.
 
-Practice is the main learning area.
+The starting level is based on available evidence:
 
-It should feel like a live tutoring interaction:
+- Same chapter performance.
+- Same subject performance.
+- Mastered prerequisite topics.
+- Average level reached in related topics.
+- Baseline diagnostic evidence when available.
+- If no useful evidence exists, the student starts from Level 1.
 
-- one side shows the current question
-- one side shows the linked tutor
-- answering a question updates the tutor context
-- wrong answers trigger hints or explanations
-- level changes happen only after enough evidence
+Example:
 
-The student should not feel like they are filling a static quiz form. The experience should feel guided and responsive.
+- A new student with no history starts from Level 1.
+- A student who mastered related chapter topics may start higher.
+- A student who performed weakly in nearby topics starts lower.
 
-Practice should continue until the student chooses to stop, is routed to a different prerequisite topic, or masters the topic. Internally, the system still uses five-question checkpoints because level decisions need stable evidence, but the user experience should feel continuous.
+This prevents the platform from asking the student to manually self-select a level.
 
-## 26. Start Adaptive Practice Button
+## 10. How the level changes
 
-The Start adaptive practice button begins or resumes a five-question learning round.
+Each practice session has five questions.
 
-What happens when clicked:
+### 10.1 Moving up
 
-1. The frontend sends the selected subject, chapter, and topic to the backend.
-2. The backend finds or creates the student's topic state.
-3. The backend checks whether there is already an active session for this topic.
-4. If an active session exists, it resumes that session.
-5. If not, the backend chooses the student's current coordinate.
-6. The backend selects five questions for that coordinate from the database or the learner's generated pool.
-7. The backend excludes questions the learner has already seen for that topic coordinate.
-8. If there are not enough unused ready questions, the backend can prepare or request more AI-generated questions for that coordinate.
-9. The backend creates a learning session and session items.
-10. The frontend receives only the current student-safe question.
-11. The dashboard state refreshes after the round starts.
-12. The backend prepares more unused questions for the current and next likely coordinate in the background.
+The student moves up only when the evidence is strong.
 
-Why this is correct:
+A move up happens when:
 
-- The student does not manually choose level.
-- The backend owns placement and question selection.
-- The frontend only displays the current allowed question.
-- Existing active work is not duplicated.
-- Questions should not repeat for the learner when unused alternatives exist or can be generated.
-- The next round should usually be ready before the student clicks continue.
+- The student completes the five-question set.
+- The student answers all five correctly strongly enough to maintain the required streak.
+- The backend decides the checkpoint is cleared.
 
-## 27. Question Card Behavior
+Then:
 
-The question card displays one question at a time.
+- The topic state current level increases by one.
+- The next checkpoint is prepared.
+- If the student was already at the final checkpoint, the topic becomes mastered.
 
-Current behavior:
+### 10.2 Staying at the same level
 
-- The student sees the question text and answer options.
-- The answer key is not sent as visible frontend state.
-- When an answer is selected, the options are temporarily disabled.
-- The UI shows a checking state instead of reloading the whole page.
-- The backend grades the answer.
-- The backend returns the next safe state.
+The student stays at the same level when:
 
-Why this matters:
+- The session is completed, but the streak is not strong enough.
+- The student needs more reinforcement at the same checkpoint.
 
-- The user experience feels live and smooth.
-- The answer key remains protected.
-- The frontend does not decide correctness.
-- The learning route remains secure and consistent.
+Then:
 
-## 28. Linked Tutor Panel
+- The current level remains the same.
+- A new five-question set is prepared at the same level.
+- Used questions are excluded.
 
-The tutor panel is connected to the current learning session.
+### 10.3 Moving down
 
-Current behavior:
+The student moves down when:
 
-- The tutor appears beside the question card in Practice.
-- It loads the conversation for the active learning session.
-- When the student answers incorrectly, the backend can create a hint or explanation message.
-- The tutor message appears in the same flow instead of opening a separate page.
-- The student can ask follow-up questions.
-- Tutor responses are rendered in safe structured Markdown.
+- The student gets a question wrong twice.
+- The current level is above Level 1.
 
-Why this matters:
+Then:
 
-- The tutor is not a generic chatbot.
-- It understands the current question and attempt context.
-- The student can ask "why" without losing the practice flow.
-- The tutor supports learning without revealing answers too early.
+- The current level decreases by one.
+- The student gets practice at the easier previous checkpoint.
+- The tutor explains the mistake.
 
-## 29. First Wrong Answer Behavior
+### 10.4 Routing to a prerequisite
 
-When the student answers incorrectly for the first time on a question, the system gives support without immediately revealing the answer.
+The student is routed to a prerequisite when:
 
-What happens:
+- The student fails at Level 1.
+- The topic has a known prerequisite.
+- The backend finds a valid prerequisite topic with available questions.
 
-1. The backend records the attempt.
-2. The backend checks that it is the first miss.
-3. The question remains active.
-4. The backend creates or returns a Socratic hint.
-5. The correct answer and full solution are not included in the tutor prompt.
-6. The frontend shows a retry state.
-7. The tutor panel displays the hint.
+Then:
 
-Why this is correct:
+- The current topic can be paused.
+- The suggested prerequisite becomes the next learning target.
+- The student can strengthen the missing base before returning.
 
-- The student still has a chance to reason.
-- The system helps without giving away the answer.
-- This supports learning better than immediate correction.
+### 10.5 Mastering a topic
 
-## 30. Second Wrong Answer Behavior
+A topic is mastered when:
 
-When the student misses the same question again, the system gives a fuller explanation and updates the route.
+- The student clears the final checkpoint.
 
-What happens:
+Then:
 
-1. The backend records the second attempt.
-2. The backend can now reveal the correct reasoning to the tutor service.
-3. The tutor explains why the selected answer is wrong.
-4. The tutor explains why the correct reasoning works.
-5. The backend updates the student's learning evidence.
-6. The session may route to reinforcement, demotion, prerequisite support, or completion depending on the state.
+- The topic state status becomes Mastered.
+- The mastered date is saved.
+- Dashboard can use that topic to suggest new related topics.
 
-Why this is correct:
+## 11. What is saved in the database for the student
 
-- After two misses, the student needs explanation more than another hidden hint.
-- The route should respond to demonstrated difficulty.
-- The system should not keep the student stuck in an endless retry loop.
+The main saved state is the learning topic state.
 
-## 31. Correct Answer Behavior
+For each student and topic, the database stores:
 
-When the student answers correctly, the system records positive evidence.
+- Student id.
+- Subject.
+- Chapter.
+- Topic.
+- Current level.
+- Current status: Active, Mastered, or Paused for prerequisite.
+- Current streak.
+- Total answered.
+- Total correct.
+- Last activity time.
+- Mastered time if completed.
 
-What happens:
+This state is the source of truth for the student's learning path.
 
-1. The backend records the answer.
-2. The backend marks the session item as resolved.
-3. The student moves to the next question if the round is not complete.
-4. If the round is complete, the backend calculates the route outcome.
-5. The frontend updates the progress bar and current question.
+The frontend should display this state, not invent it.
 
-Why this is correct:
+## 12. What is saved for each practice session
 
-- Correct answers contribute to level movement.
-- The student sees progress immediately.
-- The backend remains responsible for deciding the next coordinate.
+Each practice session stores:
 
-## 32. Five-Question Round Shape
+- Student id.
+- Topic state id.
+- Subject, chapter, and topic.
+- Level.
+- Proficiency stage.
+- Difficulty.
+- Status: Active, Completed, or Routed.
+- Transition result: None, Advanced, Reinforce, Demoted, Prerequisite, or Mastered.
+- Total questions.
+- Current question number.
+- Started time.
+- Completed time.
 
-Each adaptive practice round uses five focused questions.
+Each question inside the session stores:
 
-Why five:
+- Its order in the session.
+- Whether it came from the curated bank or AI-generated pool.
+- The linked question id.
+- Whether it is resolved.
 
-- It is short enough for a student to complete without fatigue.
-- It gives more evidence than a single question.
-- It creates a clear checkpoint for routing.
-- It fits the 15-level structure cleanly.
+Each answer attempt stores:
 
-The round should not feel like a long test. It should feel like a compact learning checkpoint.
+- The question item id.
+- Attempt number.
+- Selected option.
+- Whether it was correct.
+- Time spent if available.
+- Created time.
 
-From the student's point of view, practice does not need to stop after one checkpoint. After a checkpoint is completed, the student can continue into the next round immediately. The Stop for now action is the intentional exit.
+This creates a complete learning record.
 
-## 33. Level and Coordinate System
+## 13. Question database format
 
-The learning system uses 15 coordinates.
+There are two question sources.
 
-The structure is:
+### 13.1 Curated question bank
 
-1. Remember - Easy
-2. Understand - Easy
-3. Apply - Easy
-4. Analyze - Easy
-5. Evaluate - Easy
-6. Remember - Medium
-7. Understand - Medium
-8. Apply - Medium
-9. Analyze - Medium
-10. Evaluate - Medium
-11. Remember - Hard
-12. Understand - Hard
-13. Apply - Hard
-14. Analyze - Hard
-15. Evaluate - Hard
+These are reviewed platform questions.
 
-The student does not choose these levels manually.
+Each question should include:
 
-Why automatic placement is better:
+- Subject.
+- Chapter.
+- Topic.
+- Subtopic if available.
+- Question text.
+- Options.
+- Correct answer.
+- Solution or explanation.
+- Bloom/proficiency label.
+- Difficulty.
+- Concept tags.
+- Common error tags.
+- Publication status.
 
-- Students often overestimate or underestimate their level.
-- Manual level choice creates inconsistent evidence.
-- Automatic placement lets the system use actual performance.
-- The platform feels adaptive rather than self-service only.
+Only published questions are used for students.
 
-## 34. Initial Placement Logic
+### 13.2 AI-generated question pool
 
-When a student begins a topic, the backend decides where to start.
+These are learner-specific generated questions.
 
-The placement can come from:
+They are stored separately from the global question bank.
 
-- existing progress in the same topic
-- evidence from the same chapter
-- evidence from the same subject
-- prerequisite evidence
-- baseline diagnostic evidence
-- a default starting point when no evidence exists
+Each generated question includes:
 
-Why this is correct:
+- Student id.
+- Generation job id.
+- Subject.
+- Chapter.
+- Topic.
+- Proficiency stage.
+- Difficulty.
+- Question text.
+- Options.
+- Correct answer.
+- Solution.
+- Hint.
+- Concept tags.
+- Common errors.
+- Status: Ready, Reserved, or Rejected.
 
-- The platform should reuse known learning history.
-- A student should not restart from zero if there is already evidence.
-- A new student can still begin safely from a foundation coordinate.
+Why generated questions are separate:
 
-## 35. Level Improvement Logic
+- They are personalized.
+- They should not automatically become public questions.
+- They can be reviewed later before joining the curated bank.
 
-The student moves upward only when the evidence supports it.
+## 14. How questions are selected
 
-A route can advance when:
+When the backend needs a five-question set, it follows this order:
 
-- the student resolves the five-question round strongly
-- mistakes are not repeated
-- the current coordinate appears stable
+1. Look for ready AI-generated questions for that student and checkpoint.
+2. Look for published curated questions for that topic and checkpoint.
+3. Remove questions the student has already used for that topic/checkpoint.
+4. Shuffle the remaining candidates.
+5. Select five questions.
 
-The route can stay or reinforce when:
+If fewer than five are available:
 
-- the student gets some answers correct but not enough for a confident move
-- the system needs more evidence
-- the student needed hints before finishing
+- The backend tries nearby ready checkpoints.
+- The backend tries a calibration set from the same topic or chapter.
+- The backend creates or runs an AI generation job.
 
-The route can move down when:
+Important rule:
 
-- the student misses the same idea repeatedly
-- the current coordinate is too difficult
-- accuracy suggests a weaker foundation
+- Questions should not repeat for the same student in the same topic path.
+- The backend tracks used question ids through session history.
 
-The route can move to a prerequisite when:
+## 15. AI generation behavior
 
-- the student is struggling at the lower levels
-- the topic depends on a missing foundation
-- a prerequisite relationship exists in the learning graph
+DeepSeek is used through the backend AI service, not directly from the frontend.
 
-Why this logic matters:
+AI can generate:
 
-- The goal is not to punish the student.
-- The goal is to choose the next most useful checkpoint.
-- A professional adaptive system should be evidence-based, not random or manually controlled.
+- Practice question batches.
+- Flashcards.
+- Tutor explanations and hints.
 
-## 36. Question Repeat Prevention
+For question generation:
 
-Practice questions should not repeat for the same learner when the system has unused alternatives.
+- The backend collects source material from existing reviewed questions.
+- The backend asks DeepSeek for questions at the correct topic, proficiency stage, and difficulty.
+- The generated questions are saved in the database.
+- The questions become available as Ready.
+- When a generated question is used in a session, it becomes Reserved.
 
-Current behavior:
+For flashcard generation:
 
-1. Before selecting a question set, the backend checks the learner's previous session items for that topic and coordinate.
-2. Previously used curated questions are excluded from the candidate pool.
-3. Previously used generated questions are excluded from the candidate pool.
-4. The backend counts only unused ready questions when deciding whether more AI-generated questions are needed.
-5. If the unused pool is too small, the backend prepares or requests more questions instead of silently repeating old ones.
+- The backend uses reviewed question material as grounding.
+- DeepSeek generates a fresh live deck for the current topic.
+- The generated cards are returned to the frontend immediately.
+- The generated cards are not saved in the database.
 
-Why this matters:
+Latency rule:
 
-- Repeated questions create false mastery.
-- The student may remember the answer instead of understanding the idea.
-- Adaptive level movement should be based on fresh evidence.
-- Question variety keeps long practice sessions useful.
+- The platform should prepare current and next checkpoint content early.
+- The student should not feel a long pause after every answer.
+- AI generation should happen in batches, not one question at a time during the visible learning flow.
 
-## 37. Mastery Logic
+## 16. Tutor and practice connection
 
-A topic is treated as mastered only when the learner clears the final required route evidence.
+The tutor is not a separate generic chatbot.
 
-Mastery should mean:
+It is connected to:
 
-- the student has progressed through the route
-- the student has shown stable performance
-- the final coordinate has enough successful evidence
+- The current session.
+- The current question.
+- The student's selected answer.
+- Whether the correct answer has already been revealed.
+- The student's topic and level.
 
-When mastered:
+### 16.1 When the student asks a normal question
 
-- the topic can appear in completed topics
-- the student can still review with flashcards
-- the dashboard can suggest related next topics
+The tutor responds in context of the current topic and session.
 
-Why this matters:
+It can:
 
-- Mastery should feel earned.
-- Completed topics help motivation.
-- Review remains available because memory fades over time.
+- Explain the concept.
+- Break down the question.
+- Give a hint.
+- Clarify a wrong option.
+- Help the student think through the next step.
 
-## 38. Backend and Database Responsibilities
+### 16.2 When the student gets the first attempt wrong
 
-The backend is responsible for:
+The tutor gives a hint.
 
-- user-specific topic state
-- level and coordinate decisions
-- question selection
-- repeat prevention for previously used questions
-- answer grading
-- retry and explanation rules
-- tutor conversation state
-- flashcard generation and review scheduling
-- dashboard progress and suggestions
+It should:
 
-The database stores:
+- Avoid revealing the final answer immediately.
+- Point to the relevant concept.
+- Encourage the student to try again.
 
-- topic progress state
-- learning sessions
-- session question items
-- submitted answers
-- generated question pools
-- flashcards
-- flashcard reviews
-- tutor conversations
-- tutor messages
+### 16.3 When the student gets the second attempt wrong
 
-The frontend is responsible for:
+The tutor gives a full explanation.
 
-- showing the selected topic workspace
-- displaying the current safe state
-- handling loading and interaction states
-- calling the correct API endpoint
-- never inventing progress, questions, answers, or flashcards
+It should:
 
-## 39. API Interaction Summary
+- Explain why the selected answer is wrong.
+- Explain why the correct answer is right.
+- Explain the concept clearly.
+- Suggest what to focus on next.
 
-The Learn page uses these major backend actions:
+### 16.4 Tutor formatting
 
-- load dashboard summary
-- start or resume a learning session
-- submit an answer
-- load tutor conversation
-- send tutor message
-- load flashcards
-- generate flashcards
-- review flashcard
+Tutor responses should be clean and readable.
 
-Each API call should have:
+They should use:
 
-- a clear loading state
-- a clear error state
-- no full-page reload
-- no duplicate submission
-- no frontend-only fallback data
+- Short paragraphs.
+- Simple bullets when helpful.
+- Step-by-step reasoning for math or physics problems.
+- No broken markdown.
+- No huge walls of text.
 
-Why this matters:
+## 17. Continuous practice expectation
 
-- Professional software should feel reliable even when the network is slow.
-- The student should always know whether the system is working.
-- Data should stay consistent with the backend.
+The visible experience should be continuous.
 
-## 40. Loading and Smoothness Rules for Learn
+The system may use five-question sessions internally, but the student should feel:
 
-The Learn page should not show broken partial sections.
+- I answer a set.
+- I receive feedback.
+- I continue to the next set if I want.
+- I stop only when I choose to take a break.
 
-Current rules:
+After every set:
 
-- Dashboard loading uses skeleton cards.
-- Flashcard loading uses skeleton cards.
-- Starting practice shows a focused button loading state.
-- Answer submission disables the question options.
-- Tutor loading happens inside the tutor panel.
-- The page should not fully refresh after answer submission.
+- The backend finalizes the session.
+- The backend updates the topic state.
+- The frontend shows the result and next action.
+- The backend prepares the next relevant content.
 
-Why this matters:
+## 18. What happens when content is missing
 
-- The practice flow should feel live.
-- The student should not lose context.
-- Smooth loading makes the platform feel production-ready.
+If a topic does not have enough ready questions:
 
-## 41. Security and Correctness Rules
+- The backend should not fake frontend data.
+- The backend should generate or prepare content.
+- The UI should show a clear preparing state.
+- The student should be guided to try again shortly or review flashcards if available.
 
-The Learn page must protect learning data.
+The message should be calm and specific, not confusing.
 
-Rules:
+Example:
 
-- The frontend must not receive answer keys before allowed.
-- The frontend must not decide correctness.
-- The frontend must not create fake flashcards.
-- The frontend must not store mock progress.
-- AI generation must be grounded in reviewed database material.
-- Tutor prompts must not reveal answers during the first wrong attempt.
-- All user actions must be tied to the authenticated user.
+- “We are preparing a fresh five-question set for this checkpoint. Try again shortly.”
 
-Why this matters:
+## 19. Security and data rules
 
-- The platform is an educational assessment and learning system.
-- Trust depends on correctness and secure handling of answers.
-- Students should not be able to bypass the learning flow through frontend data.
+The application must follow these rules:
 
-## 42. Final Learn Page Intent
+- No secrets in frontend code.
+- API URLs must come from environment variables.
+- Backend URL must not be hardcoded into many frontend files.
+- Frontend should call only the configured backend API base URL.
+- Backend should allow only the correct frontend origin in production.
+- Login sessions should use secure cookie behavior in production.
+- Correct answers should be checked on the backend.
+- The frontend should never be trusted as the source of truth for scoring or level movement.
+- All major data must come from the database through backend APIs.
 
-The final Learn page should feel like a premium adaptive learning studio.
+## 20. What each main API flow is responsible for
 
-The ideal experience:
+Authentication:
 
-- the student searches and selects a topic
-- the workspace opens with clear topic identity
-- the dashboard explains the current route briefly
-- flashcards support recall without clutter
-- practice becomes the main interactive area
-- the tutor feels connected to the current question
-- levels change automatically from evidence
-- all data comes from backend and database flows
+- Create account.
+- Login.
+- Logout.
+- Check current user.
 
-In short:
+Dashboard:
 
-The Learn page should feel like a guided intelligent tutor, with the backend quietly managing state, evidence, routing, and persistence.
+- Return active topics.
+- Return completed topics.
+- Return recent history.
+- Return suggested next topics.
+- Return whether baseline diagnostic is needed.
+
+Search:
+
+- Return verified topics from the database.
+- Open the selected topic workspace.
+
+Adaptive practice:
+
+- Create or resume a session.
+- Return current question without exposing the answer.
+- Save answer attempt.
+- Return feedback.
+- Update topic state.
+- Decide level movement.
+- Prepare future content.
+
+Flashcards:
+
+- Return an empty stored deck by default.
+- Generate live flashcards through backend AI.
+- Do not save generated flashcards.
+- Treat card ratings as local deck navigation, not a database review update.
+
+Tutor:
+
+- Load session conversation.
+- Answer student messages in context.
+- Create hints after first wrong attempts.
+- Create explanations after second wrong attempts.
+
+## 21. Simple end-to-end example
+
+Example student flow:
+
+1. Student signs up.
+2. Dashboard opens.
+3. Baseline diagnostic appears because the account is new.
+4. Student searches “Gauss Law”.
+5. Student selects Gauss Law.
+6. Learn page opens.
+7. Backend creates a Gauss Law learning state.
+8. Because the student has no history, the state starts at Level 1: Recall - Easy.
+9. Student opens Practice studio.
+10. Student clicks Start adaptive practice.
+11. Backend creates a five-question session.
+12. Student answers question 1 correctly.
+13. Backend saves the answer, increments progress, and moves to question 2.
+14. Student answers question 2 wrong.
+15. Tutor gives a hint without revealing the final answer.
+16. Student tries again and answers correctly.
+17. Backend resolves the question and continues.
+18. Student completes the set.
+19. If the required streak is strong enough, backend advances the student to Level 2.
+20. If not, backend keeps the student at Level 1 for reinforcement.
+21. Student clicks Continue.
+22. Backend gives a fresh set without repeating used questions.
+23. Student stops when they want a break.
+24. Dashboard later shows Gauss Law as an active topic with the saved checkpoint.
+
+## 22. Product quality expectation
+
+The final product should feel professional and trustworthy.
+
+The experience should be:
+
+- Clear: the student knows what to do next.
+- Smooth: loading states and transitions do not feel broken.
+- Adaptive: the system changes based on evidence.
+- Honest: no fake frontend data.
+- Secure: backend owns scoring, state, and secrets.
+- Continuous: practice keeps going until the student stops.
+- Supportive: the tutor helps exactly where the student is struggling.
+
+The goal is not just a nice interface. The goal is a working learning platform where the UI, backend, database, AI generation, and adaptive logic all support one clear learning journey.

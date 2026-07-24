@@ -27,7 +27,6 @@ import {
 } from './adaptive-content.service';
 import {
   FlashcardRating,
-  FlashcardSource,
   FlashcardStatus,
   GeneratedLearningQuestionStatus,
   LearningQuestionSource,
@@ -436,46 +435,9 @@ export class AdaptiveService {
   }
 
   async getFlashcards(userId: string, input: FlashcardQueryDto) {
-    const builder = this.flashcardsRepository
-      .createQueryBuilder('flashcard')
-      .where('flashcard.status = :status', {
-        status: FlashcardStatus.PUBLISHED,
-      });
-    if (input.subject)
-      builder.andWhere('flashcard.subject = :subject', {
-        subject: input.subject,
-      });
-    if (input.chapter)
-      builder.andWhere('flashcard.chapter = :chapter', {
-        chapter: input.chapter,
-      });
-    if (input.topic)
-      builder.andWhere('flashcard.topic = :topic', { topic: input.topic });
-    const cards = await builder
-      .orderBy('flashcard.created_at', 'ASC')
-      .take(input.limit ?? 12)
-      .getMany();
-    const reviews = cards.length
-      ? await this.flashcardReviewsRepository.find({
-          where: { userId, flashcardId: In(cards.map((card) => card.id)) },
-        })
-      : [];
-    const reviewByCard = new Map(
-      reviews.map((review) => [review.flashcardId, review]),
-    );
-    return cards
-      .map((card) =>
-        this.toFlashcardPayload(card, reviewByCard.get(card.id) ?? null),
-      )
-      .sort((left, right) => {
-        const leftDue = left.review?.dueAt
-          ? new Date(left.review.dueAt).getTime()
-          : 0;
-        const rightDue = right.review?.dueAt
-          ? new Date(right.review.dueAt).getTime()
-          : 0;
-        return leftDue - rightDue;
-      });
+    void userId;
+    void input;
+    return [];
   }
 
   async reviewFlashcard(
@@ -506,46 +468,24 @@ export class AdaptiveService {
   }
 
   async generateFlashcards(userId: string, input: GenerateFlashcardsDto) {
+    void userId;
     const scope = this.toScope(input);
     const count = input.count ?? 6;
-    const existing = await this.flashcardsRepository.find({
-      where: {
-        subject: scope.subject,
-        chapter: scope.chapter,
-        topic: scope.topic,
-        status: FlashcardStatus.PUBLISHED,
-      },
-      order: { createdAt: 'ASC' },
-      take: 30,
-    });
-    if (existing.length >= count) {
-      return this.getFlashcards(userId, { ...scope, limit: 12 });
-    }
-
     const sourceMaterial = await this.buildFlashcardSourceMaterial(scope);
     const generated = await this.agentService.generateFlashcards({
       ...scope,
-      count: count - existing.length,
+      count,
       sourceMaterial,
     });
-    const existingFronts = new Set(
-      existing.map((card) => card.front.trim().toLocaleLowerCase()),
-    );
-    const records = generated
-      .filter((card) => !existingFronts.has(card.front.trim().toLocaleLowerCase()))
-      .map((card) =>
-        this.flashcardsRepository.create({
-          ...scope,
-          front: card.front,
-          back: card.back,
-          hint: card.hint,
-          tags: card.tags,
-          source: FlashcardSource.AI_GENERATED,
-          status: FlashcardStatus.PUBLISHED,
-        }),
-      );
-    if (records.length) await this.flashcardsRepository.save(records);
-    return this.getFlashcards(userId, { ...scope, limit: 12 });
+    return generated.map((card, index) => ({
+      id: `live-${Date.now()}-${index}`,
+      ...scope,
+      front: card.front,
+      back: card.back,
+      hint: card.hint,
+      tags: card.tags,
+      review: null,
+    }));
   }
 
   private async applyAnswer(
@@ -1148,36 +1088,20 @@ export class AdaptiveService {
   }
 
   private async buildFlashcardSourceMaterial(scope: LearningScope): Promise<string> {
-    const [questions, flashcards] = await Promise.all([
-      this.questionsRepository.find({
-        where: {
-          subject: scope.subject,
-          chapter: scope.chapter,
-          topic: scope.topic,
-          status: QuestionPublicationStatus.PUBLISHED,
-        },
-        order: { created_at: 'ASC' },
-        take: 12,
-      }),
-      this.flashcardsRepository.find({
-        where: {
-          subject: scope.subject,
-          chapter: scope.chapter,
-          topic: scope.topic,
-          status: FlashcardStatus.PUBLISHED,
-        },
-        order: { createdAt: 'ASC' },
-        take: 12,
-      }),
-    ]);
+    const questions = await this.questionsRepository.find({
+      where: {
+        subject: scope.subject,
+        chapter: scope.chapter,
+        topic: scope.topic,
+        status: QuestionPublicationStatus.PUBLISHED,
+      },
+      order: { created_at: 'ASC' },
+      take: 12,
+    });
     const blocks = [
       ...questions.map(
         (question) =>
           `Question concept: ${question.question_text}\nCorrect reasoning: ${question.solution}\nTags: ${(question.concept_tags ?? []).join(', ')}`,
-      ),
-      ...flashcards.map(
-        (card) =>
-          `Flashcard: ${card.front}\nAnswer: ${card.back}\nTags: ${(card.tags ?? []).join(', ')}`,
       ),
     ];
     if (blocks.length === 0) {

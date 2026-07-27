@@ -27,7 +27,7 @@ export function practiceHref(scope: PracticeScope): string {
     chapter: scope.chapter,
     topic: scope.topic,
   });
-  return `/arena?${params.toString()}`;
+  return `/practice?${params.toString()}`;
 }
 
 export function elapsedPracticeSeconds(startedAt: string): number {

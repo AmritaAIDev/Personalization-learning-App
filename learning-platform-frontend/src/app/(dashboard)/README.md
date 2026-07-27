@@ -10,6 +10,10 @@
 - `/diagnostic/[attemptId]`: timed, auto-saving question flow with no answer-key payload.
 - `/analysis/[attemptId]`: submitted topic and Bloom analysis.
 - `/recommendations/[attemptId]`: resources selected from the database using weak topics.
+- `/practice`: reviewed practice entry point and practice-mode selector. Topic-scoped practice still uses backend-created attempts.
+- `/tests`: baseline, reviewed-practice, and future mock-test command surface.
+- `/notebook`: mistake and revision notebook surface for wrong-answer repair.
+- `/doubts`: context-aware doubt entry surface that should remain linked to topic/question state.
 - `/profile`: authenticated profile, completed diagnostic attempts, and saved adaptive-topic history.
 
-`/arena` and `/analytics` redirect to secure, maintained flows so the prior client-side answer reveal is not reachable.
+`/arena` is retained only as a legacy compatibility route for older practice links. New product links should point to `/practice`.

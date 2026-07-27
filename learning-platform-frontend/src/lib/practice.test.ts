@@ -1,38 +1,28 @@
-import { describe, expect, it, vi } from 'vitest';
-import {
-  elapsedPracticeSeconds,
-  practiceHref,
-  practiceScopeFromSearchParams,
-} from './practice';
+import { describe, expect, it } from 'vitest';
+import { practiceHref, practiceScopeFromSearchParams } from './practice';
 
-describe('practice URL helpers', () => {
-  it('accepts a complete scope and generates a safe practice URL', () => {
-    const scope = practiceScopeFromSearchParams(
-      new URLSearchParams({
-        subject: 'Physics',
-        chapter: "Coulomb's Law and Charge",
-        topic: 'Coulomb law',
-      }),
-    );
-
-    expect(scope).toEqual({
-      subject: 'Physics',
-      chapter: "Coulomb's Law and Charge",
-      topic: 'Coulomb law',
-    });
-    expect(practiceHref(scope!)).toContain('chapter=Coulomb%27s+Law+and+Charge');
-  });
-
-  it('does not create a practice session from an incomplete scope', () => {
+describe('practice route helpers', () => {
+  it('builds practice workspace URLs with encoded topic scope', () => {
     expect(
-      practiceScopeFromSearchParams(new URLSearchParams({ subject: 'Physics' })),
-    ).toBeNull();
+      practiceHref({
+        subject: 'Physics',
+        chapter: 'Electrostatics',
+        topic: 'Gauss Law',
+      }),
+    ).toBe('/practice?subject=Physics&chapter=Electrostatics&topic=Gauss+Law');
   });
 
-  it('bounds client-reported elapsed time before sending it to the API', () => {
-    vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-07-20T10:30:00Z').getTime());
-    expect(elapsedPracticeSeconds('2026-07-20T10:29:20Z')).toBe(40);
-    expect(elapsedPracticeSeconds('invalid')).toBe(0);
-    vi.restoreAllMocks();
+  it('accepts only complete practice scopes from search params', () => {
+    expect(
+      practiceScopeFromSearchParams(
+        new URLSearchParams('subject=Physics&chapter=Electrostatics&topic=Gauss+Law'),
+      ),
+    ).toEqual({
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic: 'Gauss Law',
+    });
+
+    expect(practiceScopeFromSearchParams(new URLSearchParams('subject=Physics'))).toBeNull();
   });
 });

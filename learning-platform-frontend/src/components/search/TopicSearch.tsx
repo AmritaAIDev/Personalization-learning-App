@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { learningUrl } from '@/lib/learning';
+import { practiceHref } from '@/lib/practice';
 import type { LearningScope } from '@/lib/learning-types';
 import type { QuestionCatalogEntry } from '@/lib/practice-types';
 
@@ -21,7 +22,11 @@ function toLearningScope(entry: QuestionCatalogEntry): LearningScope {
   };
 }
 
-export default function TopicSearch() {
+export default function TopicSearch({
+  destination = 'learn',
+}: {
+  destination?: 'learn' | 'practice';
+}) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<QuestionCatalogEntry[]>([]);
@@ -70,7 +75,8 @@ export default function TopicSearch() {
   const startFirstMatch = () => {
     const firstMatch = results[0];
     if (firstMatch) {
-      router.push(learningUrl(toLearningScope(firstMatch)));
+      const scope = toLearningScope(firstMatch);
+      router.push(destination === 'practice' ? practiceHref(scope) : learningUrl(scope));
       setOpened(false);
     }
   };
@@ -160,7 +166,10 @@ export default function TopicSearch() {
                   type="button"
                   onClick={() => {
                     setOpened(false);
-                    router.push(learningUrl(toLearningScope(entry)));
+                    const scope = toLearningScope(entry);
+                    router.push(
+                      destination === 'practice' ? practiceHref(scope) : learningUrl(scope),
+                    );
                   }}
                   className="group flex min-h-24 items-center justify-between gap-4 rounded-2xl bg-surface px-4 py-4 text-left transition-all duration-200 hairline hover:border-ink/15 hover:shadow-[0_8px_24px_rgba(20,20,30,0.06)]"
                 >

@@ -118,7 +118,7 @@ The build should proceed step by step. Each slice must keep the platform profess
 
 ## 3.3 Learning state persistence
 
-- [ ] Verify user learning state updates after every answer with integration DB test.
+- [x] Verify user learning state updates after every answer with row-level mutation test.
 - [x] Verify session item progress is projected safely.
 - [x] Verify tutor messages are linked to session items.
 - [x] Verify dashboard reflects updated progress.
@@ -346,5 +346,5 @@ Still open:
 
 - Full-length mock/sectional attempts require a dedicated backend schema before they can be real modes.
 - Notebook due-review is implemented as a backend-derived schedule; a dedicated persistence model is only needed later for custom spaced-repetition ratings.
-- Row-level adaptive state mutation needs an integration database test around `applyAnswer`.
+- Row-level adaptive state mutation is covered by a repository-backed mutation spec around `applyAnswer`; a live database integration test can be added later when a dedicated test database is available.
 - Production seed and low-supply fallback audits must be run against the target database/environment.

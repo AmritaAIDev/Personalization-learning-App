@@ -24,6 +24,7 @@ import { TutorService } from './tutor.service';
 import { Question } from '../question.entity';
 import { Topic } from '../topics/topic.entity';
 import { AgentService } from '../agent/agent.service';
+import { User } from '../users/user.entity';
 
 describe('AdaptiveService flashcard reviews', () => {
   const card: Flashcard = {
@@ -540,5 +541,250 @@ describe('AdaptiveService learning state projections', () => {
         attemptCount: 0,
       }),
     ]);
+  });
+});
+
+describe('AdaptiveService row-level answer mutations', () => {
+  function createQueryBuilder<T>(row: T) {
+    return {
+      setLock: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getOne: jest.fn(async () => row),
+    };
+  }
+
+  function createMutationHarness({
+    selectedOption,
+    priorAnswers = [],
+    totalQuestions = 5,
+  }: {
+    selectedOption: string;
+    priorAnswers?: LearningAnswer[];
+    totalQuestions?: number;
+  }) {
+    const now = new Date('2026-07-28T00:00:00.000Z');
+    const state = {
+      id: 'state-id',
+      userId: 'user-id',
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic: 'Gauss Law',
+      currentLevel: 1,
+      status: LearningTopicStatus.ACTIVE,
+      streakCounter: 2,
+      totalAnswered: 0,
+      totalCorrect: 0,
+      lastActivityAt: now,
+      masteredAt: null,
+      createdAt: now,
+      updatedAt: now,
+    } as LearningTopicState;
+    const session = {
+      id: 'session-id',
+      stateId: state.id,
+      userId: 'user-id',
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic: 'Gauss Law',
+      level: 1,
+      bloomLevel: 'Recall',
+      difficulty: 'Easy',
+      status: LearningSessionStatus.ACTIVE,
+      transition: LearningSessionTransition.NONE,
+      totalQuestions,
+      currentSequence: 1,
+      completedAt: null,
+      startedAt: now,
+      updatedAt: now,
+    } as LearningSession;
+    const item = {
+      id: 'item-id',
+      sessionId: session.id,
+      sequence: 1,
+      source: LearningQuestionSource.CURATED,
+      questionId: 'question-id',
+      generatedQuestionId: null,
+      question: {
+        id: 'question-id',
+        question_text: 'What does Gauss Law relate?',
+        options: ['A', 'B', 'C', 'D'],
+        correct_answer: 'A',
+        solution: 'Flux is linked to enclosed charge.',
+        bloom_level: 'Remember',
+        difficulty: 'Easy',
+        concept_tags: ['flux'],
+        common_errors: [],
+      },
+      generatedQuestion: null,
+      resolvedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    } as unknown as LearningSessionItem;
+    const createdAnswer = {
+      sessionItemId: item.id,
+      attemptNumber: priorAnswers.length + 1,
+      selectedOption,
+      isCorrect: selectedOption === 'A',
+      elapsedSeconds: null,
+    } as LearningAnswer;
+
+    const sessionsRepository = {
+      createQueryBuilder: jest.fn(() => createQueryBuilder(session)),
+      save: jest.fn(async (value: LearningSession) => value),
+    };
+    const statesRepository = {
+      createQueryBuilder: jest.fn(() => createQueryBuilder(state)),
+      save: jest.fn(async (value: LearningTopicState) => value),
+    };
+    const itemsRepository = {
+      createQueryBuilder: jest.fn(() => createQueryBuilder(item)),
+      findOne: jest.fn(async () => item),
+      save: jest.fn(async (value: LearningSessionItem) => value),
+    };
+    const answersRepository = {
+      find: jest.fn(async () => priorAnswers),
+      create: jest.fn(() => createdAnswer),
+      save: jest.fn(async (value: LearningAnswer) => value),
+    };
+    const increment = jest.fn(async () => ({ affected: 1 }));
+    const manager = {
+      getRepository: jest.fn((entity: unknown) => {
+        if (entity === LearningSession) return sessionsRepository;
+        if (entity === LearningTopicState) return statesRepository;
+        if (entity === LearningSessionItem) return itemsRepository;
+        if (entity === LearningAnswer) return answersRepository;
+        throw new Error('Unexpected repository request.');
+      }),
+      increment,
+    };
+    const contentService = {
+      toQuestionReference: jest.fn(() => ({
+        source: LearningQuestionSource.CURATED,
+        id: 'question-id',
+        questionText: 'What does Gauss Law relate?',
+        options: ['A', 'B', 'C', 'D'],
+        correctAnswer: 'A',
+        solution: 'Flux is linked to enclosed charge.',
+        hint: null,
+        conceptTags: ['flux'],
+        commonErrors: [],
+        bloomLevel: 'Remember',
+        difficulty: 'Easy',
+      })),
+    } as unknown as AdaptiveContentService;
+    const service = new AdaptiveService(
+      {} as DataSource,
+      contentService,
+      {} as GenerationWorkerService,
+      {} as TutorService,
+      {} as AgentService,
+      {} as Repository<LearningTopicState>,
+      {} as Repository<LearningSession>,
+      {} as Repository<Flashcard>,
+      {} as Repository<FlashcardReview>,
+      {} as Repository<Question>,
+      {} as Repository<Topic>,
+    );
+    return {
+      service: service as unknown as {
+        applyAnswer: (
+          manager: unknown,
+          userId: string,
+          sessionId: string,
+          sessionItemId: string,
+          input: { selectedOption: string },
+        ) => Promise<{ kind: string }>;
+      },
+      manager,
+      state,
+      session,
+      item,
+      createdAnswer,
+      answersRepository,
+      statesRepository,
+      sessionsRepository,
+      itemsRepository,
+      increment,
+    };
+  }
+
+  it('persists the answer and reinforces state after a first wrong answer', async () => {
+    const harness = createMutationHarness({ selectedOption: 'B' });
+
+    const result = await harness.service.applyAnswer(
+      harness.manager,
+      'user-id',
+      'session-id',
+      'item-id',
+      { selectedOption: 'B' },
+    );
+
+    expect(result.kind).toBe('SOCRATIC_HINT');
+    expect(harness.answersRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionItemId: 'item-id',
+        attemptNumber: 1,
+        selectedOption: 'B',
+        isCorrect: false,
+      }),
+    );
+    expect(harness.answersRepository.save).toHaveBeenCalledWith(
+      harness.createdAnswer,
+    );
+    expect(harness.state).toMatchObject({
+      totalAnswered: 1,
+      totalCorrect: 0,
+      streakCounter: 0,
+      currentLevel: 1,
+      status: LearningTopicStatus.ACTIVE,
+    });
+    expect(harness.item.resolvedAt).toBeNull();
+    expect(harness.session).toMatchObject({
+      currentSequence: 1,
+      status: LearningSessionStatus.ACTIVE,
+    });
+    expect(harness.statesRepository.save).toHaveBeenCalledWith(harness.state);
+    expect(harness.itemsRepository.save).toHaveBeenCalledWith(harness.item);
+    expect(harness.sessionsRepository.save).toHaveBeenCalledWith(
+      harness.session,
+    );
+    expect(harness.increment).not.toHaveBeenCalled();
+  });
+
+  it('persists the answer, advances item progress, and awards XP after a correct answer', async () => {
+    const harness = createMutationHarness({ selectedOption: 'A' });
+
+    const result = await harness.service.applyAnswer(
+      harness.manager,
+      'user-id',
+      'session-id',
+      'item-id',
+      { selectedOption: 'A' },
+    );
+
+    expect(result.kind).toBe('CORRECT');
+    expect(harness.createdAnswer).toMatchObject({
+      attemptNumber: 1,
+      selectedOption: 'A',
+      isCorrect: true,
+    });
+    expect(harness.state).toMatchObject({
+      totalAnswered: 1,
+      totalCorrect: 1,
+      streakCounter: 3,
+      currentLevel: 1,
+    });
+    expect(harness.item.resolvedAt).toBeInstanceOf(Date);
+    expect(harness.session).toMatchObject({
+      currentSequence: 2,
+      status: LearningSessionStatus.ACTIVE,
+    });
+    expect(harness.increment).toHaveBeenCalledWith(
+      User,
+      { id: 'user-id' },
+      'xp',
+      10,
+    );
   });
 });

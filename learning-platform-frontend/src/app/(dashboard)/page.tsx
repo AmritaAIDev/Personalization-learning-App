@@ -123,19 +123,25 @@ export default function DashboardPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-mute">
                   Tests
                 </p>
-                <p className="mt-1 font-heading text-2xl font-semibold text-ink">
-                  {loading ? '-' : (dashboard?.stats.testsTaken ?? 0)}
-                </p>
+                {loading ? (
+                  <div className="mt-2 h-7 w-12 rounded-full skeleton" />
+                ) : (
+                  <p className="mt-1 font-heading text-2xl font-semibold text-ink">
+                    {dashboard?.stats.testsTaken ?? 0}
+                  </p>
+                )}
               </div>
               <div className="rounded-2xl bg-canvas p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-mute">
                   Best
                 </p>
-                <p className="mt-1 font-heading text-2xl font-semibold text-ink">
-                  {loading || dashboard?.stats.bestScore == null
-                    ? '-'
-                    : `${dashboard.stats.bestScore}%`}
-                </p>
+                {loading ? (
+                  <div className="mt-2 h-7 w-16 rounded-full skeleton" />
+                ) : (
+                  <p className="mt-1 font-heading text-2xl font-semibold text-ink">
+                    {dashboard?.stats.bestScore == null ? '-' : `${dashboard.stats.bestScore}%`}
+                  </p>
+                )}
               </div>
               <Link
                 href="/profile"

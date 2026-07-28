@@ -11,10 +11,7 @@ import {
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { PracticeAnswer } from './practice-answer.entity';
-import {
-  PracticeAnalysis,
-  PracticeAttemptStatus,
-} from './practice.types';
+import { PracticeAnalysis, PracticeAttemptStatus } from './practice.types';
 
 @Entity('practice_attempts')
 @Index('IDX_practice_attempts_user_status', ['userId', 'status'])

@@ -17,6 +17,13 @@ describe('mastery routing', () => {
   });
 
   it('marks the final coordinate as mastered', () => {
+    expect(resolveCoordinateCompletion(12, 5)).toEqual({
+      transition: LearningSessionTransition.MASTERED,
+      nextLevel: null,
+    });
+  });
+
+  it('keeps legacy out-of-range levels safe as mastered rather than crashing', () => {
     expect(resolveCoordinateCompletion(15, 5)).toEqual({
       transition: LearningSessionTransition.MASTERED,
       nextLevel: null,

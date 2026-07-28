@@ -119,11 +119,32 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
 
   if (loading) {
     return (
-      <div className="grid min-h-screen place-items-center p-6 text-sm font-semibold text-[#52525b]">
-        <span className="flex items-center gap-3">
-          <LoaderCircle className="h-5 w-5 animate-spin text-[#3f6f57]" aria-hidden="true" />
-          Preparing your balanced practice set…
-        </span>
+      <div className="mx-auto flex min-h-screen max-w-4xl items-center p-5 sm:p-8">
+        <section className="w-full rounded-[2rem] border border-hairline bg-surface p-6 shadow-[0_22px_70px_rgba(20,20,30,0.07)]">
+          <p className="flex items-center gap-3 text-sm font-semibold text-ink-soft">
+            <LoaderCircle className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
+            Preparing your balanced practice set...
+          </p>
+          <div className="mt-6 grid gap-4 md:grid-cols-[1fr_16rem]">
+            <div className="rounded-[1.5rem] bg-canvas p-5">
+              <div className="h-5 w-44 rounded-full skeleton" />
+              <div className="mt-5 h-20 rounded-2xl skeleton" />
+              <div className="mt-5 space-y-3">
+                {[0, 1, 2, 3].map((item) => (
+                  <div key={item} className="h-12 rounded-2xl skeleton" />
+                ))}
+              </div>
+            </div>
+            <div className="rounded-[1.5rem] bg-canvas p-5">
+              <div className="h-5 w-28 rounded-full skeleton" />
+              <div className="mt-5 grid grid-cols-5 gap-2">
+                {Array.from({ length: 15 }, (_, index) => (
+                  <div key={index} className="aspect-square rounded-lg skeleton" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     );
   }
@@ -131,10 +152,18 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
   if (!payload) {
     return (
       <div className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center p-6 text-center">
-        <CircleAlert className="h-9 w-9 text-[#3f6f57]" aria-hidden="true" />
-        <h1 className="mt-4 font-heading text-2xl font-bold text-[#1a1a1f]">We could not open this practice set</h1>
-        <p className="mt-2 text-sm leading-6 text-[#52525b]">{error ?? 'The selected topic is not available right now.'}</p>
-        <button type="button" onClick={() => void createOrResume()} className="mt-6 rounded-xl bg-[#3f6f57] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#315844]">
+        <CircleAlert className="h-9 w-9 text-primary" aria-hidden="true" />
+        <h1 className="mt-4 font-heading text-2xl font-bold text-ink">
+          We could not open this practice set
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-ink-soft">
+          {error ?? 'The selected topic is not available right now.'}
+        </p>
+        <button
+          type="button"
+          onClick={() => void createOrResume()}
+          className="mt-6 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-strong"
+        >
           Try again
         </button>
       </div>
@@ -148,24 +177,33 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
 
   return (
     <div className="mx-auto max-w-7xl p-5 sm:p-8 lg:p-10">
-      <header className="flex flex-col gap-5 border-b border-[#ececf0] pb-6 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="flex items-center gap-2 text-xs font-medium text-ink-mute">
-            <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
-            Reviewed practice
-          </p>
-          <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-[#1a1a1f] sm:text-3xl">{payload.attempt.title}</h1>
-          <p className="mt-2 text-sm text-[#52525b]">{scope.chapter} · {answeredCount}/{payload.attempt.totalQuestions} answers saved</p>
-        </div>
-        <div className="flex flex-wrap gap-2 self-start text-xs font-bold">
-          <span className="rounded-full bg-[#e7efe9] px-3 py-2 text-[#2c4c3d]">5 Easy</span>
-          <span className="rounded-full bg-[#f4f4f6] px-3 py-2 text-[#52525b]">5 Medium</span>
-          <span className="rounded-full bg-[#1a1a1f] px-3 py-2 text-white">5 Hard</span>
+      <header className="rounded-[1.75rem] border border-hairline bg-surface p-5 shadow-[0_16px_40px_rgba(20,20,30,0.055)]">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="flex items-center gap-2 text-xs font-medium text-ink-mute">
+              <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
+              Reviewed practice
+            </p>
+            <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+              {payload.attempt.title}
+            </h1>
+            <p className="mt-2 text-sm text-ink-soft">
+              {scope.chapter} • {answeredCount}/{payload.attempt.totalQuestions} answers saved
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 self-start text-xs font-bold">
+            <span className="rounded-full bg-primary-tint px-3 py-2 text-primary">5 Easy</span>
+            <span className="rounded-full bg-canvas px-3 py-2 text-ink-soft">5 Medium</span>
+            <span className="rounded-full bg-ink px-3 py-2 text-white">5 Hard</span>
+          </div>
         </div>
       </header>
 
       {error && (
-        <p className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700" role="alert">
+        <p
+          className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
+          role="alert"
+        >
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           {error}
         </p>
@@ -175,11 +213,19 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
         <section>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2 text-xs font-bold">
-              <span className="rounded-full bg-[#e7efe9] px-3 py-1.5 text-[#2c4c3d]">{question.difficulty}</span>
-              <span className="rounded-full bg-[#f4f4f6] px-3 py-1.5 text-[#52525b]">{question.bloomLevel}</span>
-              <span className="rounded-full bg-[#f4f4f6] px-3 py-1.5 text-[#52525b]">{question.marks} marks</span>
+              <span className="rounded-full bg-primary-tint px-3 py-1.5 text-primary">
+                {question.difficulty}
+              </span>
+              <span className="rounded-full bg-canvas px-3 py-1.5 text-ink-soft">
+                {question.bloomLevel}
+              </span>
+              <span className="rounded-full bg-canvas px-3 py-1.5 text-ink-soft">
+                {question.marks} marks
+              </span>
             </div>
-            <p className="text-sm font-semibold text-[#52525b]">Question {currentIndex + 1} of {payload.questions.length}</p>
+            <p className="text-sm font-semibold text-ink-soft">
+              Question {currentIndex + 1} of {payload.questions.length}
+            </p>
           </div>
 
           <QuestionCard
@@ -190,49 +236,113 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
             onSelect={(option) => void saveSelection(option)}
           />
 
-          <p className="mt-4 flex items-center gap-2 text-xs font-semibold text-[#52525b]" aria-live="polite">
-            {isSavingCurrent ? <LoaderCircle className="h-4 w-4 animate-spin text-[#3f6f57]" aria-hidden="true" /> : <Save className="h-4 w-4 text-[#3f6f57]" aria-hidden="true" />}
-            {isSavingCurrent ? 'Saving your answer…' : answers[question.id] ? 'Answer saved securely.' : 'Choose an answer to save it.'}
+          <p
+            className="mt-4 flex items-center gap-2 text-xs font-semibold text-ink-soft"
+            aria-live="polite"
+          >
+            {isSavingCurrent ? (
+              <LoaderCircle className="h-4 w-4 animate-spin text-primary" aria-hidden="true" />
+            ) : (
+              <Save className="h-4 w-4 text-primary" aria-hidden="true" />
+            )}
+            {isSavingCurrent
+              ? 'Saving your answer...'
+              : answers[question.id]
+                ? 'Answer saved securely.'
+                : 'Choose an answer to save it.'}
           </p>
 
-          <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[#ececf0] pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <button type="button" onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))} disabled={currentIndex === 0 || submitting} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dedee3] px-4 py-2.5 text-sm font-bold text-[#52525b] transition hover:bg-[#f4f4f6] disabled:cursor-not-allowed disabled:opacity-50">
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Previous
+          <div className="mt-8 flex flex-col-reverse gap-3 border-t border-hairline pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))}
+              disabled={currentIndex === 0 || submitting}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-hairline px-4 py-2.5 text-sm font-bold text-ink-soft transition hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              Previous
             </button>
             {isLastQuestion ? (
-              <button type="button" onClick={() => void submit()} disabled={submitting || savingQuestionId !== null} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#3f6f57] px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20, 20, 30,0.22)] transition hover:bg-[#315844] disabled:cursor-not-allowed disabled:opacity-60">
-                {submitting ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" /> : <>Submit practice <Send className="h-4 w-4" aria-hidden="true" /></>}
+              <button
+                type="button"
+                onClick={() => void submit()}
+                disabled={submitting || savingQuestionId !== null}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20,20,30,0.22)] transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? (
+                  <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <>
+                    Submit practice
+                    <Send className="h-4 w-4" aria-hidden="true" />
+                  </>
+                )}
               </button>
             ) : (
-              <button type="button" onClick={() => setCurrentIndex((index) => Math.min(payload.questions.length - 1, index + 1))} disabled={submitting} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a1a1f] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#2a2a30] disabled:cursor-not-allowed disabled:opacity-60">
-                Next <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentIndex((index) => Math.min(payload.questions.length - 1, index + 1))
+                }
+                disabled={submitting}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-5 py-2.5 text-sm font-bold text-white transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Next
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
           </div>
         </section>
 
-        <aside className="rounded-[1.75rem] border border-[#ececf0] bg-white p-5 shadow-[0_14px_34px_rgba(20, 20, 30,0.05)] xl:self-start">
+        <aside className="rounded-[1.75rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)] xl:self-start">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-heading text-lg font-bold text-[#1a1a1f]">Question map</h2>
-            <span className="text-xs font-semibold text-[#52525b]">{answeredCount} saved</span>
+            <h2 className="font-heading text-lg font-bold text-ink">Question map</h2>
+            <span className="text-xs font-semibold text-ink-soft">{answeredCount} saved</span>
           </div>
           <div className="mt-5 grid grid-cols-5 gap-2" aria-label="Question navigation">
             {payload.questions.map((item, index) => {
               const isCurrent = index === currentIndex;
               const isAnswered = Boolean(answers[item.id]);
               return (
-                <button key={item.id} type="button" onClick={() => setCurrentIndex(index)} disabled={submitting} aria-label={`Go to question ${index + 1}${isAnswered ? ', answered' : ''}`} aria-current={isCurrent ? 'step' : undefined} className={`grid aspect-square place-items-center rounded-lg text-xs font-bold transition ${isCurrent ? 'bg-[#3f6f57] text-white ring-2 ring-[#a8c4b6]' : isAnswered ? 'bg-[#e8f5ed] text-[#166534] hover:bg-[#d8f0e1]' : 'bg-[#f4f4f6] text-[#52525b] hover:bg-[#e7e8ea]'}`}>
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setCurrentIndex(index)}
+                  disabled={submitting}
+                  aria-label={`Go to question ${index + 1}${isAnswered ? ', answered' : ''}`}
+                  aria-current={isCurrent ? 'step' : undefined}
+                  className={`grid aspect-square place-items-center rounded-lg text-xs font-bold transition ${
+                    isCurrent
+                      ? 'bg-primary text-white ring-2 ring-primary/30'
+                      : isAnswered
+                        ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                        : 'bg-canvas text-ink-soft hover:bg-primary-tint'
+                  }`}
+                >
                   {index + 1}
                 </button>
               );
             })}
           </div>
-          <div className="mt-6 space-y-2 border-t border-[#ececf0] pt-5 text-xs text-[#52525b]">
-            <p className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" /> Answer saved</p>
+          <div className="mt-6 space-y-2 border-t border-hairline pt-5 text-xs text-ink-soft">
+            <p className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+              Answer saved
+            </p>
             <p>Results and explanations unlock only after submission.</p>
           </div>
-          <button type="button" onClick={() => void submit()} disabled={submitting || savingQuestionId !== null} className="mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#f2b6c5] bg-[#eef3f0] px-4 py-2.5 text-sm font-bold text-[#2c4c3d] transition hover:bg-[#e7efe9] disabled:cursor-not-allowed disabled:opacity-60">
-            {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />} Submit now
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={submitting || savingQuestionId !== null}
+            className="mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary-tint px-4 py-2.5 text-sm font-bold text-primary transition hover:bg-[#e7efe9] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Send className="h-4 w-4" aria-hidden="true" />
+            )}
+            Submit now
           </button>
         </aside>
       </div>

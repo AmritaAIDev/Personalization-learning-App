@@ -7,12 +7,16 @@ import {
   ArrowRight,
   BadgeCheck,
   BookMarked,
+  BrainCircuit,
   CheckCircle2,
   CircleAlert,
   Compass,
+  Gauge,
+  Info,
   Layers3,
   LoaderCircle,
   MessagesSquare,
+  RefreshCw,
   SearchCheck,
   Target,
   Trophy,
@@ -91,11 +95,13 @@ function getTopicState(
 function TabButton({
   active,
   label,
+  description,
   icon,
   onClick,
 }: {
   active: boolean;
   label: string;
+  description: string;
   icon: ReactNode;
   onClick: () => void;
 }) {
@@ -103,14 +109,51 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-4 py-2 text-[13.5px] font-medium transition duration-200 ${
-        active ? 'bg-ink text-white' : 'text-ink-soft hover:bg-canvas'
+      className={`group flex min-h-12 items-center gap-3 rounded-2xl px-3.5 py-2.5 text-left transition duration-200 ${
+        active
+          ? 'bg-ink text-white shadow-[0_10px_24px_rgba(20,20,30,0.16)]'
+          : 'border border-hairline bg-surface text-ink-soft hover:border-primary/25 hover:bg-primary-tint/40 hover:text-ink'
       }`}
     >
-      {icon}
-      {label}
+      <span
+        className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${
+          active ? 'bg-white/12 text-white' : 'bg-canvas text-primary'
+        }`}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[13px] font-semibold">{label}</span>
+        <span
+          className={`mt-0.5 hidden text-[11px] leading-4 sm:block ${
+            active ? 'text-white/60' : 'text-ink-mute'
+          }`}
+        >
+          {description}
+        </span>
+      </span>
     </button>
   );
+}
+
+function routeStatusDetail(topicState: LearningState | null): string {
+  if (!topicState) {
+    return 'No saved topic state yet. The first practice round will create placement evidence.';
+  }
+  if (topicState.status === 'MASTERED') {
+    return 'This topic is mastered. Use flashcards or review practice to keep it durable.';
+  }
+  if (topicState.status === 'PAUSED_FOR_PREREQUISITE') {
+    return 'This route is paused because prerequisite evidence is more important right now.';
+  }
+  return 'This level comes from saved answer history and updates only after practice evidence.';
+}
+
+function formatTransitionLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/^\w/, (letter) => letter.toUpperCase());
 }
 
 function DashboardSkeleton() {
@@ -167,58 +210,99 @@ function TopicOverview({
         : topicState
           ? 'In progress'
           : 'Ready to place';
+  const coordinate = topicState?.currentCoordinate;
+  const routeCards = [
+    {
+      label: 'Current level',
+      value: topicState ? `Level ${topicState.currentLevel}` : 'Not placed',
+      detail: coordinate?.label ?? 'Practice starts the automatic placement flow',
+      icon: <Gauge className="h-4 w-4" aria-hidden="true" />,
+    },
+    {
+      label: 'Cognitive target',
+      value: coordinate?.bloomLevel ?? 'Pending',
+      detail: coordinate
+        ? `${coordinate.difficulty} difficulty checkpoint`
+        : 'Bloom and difficulty are chosen by backend evidence',
+      icon: <BrainCircuit className="h-4 w-4" aria-hidden="true" />,
+    },
+    {
+      label: 'Decision source',
+      value: topicState ? 'Saved evidence' : 'First round',
+      detail: routeStatusDetail(topicState),
+      icon: <Info className="h-4 w-4" aria-hidden="true" />,
+    },
+  ];
 
   return (
     <div className="space-y-5">
       <div className="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]">
-      <section className="rounded-[1.5rem] border border-[#ececf0] bg-white p-5 shadow-[0_14px_34px_rgba(20, 20, 30,0.05)] sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="flex items-center gap-2 text-xs font-medium text-ink-mute">
-              <SearchCheck className="h-4 w-4" aria-hidden="true" />
-              Current route
-            </p>
-            <h2 className="mt-2 font-heading text-2xl font-bold tracking-tight text-[#1a1a1f]">
-              {topicState ? topicState.stageLabel : 'Start placement through practice'}
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#52525b]">
-              {topicState
-                ? topicState.nextFocus
-                : 'The system will place the student automatically from the first adaptive round.'}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onOpenPractice}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#3f6f57] px-4 py-2 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20, 20, 30,0.18)] transition hover:-translate-y-0.5 hover:bg-[#315844]"
-          >
-            Continue practice
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
-
-        <div className="mt-6 h-2 overflow-hidden rounded-full bg-[#f2f2f5]">
-          <div
-            className="h-full rounded-full bg-[#3f6f57] transition-all duration-500"
-            style={{ width: `${topicState?.masteryPercent ?? 0}%` }}
-          />
-        </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {[
-            ['Route', `${topicState?.masteryPercent ?? 0}% complete`],
-            ['Accuracy', accuracy === null ? 'No answers yet' : `${accuracy}%`],
-            ['Status', status],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-2xl border border-[#ececf0] bg-[#fbfbfd] p-4">
-              <p className="text-[11px] font-medium text-ink-mute">
-                {label}
+        <section className="rounded-[1.5rem] border border-[#ececf0] bg-white p-5 shadow-[0_14px_34px_rgba(20, 20, 30,0.05)] sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="flex items-center gap-2 text-xs font-medium text-ink-mute">
+                <SearchCheck className="h-4 w-4" aria-hidden="true" />
+                Current route
               </p>
-              <p className="mt-2 text-sm font-bold text-[#1a1a1f]">{value}</p>
+              <h2 className="mt-2 font-heading text-2xl font-bold tracking-tight text-[#1a1a1f]">
+                {topicState ? topicState.stageLabel : 'Start placement through practice'}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#52525b]">
+                {topicState
+                  ? topicState.nextFocus
+                  : 'The system will place the student automatically from the first adaptive round.'}
+              </p>
             </div>
-          ))}
-        </div>
-      </section>
+            <button
+              type="button"
+              onClick={onOpenPractice}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#3f6f57] px-4 py-2 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20, 20, 30,0.18)] transition hover:-translate-y-0.5 hover:bg-[#315844]"
+            >
+              Continue practice
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="mt-6 h-2 overflow-hidden rounded-full bg-[#f2f2f5]">
+            <div
+              className="h-full rounded-full bg-[#3f6f57] transition-all duration-500"
+              style={{ width: `${topicState?.masteryPercent ?? 0}%` }}
+            />
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            {[
+              ['Route', `${topicState?.masteryPercent ?? 0}% complete`],
+              ['Accuracy', accuracy === null ? 'No answers yet' : `${accuracy}%`],
+              ['Status', status],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-2xl border border-[#ececf0] bg-[#fbfbfd] p-4">
+                <p className="text-[11px] font-medium text-ink-mute">{label}</p>
+                <p className="mt-2 text-sm font-bold text-[#1a1a1f]">{value}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 rounded-[1.25rem] border border-[#ececf0] bg-[#fbfbfd] p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-mute">
+              Automatic level decision
+            </p>
+            <div className="mt-4 grid gap-3 lg:grid-cols-3">
+              {routeCards.map((card) => (
+                <article key={card.label} className="rounded-2xl bg-white p-4">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#eef3f0] text-[#3f6f57]">
+                    {card.icon}
+                  </span>
+                  <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-mute">
+                    {card.label}
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-[#1a1a1f]">{card.value}</p>
+                  <p className="mt-2 text-xs leading-5 text-[#52525b]">{card.detail}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
 
       <section className="space-y-5">
         <article className="rounded-[1.5rem] border border-[#ececf0] bg-white p-5 shadow-[0_14px_34px_rgba(20, 20, 30,0.05)]">
@@ -242,7 +326,7 @@ function TopicOverview({
                       {item.coordinate.label}
                     </p>
                     <p className="mt-0.5 text-xs text-[#52525b]">
-                      {item.transition.toLowerCase().replace('_', ' ')}
+                      {formatTransitionLabel(item.transition)}
                     </p>
                   </div>
                   <span className="text-xs font-bold text-[#86868b]">
@@ -310,6 +394,36 @@ function PracticeWorkspace({
   onContinue: () => void;
   onStop: () => void;
 }) {
+  if (!payload && loading) {
+    return (
+      <section className="rounded-[1.5rem] border border-[#ececf0] bg-white p-6 shadow-[0_18px_44px_rgba(20, 20, 30,0.07)] sm:p-7">
+        <div className="grid gap-6 lg:grid-cols-[1fr_0.85fr] lg:items-center">
+          <div>
+            <p className="flex items-center gap-2 text-xs font-medium text-ink-mute">
+              <RefreshCw className="h-4 w-4 animate-spin text-[#3f6f57]" aria-hidden="true" />
+              Preparing practice studio
+            </p>
+            <h2 className="mt-2 font-heading text-3xl font-bold tracking-tight text-[#1a1a1f]">
+              Building your next learning set
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[#52525b]">
+              The backend is selecting the right level, question set, and tutor context for this
+              topic. This should stay short and smooth.
+            </p>
+          </div>
+          <div className="rounded-[1.35rem] border border-[#ececf0] bg-[#fbfbfd] p-4">
+            <div className="space-y-3" aria-label="Preparing adaptive practice">
+              <div className="h-12 rounded-xl skeleton" />
+              <div className="h-12 rounded-xl skeleton" />
+              <div className="h-12 rounded-xl skeleton" />
+              <div className="h-11 rounded-xl skeleton" />
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   if (!payload) {
     return (
       <section className="rounded-[1.5rem] border border-[#ececf0] bg-white p-6 shadow-[0_18px_44px_rgba(20, 20, 30,0.07)] sm:p-7">
@@ -323,7 +437,9 @@ function PracticeWorkspace({
               Start the adaptive round
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[#52525b]">
-              Five database-backed questions open the live tutor flow. The student does not pick a level manually.
+              A short database-backed learning set opens the live tutor flow. When it completes,
+              the next set is prepared automatically so practice can continue until the student
+              stops.
             </p>
             {error ? (
               <p
@@ -339,7 +455,12 @@ function PracticeWorkspace({
             <div className="grid gap-2 text-sm font-semibold text-[#52525b]">
               <span className="rounded-xl bg-white px-3 py-3">1. Auto placement</span>
               <span className="rounded-xl bg-white px-3 py-3">2. Answer with tutor support</span>
-              <span className="rounded-xl bg-white px-3 py-3">3. Level updates only with evidence</span>
+              <span className="rounded-xl bg-white px-3 py-3">
+                3. Continue sets until you stop
+              </span>
+              <span className="rounded-xl bg-white px-3 py-3">
+                4. Level updates only with evidence
+              </span>
             </div>
             <button
               type="button"
@@ -505,7 +626,7 @@ function PracticeWorkspace({
                       ? 'border-amber-200 bg-amber-50 text-amber-900'
                       : feedback.kind === 'CORRECT'
                         ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                        : 'border-[#cfe0d4] bg-[#eef3f0] text-[#8d1730]'
+                    : 'border-[#cfe0d4] bg-[#eef3f0] text-[#2c4c3d]'
                   }`}
                   role="status"
                 >
@@ -661,50 +782,53 @@ export default function AdaptiveStudySession({
 
   return (
     <div className="mx-auto max-w-7xl p-5 sm:p-8 lg:p-10">
-      <header className="rounded-[1.5rem] border border-[#ececf0] bg-white px-4 py-4 shadow-[0_16px_38px_rgba(20, 20, 30,0.06)] sm:px-5">
-        <div className="grid gap-4 lg:grid-cols-[auto_1fr_auto] lg:items-center">
+      <header className="rounded-[1.75rem] border border-hairline bg-surface p-4 shadow-[0_16px_40px_rgba(20,20,30,0.055)] sm:p-5">
+        <div className="grid gap-4 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:items-center">
           <Link
             href="/"
-            className="inline-flex min-h-9 w-fit items-center justify-center gap-2 rounded-xl border border-[#dedee3] px-3 py-1.5 text-xs font-bold text-[#52525b] transition hover:bg-[#f4f4f6]"
+            className="inline-flex min-h-9 w-fit items-center justify-center gap-2 rounded-xl border border-hairline px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-primary/30 hover:bg-primary-tint/40 hover:text-primary"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Search
           </Link>
 
-          <div className="text-left lg:text-center">
-            <p className="inline-flex items-center gap-2 text-xs font-medium text-ink-mute">
+          <div className="min-w-0 text-left xl:text-center">
+            <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-ink-mute">
               <Compass className="h-4 w-4" aria-hidden="true" />
               Topic workspace
             </p>
-            <h1 className="mt-1 font-heading text-2xl font-bold tracking-tight text-[#1a1a1f] sm:text-3xl">
+            <h1 className="mt-1 truncate font-heading text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
               {scope.topic}
             </h1>
-            <div className="mt-2 flex flex-wrap gap-2 lg:justify-center">
-              <span className="rounded-full bg-[#f4f4f6] px-3 py-1.5 text-xs font-bold text-[#52525b]">
+            <div className="mt-2 flex flex-wrap gap-2 xl:justify-center">
+              <span className="rounded-full bg-canvas px-3 py-1.5 text-xs font-semibold text-ink-soft">
                 {scope.chapter}
               </span>
-              <span className="rounded-full bg-[#eef3f0] px-3 py-1.5 text-xs font-bold text-[#2c4c3d]">
+              <span className="rounded-full bg-primary-tint px-3 py-1.5 text-xs font-semibold text-primary">
                 {topicState?.stageLabel ?? 'Placement pending'}
               </span>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 lg:justify-end">
+          <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[34rem]">
             <TabButton
               active={activeTab === 'overview'}
               label="Dashboard"
+              description="Route status"
               icon={<SearchCheck className="h-4 w-4" aria-hidden="true" />}
               onClick={() => setActiveTab('overview')}
             />
             <TabButton
               active={activeTab === 'flashcards'}
               label="Flashcards"
+              description="Live AI recall"
               icon={<BookMarked className="h-4 w-4" aria-hidden="true" />}
               onClick={() => setActiveTab('flashcards')}
             />
             <TabButton
               active={activeTab === 'practice'}
-              label="Practice"
+              label="Practice Studio"
+              description="Question + tutor"
               icon={<MessagesSquare className="h-4 w-4" aria-hidden="true" />}
               onClick={() => setActiveTab('practice')}
             />

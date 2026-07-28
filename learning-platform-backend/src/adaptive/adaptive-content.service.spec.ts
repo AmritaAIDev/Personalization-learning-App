@@ -53,8 +53,12 @@ describe('AdaptiveContentService question selection', () => {
         createQueryBuilder: jest.fn(() => queryBuilder),
       })),
     } as unknown as DataSource;
+    const findQuestions = jest.fn(async () => [
+      usedQuestion,
+      ...freshQuestions,
+    ]);
     const questionsRepository = {
-      find: jest.fn(async () => [usedQuestion, ...freshQuestions]),
+      find: findQuestions,
     } as unknown as Repository<Question>;
     const generatedQuestionsRepository = {
       find: jest.fn(async () => [] as GeneratedLearningQuestion[]),
@@ -79,6 +83,14 @@ describe('AdaptiveContentService question selection', () => {
     );
 
     expect(selected).toHaveLength(5);
+    expect(findQuestions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          difficulty: 'Easy',
+          status: QuestionPublicationStatus.PUBLISHED,
+        }),
+      }),
+    );
     expect(selected).toEqual(
       expect.not.arrayContaining([
         expect.objectContaining({
@@ -87,5 +99,58 @@ describe('AdaptiveContentService question selection', () => {
         }),
       ]),
     );
+  });
+
+  it('reports coordinate coverage for all 12 levels without creating mock frontend data', async () => {
+    const dataSource = {} as DataSource;
+    const questionsRepository = {
+      count: jest.fn(async ({ where }: { where: { difficulty: string } }) =>
+        where.difficulty === 'Easy' ? 5 : 2,
+      ),
+    } as unknown as Repository<Question>;
+    const generatedQuestionsRepository = {
+      count: jest.fn(async ({ where }: { where: { difficulty: string } }) =>
+        where.difficulty === 'Hard' ? 4 : 0,
+      ),
+    } as unknown as Repository<GeneratedLearningQuestion>;
+    const service = new AdaptiveContentService(
+      dataSource,
+      {} as AgentService,
+      questionsRepository,
+      generatedQuestionsRepository,
+      {} as Repository<GenerationJob>,
+      {} as Repository<Flashcard>,
+    );
+
+    const coverage = await service.getCoverage({
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic: 'Gauss Law',
+    });
+
+    expect(coverage.coordinates).toHaveLength(12);
+    expect(coverage.coordinates[0]).toMatchObject({
+      level: 1,
+      bloomLevel: 'Recall',
+      difficulty: 'Easy',
+      curatedPublished: 5,
+      generatedReady: 0,
+      totalReady: 5,
+      readyForSession: true,
+    });
+    expect(coverage.coordinates[2]).toMatchObject({
+      level: 3,
+      difficulty: 'Hard',
+      curatedPublished: 2,
+      generatedReady: 4,
+      totalReady: 6,
+      readyForSession: true,
+    });
+    expect(coverage.coordinates[1]).toMatchObject({
+      level: 2,
+      difficulty: 'Medium',
+      totalReady: 2,
+      readyForSession: false,
+    });
   });
 });

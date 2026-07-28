@@ -516,9 +516,12 @@ export class AgentService {
     }
     const flashcards = values.map((value) => {
       const candidate = value as Partial<GeneratedFlashcardPayload>;
-      const front = typeof candidate.front === 'string' ? candidate.front.trim() : '';
-      const back = typeof candidate.back === 'string' ? candidate.back.trim() : '';
-      const hint = typeof candidate.hint === 'string' ? candidate.hint.trim() : null;
+      const front =
+        typeof candidate.front === 'string' ? candidate.front.trim() : '';
+      const back =
+        typeof candidate.back === 'string' ? candidate.back.trim() : '';
+      const hint =
+        typeof candidate.hint === 'string' ? candidate.hint.trim() : null;
       if (front.length < 8 || back.length < 12) {
         throw new ServiceUnavailableException(
           'The AI returned an incomplete flashcard.',

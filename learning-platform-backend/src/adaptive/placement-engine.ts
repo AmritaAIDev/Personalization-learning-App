@@ -40,7 +40,8 @@ export function describeLearningStage(level: number): {
   if (boundedLevel <= 2) {
     return {
       stageLabel: 'Foundation check',
-      nextFocus: 'Lock in core recall and concept meaning before adding speed or complexity.',
+      nextFocus:
+        'Lock in core recall and concept meaning before adding speed or complexity.',
       coordinateLabel: coordinate.label,
     };
   }
@@ -48,7 +49,8 @@ export function describeLearningStage(level: number): {
   if (boundedLevel <= 5) {
     return {
       stageLabel: 'Concept builder',
-      nextFocus: 'Strengthen understanding so the topic can hold up under standard problem solving.',
+      nextFocus:
+        'Strengthen understanding so the topic can hold up under standard problem solving.',
       coordinateLabel: coordinate.label,
     };
   }
@@ -56,7 +58,8 @@ export function describeLearningStage(level: number): {
   if (boundedLevel <= 8) {
     return {
       stageLabel: 'Applied practice',
-      nextFocus: 'Convert understanding into reliable standard-question execution.',
+      nextFocus:
+        'Convert understanding into reliable standard-question execution.',
       coordinateLabel: coordinate.label,
     };
   }
@@ -64,14 +67,16 @@ export function describeLearningStage(level: number): {
   if (boundedLevel <= 11) {
     return {
       stageLabel: 'Reasoning stretch',
-      nextFocus: 'Handle multi-step structure, decision points, and mixed reasoning with fewer hints.',
+      nextFocus:
+        'Handle multi-step structure, decision points, and mixed reasoning with fewer hints.',
       coordinateLabel: coordinate.label,
     };
   }
 
   return {
     stageLabel: 'Mastery stretch',
-    nextFocus: 'Sustain advanced reasoning and finish the topic at an exam-ready standard.',
+    nextFocus:
+      'Sustain advanced reasoning and finish the topic at an exam-ready standard.',
     coordinateLabel: coordinate.label,
   };
 }
@@ -105,26 +110,17 @@ export function inferInitialPlacement(
     confidence = 'HIGH';
   }
 
-  if (
-    evidence.sameChapterAnswered >= 10 &&
-    sameChapterAccuracy >= 0.8
-  ) {
+  if (evidence.sameChapterAnswered >= 10 && sameChapterAccuracy >= 0.8) {
     readinessScore += 2;
     reason = 'CHAPTER_EVIDENCE';
     confidence = 'HIGH';
-  } else if (
-    evidence.sameChapterAnswered >= 6 &&
-    sameChapterAccuracy >= 0.67
-  ) {
+  } else if (evidence.sameChapterAnswered >= 6 && sameChapterAccuracy >= 0.67) {
     readinessScore += 1;
     reason = 'CHAPTER_EVIDENCE';
     confidence = confidence === 'HIGH' ? 'HIGH' : 'MEDIUM';
   }
 
-  if (
-    evidence.sameSubjectAnswered >= 20 &&
-    sameSubjectAccuracy >= 0.78
-  ) {
+  if (evidence.sameSubjectAnswered >= 20 && sameSubjectAccuracy >= 0.78) {
     readinessScore += 1;
     if (reason === 'BASELINE') reason = 'SUBJECT_EVIDENCE';
     if (confidence === 'LOW') confidence = 'MEDIUM';

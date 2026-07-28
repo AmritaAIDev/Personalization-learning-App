@@ -19,7 +19,9 @@ import {
   GenerationJobStatus,
   LearningCoordinate,
   LearningQuestionSource,
+  LEARNING_LEVEL_COUNT,
   LEARNING_QUESTIONS_PER_SESSION,
+  coordinateForLevel,
 } from './adaptive.types';
 import { Flashcard } from './flashcard.entity';
 import { GeneratedLearningQuestion } from './generated-learning-question.entity';
@@ -167,11 +169,71 @@ export class AdaptiveContentService {
       order: { created_at: 'ASC' },
       take: Math.max(count * 4, 20),
     });
-    const chapterCandidates = chapterQuestions.map((question) =>
-      this.toCuratedReference(question),
-    ).filter((question) => !used.curated.has(question.id));
+    const chapterCandidates = chapterQuestions
+      .map((question) => this.toCuratedReference(question))
+      .filter((question) => !used.curated.has(question.id));
     if (chapterCandidates.length < count) return [];
     return this.shuffle(chapterCandidates).slice(0, count);
+  }
+
+  async getCoverage(scope: LearningScope): Promise<{
+    subject: string;
+    chapter: string;
+    topic: string;
+    coordinates: Array<{
+      level: number;
+      bloomLevel: string;
+      difficulty: string;
+      curatedPublished: number;
+      generatedReady: number;
+      totalReady: number;
+      readyForSession: boolean;
+    }>;
+  }> {
+    const coordinates = await Promise.all(
+      Array.from({ length: LEARNING_LEVEL_COUNT }, (_, index) => index + 1).map(
+        async (level) => {
+          const coordinate = coordinateForLevel(level);
+          const bloomAliases = bloomLevelAliases(coordinate.bloomLevel);
+          const [curatedPublished, generatedReady] = await Promise.all([
+            this.questionsRepository.count({
+              where: {
+                subject: scope.subject,
+                chapter: scope.chapter,
+                topic: scope.topic,
+                bloom_level: In(bloomAliases),
+                difficulty: coordinate.difficulty,
+                status: QuestionPublicationStatus.PUBLISHED,
+              },
+            }),
+            this.generatedQuestionsRepository.count({
+              where: {
+                subject: scope.subject,
+                chapter: scope.chapter,
+                topic: scope.topic,
+                bloomLevel: In(bloomAliases),
+                difficulty: coordinate.difficulty,
+                status: GeneratedLearningQuestionStatus.READY,
+              },
+            }),
+          ]);
+          const totalReady = curatedPublished + generatedReady;
+          return {
+            level,
+            bloomLevel: coordinate.bloomLevel,
+            difficulty: coordinate.difficulty,
+            curatedPublished,
+            generatedReady,
+            totalReady,
+            readyForSession: totalReady >= LEARNING_QUESTIONS_PER_SESSION,
+          };
+        },
+      ),
+    );
+    return {
+      ...scope,
+      coordinates,
+    };
   }
 
   /** Schedules a durable job only when the exact coordinate does not have a full cache. */
@@ -359,7 +421,7 @@ export class AdaptiveContentService {
           subject: scope.subject,
           chapter: scope.chapter,
           topic: scope.topic,
-          bloomLevel: coordinate.bloomLevel,
+          bloomLevel: In(bloomLevelAliases(coordinate.bloomLevel)),
           difficulty: coordinate.difficulty,
           status: GeneratedLearningQuestionStatus.READY,
         },
@@ -370,7 +432,7 @@ export class AdaptiveContentService {
           subject: scope.subject,
           chapter: scope.chapter,
           topic: scope.topic,
-          bloom_level: coordinate.bloomLevel,
+          bloom_level: In(bloomLevelAliases(coordinate.bloomLevel)),
           difficulty: coordinate.difficulty,
           status: QuestionPublicationStatus.PUBLISHED,
         },
@@ -391,7 +453,10 @@ export class AdaptiveContentService {
       .getRepository(LearningSessionItem)
       .createQueryBuilder('item')
       .innerJoin('item.session', 'session')
-      .select(['item.questionId AS "questionId"', 'item.generatedQuestionId AS "generatedQuestionId"'])
+      .select([
+        'item.questionId AS "questionId"',
+        'item.generatedQuestionId AS "generatedQuestionId"',
+      ])
       .where('session.user_id = :userId', { userId })
       .andWhere('session.subject = :subject', { subject: scope.subject })
       .andWhere('session.chapter = :chapter', { chapter: scope.chapter })

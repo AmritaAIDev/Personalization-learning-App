@@ -1,7 +1,4 @@
-import {
-  QuestionPublicationStatus,
-  QuestionSource,
-} from './question.entity';
+import { QuestionPublicationStatus, QuestionSource } from './question.entity';
 import { QuestionsService } from './questions.service';
 
 describe('QuestionsService', () => {

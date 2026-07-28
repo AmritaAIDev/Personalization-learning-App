@@ -114,9 +114,15 @@ describe('PracticeService', () => {
       created.questionIds.includes(question.id),
     );
     expect(payload.questions).toHaveLength(15);
-    expect(selected.filter((question) => question.difficulty === 'Easy')).toHaveLength(5);
-    expect(selected.filter((question) => question.difficulty === 'Medium')).toHaveLength(5);
-    expect(selected.filter((question) => question.difficulty === 'Hard')).toHaveLength(5);
+    expect(
+      selected.filter((question) => question.difficulty === 'Easy'),
+    ).toHaveLength(5);
+    expect(
+      selected.filter((question) => question.difficulty === 'Medium'),
+    ).toHaveLength(5);
+    expect(
+      selected.filter((question) => question.difficulty === 'Hard'),
+    ).toHaveLength(5);
     expect(JSON.stringify(payload.questions)).not.toContain('correct_answer');
     expect(JSON.stringify(payload.questions)).not.toContain('solution');
   });

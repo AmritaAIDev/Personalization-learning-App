@@ -9,10 +9,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import {
-  QuestionPublicationStatus,
-  QuestionSource,
-} from './question.entity';
+import { QuestionPublicationStatus, QuestionSource } from './question.entity';
 
 // Accept both the four canonical proficiency levels and the legacy Bloom
 // vocabulary so historical clients and seeded data continue to validate.

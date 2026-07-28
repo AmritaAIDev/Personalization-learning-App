@@ -1,9 +1,4 @@
-import {
-  IsOptional,
-  IsString,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { IsIn, IsInt, Max, Min } from 'class-validator';
 import { FlashcardRating } from './adaptive.types';
 
@@ -22,7 +17,6 @@ export class CreateLearningSessionDto {
   @MinLength(2)
   @MaxLength(160)
   topic: string;
-
 }
 
 export class SubmitLearningAnswerDto {

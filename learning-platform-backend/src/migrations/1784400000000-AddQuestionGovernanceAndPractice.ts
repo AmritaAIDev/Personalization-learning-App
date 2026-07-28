@@ -1,14 +1,12 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddQuestionGovernanceAndPractice1784400000000
-  implements MigrationInterface
-{
+export class AddQuestionGovernanceAndPractice1784400000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      "ALTER TABLE \"questions\" ADD COLUMN IF NOT EXISTS \"status\" varchar(20) NOT NULL DEFAULT 'PUBLISHED'",
+      'ALTER TABLE "questions" ADD COLUMN IF NOT EXISTS "status" varchar(20) NOT NULL DEFAULT \'PUBLISHED\'',
     );
     await queryRunner.query(
-      "ALTER TABLE \"questions\" ADD COLUMN IF NOT EXISTS \"source\" varchar(20) NOT NULL DEFAULT 'CURATED'",
+      'ALTER TABLE "questions" ADD COLUMN IF NOT EXISTS "source" varchar(20) NOT NULL DEFAULT \'CURATED\'',
     );
     await queryRunner.query(
       'ALTER TABLE "questions" ADD COLUMN IF NOT EXISTS "quality_score" smallint NOT NULL DEFAULT 80',
@@ -38,16 +36,16 @@ export class AddQuestionGovernanceAndPractice1784400000000
       "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'CHK_questions_status') THEN ALTER TABLE \"questions\" ADD CONSTRAINT \"CHK_questions_status\" CHECK (\"status\" IN ('DRAFT', 'PUBLISHED', 'ARCHIVED')); END IF; END $$;",
     );
     await queryRunner.query(
-      "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'CHK_questions_source') THEN ALTER TABLE \"questions\" ADD CONSTRAINT \"CHK_questions_source\" CHECK (\"source\" IN ('CURATED', 'AI_GENERATED')); END IF; END $$;",
+      'DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'CHK_questions_source\') THEN ALTER TABLE "questions" ADD CONSTRAINT "CHK_questions_source" CHECK ("source" IN (\'CURATED\', \'AI_GENERATED\')); END IF; END $$;',
     );
     await queryRunner.query(
-      "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'CHK_questions_quality_score') THEN ALTER TABLE \"questions\" ADD CONSTRAINT \"CHK_questions_quality_score\" CHECK (\"quality_score\" BETWEEN 0 AND 100); END IF; END $$;",
+      'DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'CHK_questions_quality_score\') THEN ALTER TABLE "questions" ADD CONSTRAINT "CHK_questions_quality_score" CHECK ("quality_score" BETWEEN 0 AND 100); END IF; END $$;',
     );
     await queryRunner.query(
-      "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_questions_created_by_user') THEN ALTER TABLE \"questions\" ADD CONSTRAINT \"FK_questions_created_by_user\" FOREIGN KEY (\"created_by_user_id\") REFERENCES \"users\"(\"id\") ON DELETE SET NULL; END IF; END $$;",
+      'DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'FK_questions_created_by_user\') THEN ALTER TABLE "questions" ADD CONSTRAINT "FK_questions_created_by_user" FOREIGN KEY ("created_by_user_id") REFERENCES "users"("id") ON DELETE SET NULL; END IF; END $$;',
     );
     await queryRunner.query(
-      "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_questions_reviewed_by_user') THEN ALTER TABLE \"questions\" ADD CONSTRAINT \"FK_questions_reviewed_by_user\" FOREIGN KEY (\"reviewed_by_user_id\") REFERENCES \"users\"(\"id\") ON DELETE SET NULL; END IF; END $$;",
+      'DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = \'FK_questions_reviewed_by_user\') THEN ALTER TABLE "questions" ADD CONSTRAINT "FK_questions_reviewed_by_user" FOREIGN KEY ("reviewed_by_user_id") REFERENCES "users"("id") ON DELETE SET NULL; END IF; END $$;',
     );
     await queryRunner.query(
       'CREATE INDEX IF NOT EXISTS "IDX_questions_published_scope" ON "questions" ("status", "subject", "chapter", "topic", "difficulty")',
@@ -76,8 +74,12 @@ export class AddQuestionGovernanceAndPractice1784400000000
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query('DROP TABLE IF EXISTS "practice_answers"');
     await queryRunner.query('DROP TABLE IF EXISTS "practice_attempts"');
-    await queryRunner.query('DROP INDEX IF EXISTS "IDX_questions_catalog_search"');
-    await queryRunner.query('DROP INDEX IF EXISTS "IDX_questions_published_scope"');
+    await queryRunner.query(
+      'DROP INDEX IF EXISTS "IDX_questions_catalog_search"',
+    );
+    await queryRunner.query(
+      'DROP INDEX IF EXISTS "IDX_questions_published_scope"',
+    );
     await queryRunner.query(
       'ALTER TABLE "questions" DROP CONSTRAINT IF EXISTS "FK_questions_reviewed_by_user"',
     );

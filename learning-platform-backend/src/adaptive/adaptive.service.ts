@@ -195,7 +195,7 @@ export class AdaptiveService {
        GROUP BY q.subtopic
        ORDER BY n DESC`,
       params,
-    )) as Row[];
+    )) as unknown as Row[];
     if (subtopicRows.length > 0) {
       return { source: 'subtopic', items: map(subtopicRows) };
     }
@@ -208,12 +208,16 @@ export class AdaptiveService {
        ORDER BY n DESC
        LIMIT 12`,
       params,
-    )) as Row[];
+    )) as unknown as Row[];
     if (conceptRows.length > 0) {
       return { source: 'concept', items: map(conceptRows) };
     }
 
     return { source: 'none', items: [] };
+  }
+
+  async getQuestionCoverage(input: CreateLearningSessionDto) {
+    return this.contentService.getCoverage(this.toScope(input));
   }
 
   async createOrResume(
@@ -305,9 +309,11 @@ export class AdaptiveService {
       coordinate.level,
       questions,
     );
-    void this.prefetchPracticeContinuity(user.id, scope, coordinate.level).catch(
-      () => undefined,
-    );
+    void this.prefetchPracticeContinuity(
+      user.id,
+      scope,
+      coordinate.level,
+    ).catch(() => undefined);
     return this.getSession(user.id, sessionId);
   }
 
@@ -434,7 +440,7 @@ export class AdaptiveService {
     };
   }
 
-  async getFlashcards(userId: string, input: FlashcardQueryDto) {
+  getFlashcards(userId: string, input: FlashcardQueryDto) {
     void userId;
     void input;
     return [];
@@ -817,7 +823,10 @@ export class AdaptiveService {
       : null;
     return {
       state: this.toPublicState(session.state),
-      placement: describeSavedPlacement(session.state.currentLevel, session.topic),
+      placement: describeSavedPlacement(
+        session.state.currentLevel,
+        session.topic,
+      ),
       session: {
         id: session.id,
         status: session.status,
@@ -896,7 +905,9 @@ export class AdaptiveService {
     const sameChapter = sameSubject.filter(
       (state) => state.chapter === scope.chapter && state.topic !== scope.topic,
     );
-    const peerStates = sameSubject.filter((state) => state.topic !== scope.topic);
+    const peerStates = sameSubject.filter(
+      (state) => state.topic !== scope.topic,
+    );
     const targetTopic = await this.topicsRepository.findOne({
       where: { name: scope.topic },
       relations: { prerequisites: true },
@@ -995,8 +1006,9 @@ export class AdaptiveService {
     preferredLevel: number,
   ): Promise<{ level: number; questions: LearningQuestionReference[] } | null> {
     const candidates = [
-      ...Array.from({ length: preferredLevel - 1 }, (_, index) =>
-        preferredLevel - index - 1,
+      ...Array.from(
+        { length: preferredLevel - 1 },
+        (_, index) => preferredLevel - index - 1,
       ),
       ...Array.from(
         { length: LEARNING_LEVEL_COUNT - preferredLevel },
@@ -1087,7 +1099,9 @@ export class AdaptiveService {
       .slice(0, 3);
   }
 
-  private async buildFlashcardSourceMaterial(scope: LearningScope): Promise<string> {
+  private async buildFlashcardSourceMaterial(
+    scope: LearningScope,
+  ): Promise<string> {
     const questions = await this.questionsRepository.find({
       where: {
         subject: scope.subject,

@@ -10,10 +10,7 @@ import { randomInt } from 'node:crypto';
 import { In, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { BLOOM_LEVELS, normalizeBloomLevel } from '../adaptive/adaptive.types';
-import {
-  Question,
-  QuestionPublicationStatus,
-} from '../question.entity';
+import { Question, QuestionPublicationStatus } from '../question.entity';
 import { PracticeAnswer } from './practice-answer.entity';
 import { PracticeAttempt } from './practice-attempt.entity';
 import {
@@ -140,10 +137,14 @@ export class PracticeService {
   ) {
     const attempt = await this.getOwnedAttempt(userId, attemptId, true);
     if (attempt.status !== PracticeAttemptStatus.IN_PROGRESS) {
-      throw new ConflictException('This practice session has already been submitted.');
+      throw new ConflictException(
+        'This practice session has already been submitted.',
+      );
     }
     if (!attempt.questionIds.includes(questionId)) {
-      throw new NotFoundException('Question is not part of this practice session.');
+      throw new NotFoundException(
+        'Question is not part of this practice session.',
+      );
     }
 
     const question = await this.questionsRepository.findOne({
@@ -185,7 +186,9 @@ export class PracticeService {
   async submitAttempt(userId: string, attemptId: string) {
     const attempt = await this.getOwnedAttempt(userId, attemptId, true);
     if (attempt.status !== PracticeAttemptStatus.IN_PROGRESS) {
-      throw new ConflictException('This practice session has already been submitted.');
+      throw new ConflictException(
+        'This practice session has already been submitted.',
+      );
     }
 
     const questions = await this.getQuestionsForAttempt(attempt);
@@ -238,7 +241,10 @@ export class PracticeService {
 
   async getReview(userId: string, attemptId: string) {
     const attempt = await this.getOwnedAttempt(userId, attemptId, true);
-    if (attempt.status !== PracticeAttemptStatus.SUBMITTED || !attempt.analysis) {
+    if (
+      attempt.status !== PracticeAttemptStatus.SUBMITTED ||
+      !attempt.analysis
+    ) {
       throw new ConflictException(
         'Submit this practice session before viewing explanations.',
       );
@@ -328,7 +334,9 @@ export class PracticeService {
           'This topic needs at least five published Easy, Medium, and Hard questions before practice can start.',
         );
       }
-      selected.push(...this.pickDiverseQuestions(tier, PRACTICE_PER_DIFFICULTY));
+      selected.push(
+        ...this.pickDiverseQuestions(tier, PRACTICE_PER_DIFFICULTY),
+      );
     }
     if (selected.length !== PRACTICE_QUESTION_COUNT) {
       throw new ServiceUnavailableException(
@@ -410,9 +418,11 @@ export class PracticeService {
       };
     };
 
-    const difficultyPerformance = PRACTICE_DIFFICULTIES
-      .filter((difficulty) => difficulties.has(difficulty))
-      .map((difficulty) => makePerformance(difficulty, difficulties.get(difficulty)!));
+    const difficultyPerformance = PRACTICE_DIFFICULTIES.filter((difficulty) =>
+      difficulties.has(difficulty),
+    ).map((difficulty) =>
+      makePerformance(difficulty, difficulties.get(difficulty)!),
+    );
     const bloomPerformance = BLOOM_LEVELS.filter((level) =>
       blooms.has(level),
     ).map((level) => makePerformance(level, blooms.get(level)!));

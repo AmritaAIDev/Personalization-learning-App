@@ -48,7 +48,9 @@ const BLOOM_ALIASES: Record<string, BloomLevel> = {
   synthesis: 'Higher-Order',
 };
 
-export function normalizeBloomLevel(value: string | null | undefined): BloomLevel {
+export function normalizeBloomLevel(
+  value: string | null | undefined,
+): BloomLevel {
   const key = (value ?? '').trim().toLowerCase().replace(/\s+/g, '-');
   return BLOOM_ALIASES[key] ?? BLOOM_ALIASES[key.replace(/-/g, '')] ?? 'Recall';
 }
@@ -91,8 +93,7 @@ export interface LearningCoordinate {
 export const LEARNING_COORDINATES: readonly LearningCoordinate[] =
   BLOOM_LEVELS.flatMap((bloomLevel, bloomIndex) =>
     DIFFICULTY_LEVELS.map((difficulty, difficultyIndex) => {
-      const level =
-        bloomIndex * DIFFICULTY_LEVELS.length + difficultyIndex + 1;
+      const level = bloomIndex * DIFFICULTY_LEVELS.length + difficultyIndex + 1;
       return {
         level,
         bloomLevel,
@@ -176,7 +177,10 @@ export enum TutorMessageType {
 export function coordinateForLevel(level: number): LearningCoordinate {
   // Clamp into range so legacy state saved on the old 15-level scale (or any
   // out-of-range value) degrades gracefully instead of crashing the session.
-  const bounded = Math.min(Math.max(Math.round(level) || 1, 1), LEARNING_LEVEL_COUNT);
+  const bounded = Math.min(
+    Math.max(Math.round(level) || 1, 1),
+    LEARNING_LEVEL_COUNT,
+  );
   return LEARNING_COORDINATES[bounded - 1];
 }
 

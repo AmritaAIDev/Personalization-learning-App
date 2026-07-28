@@ -1,12 +1,21 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowUpRight, Flame, TrendingUp } from 'lucide-react';
+import {
+  ArrowUpRight,
+  BookOpen,
+  CircleAlert,
+  Flame,
+  Layers3,
+  Target,
+  TrendingUp,
+} from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import type {
   CompetencyBand,
   GrowthPayload,
   GrowthPoint,
+  TopicCompetency,
 } from '@/lib/growth-types';
 
 const BANDS: CompetencyBand[] = ['Beginner', 'Developing', 'Proficient', 'Advanced'];
@@ -15,7 +24,6 @@ function bandIndex(band: CompetencyBand): number {
   return Math.max(0, BANDS.indexOf(band));
 }
 
-/** Smooth-ish area path for the mastery timeline. */
 function buildAreaPath(points: GrowthPoint[], width: number, height: number) {
   if (points.length === 0) return { line: '', area: '' };
   const max = Math.max(points.length - 1, 1);
@@ -31,13 +39,65 @@ function buildAreaPath(points: GrowthPoint[], width: number, height: number) {
   return { line, area };
 }
 
+function readinessLabel(score: number): string {
+  if (score >= 80) return 'Exam-ready';
+  if (score >= 60) return 'Building well';
+  if (score >= 35) return 'Needs repair';
+  return 'Needs baseline';
+}
+
+function average(values: number[]): number {
+  if (values.length === 0) return 0;
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+function groupBySubject(topics: TopicCompetency[]) {
+  const groups = new Map<string, TopicCompetency[]>();
+  for (const topic of topics) {
+    groups.set(topic.subject, [...(groups.get(topic.subject) ?? []), topic]);
+  }
+  return Array.from(groups.entries()).map(([subject, subjectTopics]) => {
+    const score = average(subjectTopics.map((topic) => topic.score));
+    const weakCount = subjectTopics.filter((topic) => topic.score < 55).length;
+    return {
+      subject,
+      score,
+      weakCount,
+      label: readinessLabel(score),
+      tracked: subjectTopics.length,
+    };
+  });
+}
+
+function groupByChapter(topics: TopicCompetency[]) {
+  const groups = new Map<string, TopicCompetency[]>();
+  for (const topic of topics) {
+    const key = `${topic.subject}::${topic.chapter}`;
+    groups.set(key, [...(groups.get(key) ?? []), topic]);
+  }
+  return Array.from(groups.entries())
+    .map(([key, chapterTopics]) => {
+      const [subject, chapter] = key.split('::');
+      const score = average(chapterTopics.map((topic) => topic.score));
+      return {
+        subject,
+        chapter,
+        score,
+        tracked: chapterTopics.length,
+        weakestTopic: chapterTopics.slice().sort((a, b) => a.score - b.score)[0],
+      };
+    })
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 4);
+}
+
 function ScoreRing({ score, band }: { score: number; band: CompetencyBand }) {
   const radius = 52;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
   return (
     <div className="relative grid h-[132px] w-[132px] shrink-0 place-items-center">
-      <svg viewBox="0 0 132 132" className="h-full w-full -rotate-90">
+      <svg viewBox="0 0 132 132" className="h-full w-full -rotate-90" aria-hidden="true">
         <circle cx="66" cy="66" r={radius} fill="none" stroke="#ececf0" strokeWidth="9" />
         <circle
           cx="66"
@@ -63,19 +123,47 @@ function ScoreRing({ score, band }: { score: number; band: CompetencyBand }) {
 }
 
 function BreakdownBar({ label, value }: { label: string; value: number }) {
+  const percent = Math.round(value * 100);
   return (
     <div>
       <div className="flex items-center justify-between text-[11px]">
         <span className="text-ink-soft">{label}</span>
-        <span className="font-medium text-ink">{Math.round(value * 100)}</span>
+        <span className="font-medium text-ink">{percent}%</span>
       </div>
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/[0.06]">
         <div
           className="h-full rounded-full bg-primary/80 transition-[width] duration-700"
-          style={{ width: `${Math.round(value * 100)}%` }}
+          style={{ width: `${percent}%` }}
         />
       </div>
     </div>
+  );
+}
+
+function GrowthSkeleton() {
+  return (
+    <section className="mt-10 animate-fade">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="h-4 w-36 rounded-full skeleton" />
+          <div className="mt-3 h-8 w-64 rounded-full skeleton" />
+        </div>
+        <div className="h-4 w-44 rounded-full skeleton" />
+      </div>
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        {[0, 1, 2].map((item) => (
+          <div key={item} className="rounded-2xl bg-surface p-5 hairline elevate-sm">
+            <div className="h-4 w-24 rounded-full skeleton" />
+            <div className="mt-5 h-8 w-20 rounded-full skeleton" />
+            <div className="mt-5 h-2 w-full rounded-full skeleton" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+        <div className="h-72 rounded-2xl bg-surface hairline elevate-sm skeleton" />
+        <div className="h-72 rounded-2xl bg-surface hairline elevate-sm skeleton" />
+      </div>
+    </section>
   );
 }
 
@@ -85,12 +173,13 @@ export default function GrowthPanel() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
       const next = await apiFetch<GrowthPayload>('/api/learning/growth');
       setData(next);
       setError(null);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Growth could not be loaded.');
+      setError(reason instanceof Error ? reason.message : 'Readiness could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -102,30 +191,23 @@ export default function GrowthPanel() {
   }, [load]);
 
   const chart = useMemo(
-    () => buildAreaPath(data?.timeline ?? [], 320, 96),
+    () => buildAreaPath(data?.timeline ?? [], 320, 104),
     [data?.timeline],
   );
+  const subjectReadiness = useMemo(() => groupBySubject(data?.topics ?? []), [data?.topics]);
+  const chapterPreview = useMemo(() => groupByChapter(data?.topics ?? []), [data?.topics]);
 
-  if (loading) {
-    return (
-      <section className="mt-14">
-        <div className="h-5 w-40 rounded-full skeleton" />
-        <div className="mt-6 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="h-56 rounded-2xl bg-surface hairline elevate-sm" />
-          <div className="h-56 rounded-2xl bg-surface hairline elevate-sm" />
-        </div>
-      </section>
-    );
-  }
+  if (loading) return <GrowthSkeleton />;
 
   if (error || !data) {
     return (
-      <section className="mt-14">
-        <h2 className="font-heading text-2xl font-semibold tracking-tight text-ink">
-          Your growth
-        </h2>
+      <section className="mt-10">
+        <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <CircleAlert className="h-4 w-4 text-rose-500" aria-hidden="true" />
+          Readiness map unavailable
+        </div>
         <p className="mt-4 rounded-2xl bg-surface p-5 text-sm text-ink-soft hairline">
-          {error ?? 'Growth is not available yet.'}
+          {error ?? 'Readiness is not available yet.'}
         </p>
       </section>
     );
@@ -135,24 +217,69 @@ export default function GrowthPanel() {
   const hasTrend = timeline.length >= 2;
 
   return (
-    <section className="mt-14">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-heading text-2xl font-semibold tracking-tight text-ink">
-          Your growth
-        </h2>
+    <section className="mt-10 animate-rise" style={{ animationDelay: '150ms' }}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+            Readiness map
+          </p>
+          <h2 className="mt-2 font-heading text-2xl font-semibold tracking-tight text-ink">
+            Subject readiness and chapter priorities
+          </h2>
+        </div>
         <span className="text-[13px] text-ink-mute">
-          {overall.topicsTracked} topic{overall.topicsTracked === 1 ? '' : 's'} in motion
+          {overall.topicsTracked} topic{overall.topicsTracked === 1 ? '' : 's'} tracked from real
+          attempts
         </span>
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        {/* Competency score + band ladder — the confidence anchor. */}
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        {subjectReadiness.length > 0 ? (
+          subjectReadiness.map((subject) => (
+            <article
+              key={subject.subject}
+              className="group rounded-2xl bg-surface p-5 transition duration-300 hairline elevate-sm hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(20,20,30,0.07)]"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-ink">{subject.subject}</p>
+                  <p className="mt-1 text-xs text-ink-mute">
+                    {subject.tracked} tracked topic{subject.tracked === 1 ? '' : 's'}
+                  </p>
+                </div>
+                <span className="rounded-full bg-primary-tint px-2.5 py-1 text-[11px] font-semibold text-primary">
+                  {subject.label}
+                </span>
+              </div>
+              <div className="mt-5 flex items-end justify-between">
+                <span className="font-heading text-3xl font-semibold text-ink">
+                  {subject.score}%
+                </span>
+                <span className="text-xs font-medium text-ink-mute">
+                  {subject.weakCount} repair
+                </span>
+              </div>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-black/[0.06]">
+                <div
+                  className="h-full rounded-full bg-primary transition-[width] duration-700"
+                  style={{ width: `${subject.score}%` }}
+                />
+              </div>
+            </article>
+          ))
+        ) : (
+          <div className="rounded-2xl bg-surface p-5 text-sm leading-6 text-ink-soft hairline md:col-span-3">
+            Subject readiness appears after the student completes diagnostics or adaptive practice.
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
         <section className="rounded-2xl bg-surface p-6 hairline elevate-sm">
           <div className="flex items-center gap-6">
             <ScoreRing score={overall.score} band={overall.band} />
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] text-ink-mute">Competency</p>
-              {/* Band ladder — an aspirational path, current rung filled. */}
+              <p className="text-[13px] text-ink-mute">Overall competency</p>
               <div className="mt-3 space-y-1.5">
                 {BANDS.map((band, index) => {
                   const reached = index <= bandIndex(overall.band);
@@ -208,82 +335,119 @@ export default function GrowthPanel() {
           </div>
         </section>
 
-        {/* Growth curve + skill breakdown. */}
         <section className="rounded-2xl bg-surface p-6 hairline elevate-sm">
-          <p className="text-[13px] text-ink-mute">Mastery over time</p>
-          <div className="mt-3">
-            {hasTrend ? (
-              <svg viewBox="0 0 320 96" className="h-24 w-full" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3f6f57" stopOpacity="0.18" />
-                    <stop offset="100%" stopColor="#3f6f57" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <path d={chart.area} fill="url(#growthFill)" />
-                <path
-                  d={chart.line}
-                  fill="none"
-                  stroke="#3f6f57"
-                  strokeWidth="2"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                />
-              </svg>
-            ) : (
-              <div className="flex h-24 items-center justify-center rounded-xl bg-canvas text-center text-[13px] text-ink-mute">
-                Your growth curve draws itself as you finish rounds.
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-2 text-[13px] text-ink-mute">
+                <Target className="h-4 w-4 text-primary" aria-hidden="true" />
+                Mastery over time
+              </p>
+              <div className="mt-3">
+                {hasTrend ? (
+                  <svg viewBox="0 0 320 104" className="h-28 w-full" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3f6f57" stopOpacity="0.18" />
+                        <stop offset="100%" stopColor="#3f6f57" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d={chart.area} fill="url(#growthFill)" />
+                    <path
+                      d={chart.line}
+                      fill="none"
+                      stroke="#3f6f57"
+                      strokeWidth="2"
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                ) : (
+                  <div className="flex h-28 items-center justify-center rounded-xl bg-canvas px-5 text-center text-[13px] text-ink-mute">
+                    The growth curve draws itself as the student completes real rounds.
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            <BreakdownBar label="Accuracy" value={overall.breakdown.accuracy} />
-            <BreakdownBar label="Difficulty reached" value={overall.breakdown.difficulty} />
-            <BreakdownBar label="Cognitive depth" value={overall.breakdown.bloom} />
-            <BreakdownBar
-              label="Consistency"
-              value={overall.breakdown.consistency || overall.breakdown.accuracy}
-            />
+            <div className="grid min-w-0 gap-2.5 sm:grid-cols-2 xl:w-72 xl:grid-cols-1">
+              <BreakdownBar label="Accuracy" value={overall.breakdown.accuracy} />
+              <BreakdownBar label="Difficulty reached" value={overall.breakdown.difficulty} />
+              <BreakdownBar label="Cognitive depth" value={overall.breakdown.bloom} />
+              <BreakdownBar
+                label="Consistency"
+                value={overall.breakdown.consistency || overall.breakdown.accuracy}
+              />
+            </div>
           </div>
         </section>
       </div>
 
-      {/* Per-topic competency. */}
-      {topics.length > 0 ? (
-        <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
-          {topics.map((topic) => (
-            <div
-              key={`${topic.subject}-${topic.chapter}-${topic.topic}`}
-              className="rounded-2xl bg-surface p-4 hairline elevate-sm"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-ink">{topic.topic}</p>
-                  <p className="mt-0.5 text-xs text-ink-mute">
-                    {topic.bloomLevel} · {topic.difficulty}
-                  </p>
-                </div>
-                <span className="shrink-0 rounded-full bg-primary-tint px-2.5 py-1 text-[11px] font-medium text-primary">
-                  {topic.band}
-                </span>
-              </div>
-              <div className="mt-3 flex items-center gap-3">
-                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/[0.06]">
-                  <span
-                    className="block h-full rounded-full bg-primary transition-[width] duration-700"
-                    style={{ width: `${topic.score}%` }}
-                  />
-                </span>
-                <span className="flex items-center gap-0.5 text-xs font-medium text-ink">
-                  {topic.score}
-                  <ArrowUpRight className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-                </span>
-              </div>
-            </div>
-          ))}
+      <section className="mt-4 rounded-2xl bg-surface p-5 hairline elevate-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Layers3 className="h-4 w-4 text-primary" aria-hidden="true" />
+              Chapter and topic preview
+            </p>
+            <p className="mt-1 text-xs text-ink-mute">
+              Ordered by weakest tracked chapter, so the next repair area is obvious.
+            </p>
+          </div>
+          <BookOpen className="hidden h-5 w-5 text-ink-mute sm:block" aria-hidden="true" />
         </div>
-      ) : null}
+
+        {chapterPreview.length > 0 ? (
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            {chapterPreview.map((chapter) => (
+              <article
+                key={`${chapter.subject}-${chapter.chapter}`}
+                className="group rounded-2xl bg-canvas p-4 transition duration-300 hover:bg-surface hover:shadow-[0_12px_30px_rgba(20,20,30,0.06)]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-ink">{chapter.chapter}</p>
+                    <p className="mt-1 truncate text-xs text-ink-mute">
+                      {chapter.subject} • weakest: {chapter.weakestTopic.topic}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-ink-soft hairline">
+                    {chapter.score}%
+                  </span>
+                </div>
+                <div className="mt-4 flex items-center gap-3">
+                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/[0.06]">
+                    <span
+                      className="block h-full rounded-full bg-primary transition-[width] duration-700"
+                      style={{ width: `${chapter.score}%` }}
+                    />
+                  </span>
+                  <ArrowUpRight
+                    className="h-4 w-4 text-ink-mute transition group-hover:translate-x-0.5 group-hover:text-primary"
+                    aria-hidden="true"
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-5 rounded-xl bg-canvas p-4 text-sm leading-6 text-ink-soft">
+            Chapter priorities appear after the student completes topic-level practice or tests.
+          </p>
+        )}
+
+        {topics.length > 0 ? (
+          <div className="mt-5 flex flex-wrap gap-2">
+            {topics.slice(0, 8).map((topic) => (
+              <span
+                key={`${topic.subject}-${topic.chapter}-${topic.topic}`}
+                className="rounded-full bg-primary-tint px-3 py-1.5 text-[11px] font-semibold text-primary"
+              >
+                {topic.topic} • {topic.bloomLevel} • {topic.difficulty}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </section>
     </section>
   );
 }

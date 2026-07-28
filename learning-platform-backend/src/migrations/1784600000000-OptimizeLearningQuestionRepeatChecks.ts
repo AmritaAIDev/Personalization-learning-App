@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class OptimizeLearningQuestionRepeatChecks1784600000000
-  implements MigrationInterface
-{
+export class OptimizeLearningQuestionRepeatChecks1784600000000 implements MigrationInterface {
   name = 'OptimizeLearningQuestionRepeatChecks1784600000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

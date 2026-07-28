@@ -30,7 +30,8 @@ const WEIGHTS = {
 // Seconds a confident answer should take; faster (down to this) reads as fluent.
 const SPEED_TARGET_SECONDS = 45;
 
-export type CompetencyBand = 'Beginner' | 'Developing' | 'Proficient' | 'Advanced';
+export type CompetencyBand =
+  'Beginner' | 'Developing' | 'Proficient' | 'Advanced';
 
 export interface CompetencyBreakdown {
   accuracy: number;
@@ -52,7 +53,7 @@ export interface TopicCompetency {
   answered: number;
   score: number;
   band: CompetencyBand;
-  status: string;
+  status: LearningTopicStatus;
 }
 
 export interface GrowthPoint {
@@ -232,7 +233,8 @@ export class CompetencyService {
 
     // Weight each topic by evidence (answers) so lightly-touched topics don't dominate.
     const weight = (topic: TopicCompetency) => Math.max(topic.answered, 1);
-    const weightSum = topics.reduce((sum, topic) => sum + weight(topic), 0) || 1;
+    const weightSum =
+      topics.reduce((sum, topic) => sum + weight(topic), 0) || 1;
     const avg = (pick: (topic: TopicCompetency) => number) =>
       topics.reduce((sum, topic) => sum + pick(topic) * weight(topic), 0) /
       weightSum;
@@ -298,6 +300,14 @@ export class CompetencyService {
   private async loadAnswerAggregates(
     userId: string,
   ): Promise<Map<string, AnswerAgg>> {
+    type AnswerAggregateRow = {
+      subject: string;
+      chapter: string;
+      topic: string;
+      avg_elapsed: number | string | null;
+      variance: number | string | null;
+      n: number | string;
+    };
     const map = new Map<string, AnswerAgg>();
     try {
       const rows = (await this.dataSource.query(
@@ -311,14 +321,7 @@ export class CompetencyService {
          WHERE s.user_id = $1
          GROUP BY s.subject, s.chapter, s.topic`,
         [userId],
-      )) as Array<{
-        subject: string;
-        chapter: string;
-        topic: string;
-        avg_elapsed: string | null;
-        variance: string | null;
-        n: string;
-      }>;
+      )) as unknown as AnswerAggregateRow[];
       for (const row of rows) {
         map.set(scopeKey(row.subject, row.chapter, row.topic), {
           avgElapsed: row.avg_elapsed === null ? null : Number(row.avg_elapsed),

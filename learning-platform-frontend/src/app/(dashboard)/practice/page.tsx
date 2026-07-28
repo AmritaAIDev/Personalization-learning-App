@@ -6,14 +6,41 @@ import {
   ArrowRight,
   BookOpenCheck,
   Brain,
-  SearchX,
+  ClipboardCheck,
+  Search,
+  ShieldCheck,
   Timer,
 } from 'lucide-react';
-import PageHero from '@/components/product/PageHero';
-import FeatureCard from '@/components/product/FeatureCard';
 import PracticeSession from '@/components/practice/PracticeSession';
 import TopicSearch from '@/components/search/TopicSearch';
 import { practiceScopeFromSearchParams } from '@/lib/practice';
+
+const modes = [
+  {
+    eyebrow: 'Reviewed practice',
+    title: 'Balanced 15-question set',
+    description:
+      'The backend builds 5 Easy, 5 Medium, and 5 Hard questions from reviewed database content. Answers save live; explanations unlock only after submission.',
+    icon: <ClipboardCheck className="h-5 w-5" aria-hidden="true" />,
+    state: 'Available now',
+  },
+  {
+    eyebrow: 'Tutor mode',
+    title: 'Adaptive Practice Studio',
+    description:
+      'For learning with hints and AI tutor support, open the topic in Learn. That flow updates the automatic level route.',
+    icon: <Brain className="h-5 w-5" aria-hidden="true" />,
+    state: 'Open from Learn',
+  },
+  {
+    eyebrow: 'Review mode',
+    title: 'Mistake repair queue',
+    description:
+      'This will become database-backed through Notebook after wrong answers are saved as repair cards. No frontend mock history is shown.',
+    icon: <BookOpenCheck className="h-5 w-5" aria-hidden="true" />,
+    state: 'Next module',
+  },
+];
 
 export default function PracticePage() {
   const searchParams = useSearchParams();
@@ -24,55 +51,103 @@ export default function PracticePage() {
   return (
     <div className="min-h-screen bg-canvas pb-20">
       <main className="mx-auto w-full max-w-6xl px-5 pt-10 sm:px-8 sm:pt-16 lg:px-10">
-        <PageHero
-          eyebrow="Practice library"
-          title="Choose the intent before the question set."
-          description="The same reviewed database can support tutor-mode learning, exam-like timed sets, and weak-topic review. Search opens a verified unit; the backend decides what is ready."
-        />
+        <section className="rounded-[2rem] border border-hairline bg-surface p-5 shadow-[0_22px_70px_rgba(20,20,30,0.07)] sm:p-7 lg:p-8">
+          <div className="grid gap-7 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full bg-primary-tint px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+                <Timer className="h-3.5 w-3.5" aria-hidden="true" />
+                Practice command
+              </p>
+              <h1 className="mt-4 font-heading text-[2.15rem] font-semibold leading-[1.05] tracking-tight text-ink sm:text-[2.8rem]">
+                Start a reviewed practice set from a verified topic.
+              </h1>
+              <p className="mt-4 max-w-xl text-sm leading-6 text-ink-soft">
+                Search chooses the topic. The backend decides whether enough reviewed questions
+                exist and creates a secure practice attempt from database content only.
+              </p>
+            </div>
 
-        <section className="mt-8 rounded-[1.65rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)]">
-          <TopicSearch destination="practice" />
+            <div className="rounded-[1.5rem] border border-hairline bg-canvas p-4 sm:p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-ink">Find practice topic</p>
+                  <p className="mt-1 text-xs leading-5 text-ink-mute">
+                    Result counts come from the question catalog API.
+                  </p>
+                </div>
+                <Search className="h-5 w-5 text-primary" aria-hidden="true" />
+              </div>
+              <TopicSearch destination="practice" />
+            </div>
+          </div>
         </section>
 
-        <div className="mt-8 grid gap-4 lg:grid-cols-3">
-          <FeatureCard
-            eyebrow="Tutor mode"
-            title="Learn with explanations"
-            description="Best when the student is still forming the concept. Wrong answers stay attached to the AI tutor and mistake notebook."
-            icon={<Brain className="h-5 w-5" aria-hidden="true" />}
-          />
-          <FeatureCard
-            eyebrow="Timed mode"
-            title="Exam-like practice"
-            description="Balanced reviewed sets with autosave, submit-only analysis, and no exposed answer key before completion."
-            icon={<Timer className="h-5 w-5" aria-hidden="true" />}
-          />
-          <FeatureCard
-            eyebrow="Review mode"
-            title="Due and weak topics"
-            description="Short sessions for questions, concepts, and mistakes that are due for reinforcement."
-            icon={<BookOpenCheck className="h-5 w-5" aria-hidden="true" />}
-          />
-        </div>
+        <section className="mt-6 grid gap-4 lg:grid-cols-3">
+          {modes.map((mode) => (
+            <article
+              key={mode.eyebrow}
+              className="rounded-[1.5rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.045)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(20,20,30,0.07)]"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary-tint text-primary">
+                  {mode.icon}
+                </span>
+                <span className="rounded-full bg-canvas px-3 py-1 text-[11px] font-semibold text-ink-soft">
+                  {mode.state}
+                </span>
+              </div>
+              <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-ink-mute">
+                {mode.eyebrow}
+              </p>
+              <h2 className="mt-2 font-heading text-xl font-semibold text-ink">
+                {mode.title}
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-ink-soft">{mode.description}</p>
+            </article>
+          ))}
+        </section>
 
-        <section className="mt-8 rounded-[1.65rem] border border-dashed border-hairline bg-surface p-8 text-center">
-          <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-primary-tint text-primary">
-            <SearchX className="h-6 w-6" aria-hidden="true" />
-          </span>
-          <h2 className="mt-5 font-heading text-2xl font-semibold text-ink">
-            Practice starts from a topic.
-          </h2>
-          <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-ink-soft">
-            Search Gauss Law or another verified unit. If you want adaptive tutor
-            practice, open the topic in Learn and choose Practice Studio.
-          </p>
-          <Link
-            href="/"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-ink/90"
-          >
-            Back to dashboard
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+        <section className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <article className="rounded-[1.5rem] border border-hairline bg-ink p-6 text-white shadow-[0_18px_45px_rgba(20,20,30,0.12)]">
+            <div className="flex items-start gap-4">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/10">
+                <ShieldCheck className="h-6 w-6" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/50">
+                  Secure practice behavior
+                </p>
+                <h2 className="mt-2 font-heading text-2xl font-semibold">
+                  No answer keys before submission.
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-white/70">
+                  This area is for exam-style practice. Answers autosave, but scoring,
+                  solutions, weak concepts, and review appear only after the backend submits the
+                  attempt.
+                </p>
+              </div>
+            </div>
+          </article>
+
+          <article className="rounded-[1.5rem] border border-hairline bg-surface p-6 shadow-[0_14px_34px_rgba(20,20,30,0.045)]">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-ink-mute">
+              Need tutor support?
+            </p>
+            <h2 className="mt-2 font-heading text-2xl font-semibold text-ink">
+              Use Learn for adaptive tutoring.
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-ink-soft">
+              Practice here measures. Learn teaches. If the student needs hints, wrong-answer
+              explanations, and level movement, open the topic workspace.
+            </p>
+            <Link
+              href="/learn"
+              className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-strong"
+            >
+              Open Learn
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </article>
         </section>
       </main>
     </div>

@@ -12,7 +12,11 @@ export function normalizeDatabaseUrl(
 
   const parsed = new URL(databaseUrl);
   const sslMode = parsed.searchParams.get('sslmode')?.toLowerCase();
-  if (sslMode === 'prefer' || sslMode === 'require' || sslMode === 'verify-ca') {
+  if (
+    sslMode === 'prefer' ||
+    sslMode === 'require' ||
+    sslMode === 'verify-ca'
+  ) {
     parsed.searchParams.set('sslmode', 'verify-full');
   }
   return parsed.toString();

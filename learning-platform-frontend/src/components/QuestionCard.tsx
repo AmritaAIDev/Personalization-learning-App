@@ -33,7 +33,7 @@ export default function QuestionCard({
               aria-checked={selected}
               disabled={disabled}
               onClick={() => onSelect(option)}
-              className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left text-sm font-medium transition sm:p-5 ${selected ? 'border-[#3f6f57] bg-[#eef3f0] text-[#83112b] ring-1 ring-[#3f6f57]' : 'border-[#ececf0] text-[#1a1a1f] hover:border-[#3f6f57]/45 hover:bg-[#f7faf8]'} disabled:cursor-not-allowed disabled:opacity-60`}
+              className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left text-sm font-medium transition sm:p-5 ${selected ? 'border-[#3f6f57] bg-[#eef3f0] text-[#2c4c3d] ring-1 ring-[#3f6f57]' : 'border-[#ececf0] text-[#1a1a1f] hover:border-[#3f6f57]/45 hover:bg-[#f7faf8]'} disabled:cursor-not-allowed disabled:opacity-60`}
             >
               {option}
               {selected && <Check className="h-5 w-5 text-[#3f6f57]" aria-hidden="true" />}

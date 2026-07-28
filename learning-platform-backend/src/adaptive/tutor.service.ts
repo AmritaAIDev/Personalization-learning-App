@@ -236,7 +236,10 @@ export class TutorService {
     }
   }
 
-  private async withTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
+  private async withTimeout<T>(
+    operation: Promise<T>,
+    timeoutMs: number,
+  ): Promise<T> {
     let timeout: NodeJS.Timeout | undefined;
     try {
       return await Promise.race([

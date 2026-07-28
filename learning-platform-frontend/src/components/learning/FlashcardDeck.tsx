@@ -110,7 +110,7 @@ export default function FlashcardDeck({
   };
 
   return (
-    <aside className="mx-auto max-w-2xl rounded-2xl bg-surface p-6 hairline elevate-sm">
+    <aside className="mx-auto max-w-3xl rounded-[1.5rem] bg-surface p-6 hairline elevate-sm">
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-[15px] font-semibold text-ink">Topic flashcards</h2>
         <div className="flex shrink-0 items-center gap-2">
@@ -154,8 +154,8 @@ export default function FlashcardDeck({
       {!loading && !error && !card && (
         <p className="mt-5 rounded-xl bg-canvas p-4 text-sm leading-6 text-ink-soft">
           {generating
-            ? 'Preparing grounded flashcards from reviewed material…'
-            : 'No published flashcards are available for this topic yet.'}
+            ? 'Preparing live AI flashcards for this topic...'
+            : 'No flashcards are available yet. Generate a live set when you are ready to review.'}
         </p>
       )}
       {card && (
@@ -169,14 +169,14 @@ export default function FlashcardDeck({
             >
               {/* Front — prompt. */}
               <span className="flip-face flex flex-col overflow-auto rounded-2xl bg-canvas p-6 hairline">
-                <span className="text-[11px] font-medium text-ink-mute">Prompt · tap to flip</span>
+                <span className="text-[11px] font-medium text-ink-mute">Prompt • tap to flip</span>
                 <span className="mt-4 font-heading text-lg font-semibold leading-7 text-ink">
                   {card.front}
                 </span>
               </span>
               {/* Back — answer. */}
               <span className="flip-face flip-face--back flex flex-col overflow-auto rounded-2xl bg-primary-tint p-6 hairline">
-                <span className="text-[11px] font-medium text-primary">Answer · tap to flip</span>
+                <span className="text-[11px] font-medium text-primary">Answer • tap to flip</span>
                 <span className="mt-4 font-heading text-lg font-semibold leading-7 text-ink">
                   {card.back}
                 </span>

@@ -43,12 +43,17 @@ export class AdaptiveController {
     return { data: await this.adaptiveService.getConceptBreakdown(query) };
   }
 
+  @Get('coverage')
+  async getQuestionCoverage(@Query() query: CreateLearningSessionDto) {
+    return { data: await this.adaptiveService.getQuestionCoverage(query) };
+  }
+
   @Get('flashcards')
-  async getFlashcards(
+  getFlashcards(
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: FlashcardQueryDto,
   ) {
-    return { data: await this.adaptiveService.getFlashcards(user.id, query) };
+    return { data: this.adaptiveService.getFlashcards(user.id, query) };
   }
 
   @Throttle({ default: { limit: 4, ttl: 60_000 } })
@@ -57,7 +62,9 @@ export class AdaptiveController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() body: GenerateFlashcardsDto,
   ) {
-    return { data: await this.adaptiveService.generateFlashcards(user.id, body) };
+    return {
+      data: await this.adaptiveService.generateFlashcards(user.id, body),
+    };
   }
 
   @Post('flashcards/:flashcardId/review')

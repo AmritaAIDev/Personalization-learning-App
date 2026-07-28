@@ -33,6 +33,9 @@ import { Flashcard } from './adaptive/flashcard.entity';
 import { FlashcardReview } from './adaptive/flashcard-review.entity';
 import { TutorConversation } from './adaptive/tutor-conversation.entity';
 import { TutorMessage } from './adaptive/tutor-message.entity';
+import { NotebookModule } from './notebook/notebook.module';
+import { Doubt } from './doubts/doubt.entity';
+import { DoubtsModule } from './doubts/doubts.module';
 
 @Module({
   imports: [
@@ -75,6 +78,7 @@ import { TutorMessage } from './adaptive/tutor-message.entity';
             FlashcardReview,
             TutorConversation,
             TutorMessage,
+            Doubt,
           ],
           migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
           synchronize: false,
@@ -92,6 +96,8 @@ import { TutorMessage } from './adaptive/tutor-message.entity';
     DiagnosticsModule,
     PracticeModule,
     AdaptiveModule,
+    NotebookModule,
+    DoubtsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

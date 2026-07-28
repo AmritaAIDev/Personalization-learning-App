@@ -8,10 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomInt } from 'node:crypto';
 import { In, Repository } from 'typeorm';
-import {
-  Question,
-  QuestionPublicationStatus,
-} from '../question.entity';
+import { Question, QuestionPublicationStatus } from '../question.entity';
 import { BLOOM_LEVELS, normalizeBloomLevel } from '../adaptive/adaptive.types';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { DiagnosticAnswer } from './diagnostic-answer.entity';
@@ -413,10 +410,7 @@ export class DiagnosticsService {
         next.bloom_level,
         (bloomUsage.get(next.bloom_level) ?? 0) + 1,
       );
-      chapterUsage.set(
-        next.chapter,
-        (chapterUsage.get(next.chapter) ?? 0) + 1,
-      );
+      chapterUsage.set(next.chapter, (chapterUsage.get(next.chapter) ?? 0) + 1);
     }
     return selected;
   }

@@ -30,10 +30,15 @@ For a first miss, the correct answer and stored solution are never included in t
 - `POST /api/learning/sessions/:sessionId/items/:sessionItemId/answer` - grades and routes server-side.
 - `GET|POST /api/learning/sessions/:sessionId/tutor` - persisted Socratic chat.
 - `GET /api/learning/dashboard` - active, completed, historic, and suggested topics.
+- `GET /api/learning/coverage?subject=...&chapter=...&topic=...` - audits ready question coverage across all 12 adaptive coordinates for the requested topic.
 - `GET /api/learning/flashcards` - returns no stored deck for the live-only flashcard flow.
 - `POST /api/learning/flashcards/generate` - generates grounded live flashcards without persisting them.
 - `POST /api/learning/flashcards/:id/review` - legacy stored-card review endpoint; the current frontend does not call it for live cards.
 
 ## Operations
 
-Run `npm run migration:run`, then `npm run seed:adaptive` to install the reviewed baseline coordinate. Higher coordinates are populated by reviewed database rows and the DeepSeek worker as real database records, never by frontend sample data. Run `npm test` and `npm run build` after changes.
+Run `npm run migration:run`, then `npm run seed:adaptive` to install the reviewed baseline coordinate. Higher coordinates are populated by reviewed database rows and the DeepSeek worker as real database records, never by frontend sample data.
+
+Use the coverage endpoint before scaling a topic: every coordinate should have at least five ready questions for a no-latency round. Coordinates below that threshold can still be supported by fallback search and generation, but they should be treated as content gaps during production QA.
+
+Run `npm test` and `npm run build` after changes.

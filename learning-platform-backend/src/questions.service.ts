@@ -123,9 +123,7 @@ export class QuestionsService {
   }
 
   /** Full question records, including answer keys, for authenticated reviewers only. */
-  async findAdminAll(
-    filters: AdminQuestionFilters = {},
-  ): Promise<Question[]> {
+  async findAdminAll(filters: AdminQuestionFilters = {}): Promise<Question[]> {
     const where: FindOptionsWhere<Question> = {};
     if (filters.subject) where.subject = filters.subject;
     if (filters.chapter) where.chapter = filters.chapter;
@@ -206,8 +204,7 @@ export class QuestionsService {
         easyCount,
         mediumCount,
         hardCount,
-        readyForPractice:
-          easyCount >= 5 && mediumCount >= 5 && hardCount >= 5,
+        readyForPractice: easyCount >= 5 && mediumCount >= 5 && hardCount >= 5,
       };
     });
   }

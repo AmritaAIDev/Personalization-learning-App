@@ -22,6 +22,7 @@ import { Flashcard } from '../adaptive/flashcard.entity';
 import { FlashcardReview } from '../adaptive/flashcard-review.entity';
 import { TutorConversation } from '../adaptive/tutor-conversation.entity';
 import { TutorMessage } from '../adaptive/tutor-message.entity';
+import { Doubt } from '../doubts/doubt.entity';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -57,6 +58,7 @@ export default new DataSource({
     FlashcardReview,
     TutorConversation,
     TutorMessage,
+    Doubt,
   ],
   migrations: [join(__dirname, '..', 'migrations', '*{.ts,.js}')],
   synchronize: false,

@@ -255,7 +255,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#fbfbfd] pb-20">
       <main className="mx-auto w-full max-w-6xl px-5 pt-9 sm:px-8 lg:px-10">
-        <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.42fr)] lg:items-start">
+        <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.38fr)] lg:items-start">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
               Dashboard
@@ -267,8 +267,8 @@ export default function DashboardPage() {
               Hi {firstName}. Subject → chapter → topic clarity, not a vague overall score.
             </p>
           </div>
-          <div className="rounded-[1.35rem] border border-hairline bg-white p-3 shadow-[0_14px_34px_rgba(20,20,30,0.04)]">
-            <TopicSearch />
+          <div className="w-full lg:max-w-md lg:justify-self-end">
+            <TopicSearch compact />
           </div>
         </section>
 

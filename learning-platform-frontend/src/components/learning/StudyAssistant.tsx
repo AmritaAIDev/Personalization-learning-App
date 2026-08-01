@@ -141,7 +141,6 @@ export default function StudyAssistant({
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const loadedSessionRef = useRef<string | null>(null);
-  const optimisticMessageCounterRef = useRef(0);
 
   const autoMessageVisible =
     autoOpenMessage !== null && autoOpenMessage.id !== dismissedAutoMessageId;
@@ -223,27 +222,14 @@ export default function StudyAssistant({
     if (!trimmed || sending) return;
     setSending(true);
     setError(null);
-    optimisticMessageCounterRef.current += 1;
-    const optimistic: TutorMessage = {
-      id: `pending-${sessionId}-${optimisticMessageCounterRef.current}`,
-      role: 'USER',
-      messageType: 'GENERAL',
-      content: trimmed,
-      relatedSessionItemId: null,
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((current) => [...current, optimistic]);
     setMessage('');
     try {
-      const data = await apiFetch<{ message: TutorMessage }>(
+      await apiFetch<{ message: TutorMessage }>(
         `/api/learning/sessions/${sessionId}/tutor`,
         { method: 'POST', body: JSON.stringify({ message: trimmed }) },
       );
-      setMessages((current) => [...current, data.message]);
+      await loadConversation(true);
     } catch (reason) {
-      setMessages((current) =>
-        current.filter((item) => item.id !== optimistic.id),
-      );
       setError(
         reason instanceof Error
           ? reason.message

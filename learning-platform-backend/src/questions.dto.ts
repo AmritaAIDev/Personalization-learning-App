@@ -89,8 +89,8 @@ export class SearchQuestionCatalogDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(12)
-  limit = 8;
+  @Max(100)
+  limit = 24;
 }
 
 /** Admin-only filters for the reviewed and draft question inventory. */

@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, apiFetch } from './api';
+import { ApiError, apiFetch, clearApiMemoryCache } from './api';
 
 describe('apiFetch', () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
     fetchMock.mockReset();
+    clearApiMemoryCache();
     vi.stubGlobal('fetch', fetchMock);
   });
 
@@ -27,6 +28,7 @@ describe('apiFetch', () => {
 
     const [, options] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(options.credentials).toBe('include');
+    expect(options.cache).toBe('no-store');
     expect((options.headers as Headers).get('Accept')).toBe('application/json');
   });
 
@@ -42,6 +44,31 @@ describe('apiFetch', () => {
 
     const [, options] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect((options.headers as Headers).get('Content-Type')).toBe('application/json');
+  });
+
+  it('deduplicates concurrent reads without persisting data in browser storage', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ data: { topics: ['Gauss Law'] } }), { status: 200 }),
+    );
+
+    const [first, second] = await Promise.all([
+      apiFetch<{ topics: string[] }>('/api/questions/catalog?limit=6'),
+      apiFetch<{ topics: string[] }>('/api/questions/catalog?limit=6'),
+    ]);
+
+    expect(first).toEqual(second);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses a short-lived in-memory cache only when a caller opts in', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ data: { topics: ['Gauss Law'] } }), { status: 200 }),
+    );
+
+    await apiFetch('/api/questions/catalog?limit=6', { memoryCacheTtlMs: 45_000 });
+    await apiFetch('/api/questions/catalog?limit=6', { memoryCacheTtlMs: 45_000 });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('surfaces the API error message and status', async () => {

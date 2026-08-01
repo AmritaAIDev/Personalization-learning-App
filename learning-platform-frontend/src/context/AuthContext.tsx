@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ApiError, apiFetch } from '@/lib/api';
+import { ApiError, apiFetch, clearApiMemoryCache } from '@/lib/api';
 import type { AuthenticatedUser } from '@/lib/diagnostic-types';
 
 interface AuthContextValue {
@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
+          clearApiMemoryCache();
           setUser(null);
           setLoading(false);
           return;
@@ -72,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       refreshAuth,
       login: async (email, password) => {
+        clearApiMemoryCache();
         const response = await apiFetch<{ user: AuthenticatedUser }>('/api/auth/login', {
           method: 'POST',
           body: JSON.stringify({ email, password }),
@@ -80,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return response.user;
       },
       register: async (name, email, password) => {
+        clearApiMemoryCache();
         const response = await apiFetch<{ user: AuthenticatedUser }>(
           '/api/auth/register',
           {
@@ -94,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await apiFetch<{ loggedOut: boolean }>('/api/auth/logout', {
           method: 'POST',
         });
+        clearApiMemoryCache();
         setUser(null);
       },
     }),

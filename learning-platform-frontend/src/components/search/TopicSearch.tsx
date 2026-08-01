@@ -24,8 +24,10 @@ function toLearningScope(entry: QuestionCatalogEntry): LearningScope {
 
 export default function TopicSearch({
   destination = 'learn',
+  compact = false,
 }: {
   destination?: 'learn' | 'practice';
+  compact?: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
@@ -43,6 +45,7 @@ export default function TopicSearch({
     try {
       const data = await apiFetch<QuestionCatalogEntry[]>(
         '/api/questions/catalog?' + params.toString(),
+        { memoryCacheTtlMs: 45_000 },
       );
       setResults(data);
       setError(null);
@@ -82,9 +85,9 @@ export default function TopicSearch({
   };
 
   return (
-    <section className="mx-auto w-full">
+    <section className={`mx-auto w-full ${compact ? 'relative' : ''}`}>
       <form
-        className="flex flex-col gap-2.5 sm:flex-row sm:items-center"
+        className={`flex flex-col gap-2.5 ${compact ? '' : 'sm:flex-row sm:items-center'}`}
         onSubmit={(event) => {
           event.preventDefault();
           startFirstMatch();
@@ -101,22 +104,36 @@ export default function TopicSearch({
               setOpened(true);
             }}
             onFocus={() => setOpened(true)}
-            placeholder="Search a concept, chapter, or practice unit"
-            className="h-13 w-full rounded-xl border border-hairline bg-surface py-3.5 pl-12 pr-4 text-[15px] text-ink outline-none transition duration-200 placeholder:text-ink-mute focus:border-primary/40"
+            placeholder={
+              compact
+                ? 'Search a concept or chapter'
+                : 'Search a concept, chapter, or practice unit'
+            }
+            className={`w-full rounded-xl border border-hairline bg-surface pl-12 pr-4 text-ink outline-none transition duration-200 placeholder:text-ink-mute focus:border-primary/40 ${
+              compact ? 'h-11 py-2.5 text-sm' : 'h-13 py-3.5 text-[15px]'
+            }`}
           />
         </label>
-        <button
-          type="submit"
-          disabled={results.length === 0}
-          className="inline-flex h-13 items-center justify-center gap-2 rounded-xl bg-ink px-6 py-3.5 text-sm font-semibold text-white transition duration-200 hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Start journey
-          <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-        </button>
+        {!compact ? (
+          <button
+            type="submit"
+            disabled={results.length === 0}
+            className="inline-flex h-13 items-center justify-center gap-2 rounded-xl bg-ink px-6 py-3.5 text-sm font-semibold text-white transition duration-200 hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Start journey
+            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+        ) : null}
       </form>
 
       {opened ? (
-        <div className="mt-4 animate-fade">
+        <div
+          className={`${
+            compact
+              ? 'absolute right-0 top-full z-30 mt-2 w-full rounded-2xl border border-hairline bg-white p-3 shadow-[0_18px_48px_rgba(20,20,30,0.12)]'
+              : 'mt-4'
+          } animate-fade`}
+        >
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-[13px] font-medium text-ink-mute">
               {query.trim() ? 'Matched learning units' : 'Suggested topics'}
@@ -137,9 +154,12 @@ export default function TopicSearch({
           )}
 
           {loading && results.length === 0 && (
-            <div className="grid gap-2.5 md:grid-cols-2">
+            <div className={`grid gap-2.5 ${compact ? '' : 'md:grid-cols-2'}`}>
               {[0, 1, 2, 3].map((item) => (
-                <div key={item} className="min-h-24 rounded-2xl bg-surface px-4 py-4 hairline">
+                <div
+                  key={item}
+                  className={`${compact ? 'min-h-16' : 'min-h-24'} rounded-2xl bg-surface px-4 py-4 hairline`}
+                >
                   <div className="h-4 w-32 rounded-full skeleton" />
                   <div className="mt-3 h-3 w-44 rounded-full skeleton" />
                   <div className="mt-4 flex gap-1.5">
@@ -159,7 +179,7 @@ export default function TopicSearch({
           )}
 
           {!loading && results.length > 0 && (
-            <div className="grid gap-2.5 md:grid-cols-2">
+            <div className={`grid gap-2.5 ${compact ? '' : 'md:grid-cols-2'}`}>
               {results.map((entry) => (
                 <button
                   key={[entry.subject, entry.chapter, entry.topic].join('-')}
@@ -171,7 +191,9 @@ export default function TopicSearch({
                       destination === 'practice' ? practiceHref(scope) : learningUrl(scope),
                     );
                   }}
-                  className="group flex min-h-24 items-center justify-between gap-4 rounded-2xl bg-surface px-4 py-4 text-left transition-all duration-200 hairline hover:border-ink/15 hover:shadow-[0_8px_24px_rgba(20,20,30,0.06)]"
+                  className={`group flex items-center justify-between gap-4 rounded-2xl bg-surface px-4 text-left transition-all duration-200 hairline hover:border-ink/15 hover:shadow-[0_8px_24px_rgba(20,20,30,0.06)] ${
+                    compact ? 'min-h-16 py-3' : 'min-h-24 py-4'
+                  }`}
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-[15px] font-semibold text-ink">
@@ -180,7 +202,11 @@ export default function TopicSearch({
                     <span className="mt-0.5 block truncate text-xs text-ink-mute">
                       {entry.chapter}
                     </span>
-                    <span className="mt-2.5 flex flex-wrap gap-1.5 text-[11px] font-medium">
+                    <span
+                      className={`mt-2.5 flex-wrap gap-1.5 text-[11px] font-medium ${
+                        compact ? 'hidden' : 'flex'
+                      }`}
+                    >
                       <span className="rounded-full bg-canvas px-2 py-0.5 text-ink-soft">
                         Easy {entry.easyCount}
                       </span>

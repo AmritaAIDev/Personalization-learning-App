@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { JourneyProvider } from "@/context/JourneyContext";
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-manrope",
+});
 
 export const metadata: Metadata = {
   title: "JEE AI Competency Engine",
@@ -16,7 +23,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className="h-full antialiased"
+      className={`${manrope.variable} h-full antialiased`}
     >
       <body
         suppressHydrationWarning

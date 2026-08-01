@@ -21,6 +21,7 @@
     "seed": "ts-node -r tsconfig-paths/register src/scripts/seed-diagnostic.ts",
     "seed:diagnostic": "ts-node -r tsconfig-paths/register src/scripts/seed-diagnostic.ts",
     "seed:adaptive": "ts-node -r tsconfig-paths/register src/scripts/seed-adaptive-learning.ts",
+    "seed:demo-history": "ts-node -r tsconfig-paths/register src/scripts/seed-demo-history.ts",
     "seed:journey:development": "ts-node -r tsconfig-paths/register src/scripts/seed.ts",
     "seed:postgres": "ts-node seed-postgres.ts",
     "seed:qdrant": "ts-node seed-qdrant.ts",

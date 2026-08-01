@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, LEARNING_DATA_UPDATED_EVENT } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import type { AuthenticatedUser } from '@/lib/diagnostic-types';
 
@@ -36,16 +36,25 @@ const JourneyContext = createContext<JourneyContextType | undefined>(undefined);
 
 export function JourneyProvider({ children }: { children: ReactNode }) {
   const [journeyNodes, setJourneyNodes] = useState<JourneyNode[]>([]);
+  const [journeyLoading, setJourneyLoading] = useState(false);
   const { user, loading: authLoading } = useAuth();
 
   const fetchJourney = useCallback(async () => {
-    if (authLoading || !user) return;
+    if (authLoading) return;
+    if (!user) {
+      setJourneyNodes([]);
+      setJourneyLoading(false);
+      return;
+    }
+    setJourneyLoading(true);
     try {
       const journeyData = await apiFetch<JourneyNode[]>('/api/sessions/journey');
       setJourneyNodes(Array.isArray(journeyData) ? journeyData : []);
     } catch (error) {
       console.error('Failed to fetch the learner journey.', error);
       setJourneyNodes([]);
+    } finally {
+      setJourneyLoading(false);
     }
   }, [authLoading, user]);
 
@@ -56,8 +65,14 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     void loadJourney();
   }, [fetchJourney]);
 
+  useEffect(() => {
+    const refreshOnLearningMutation = () => void fetchJourney();
+    window.addEventListener(LEARNING_DATA_UPDATED_EVENT, refreshOnLearningMutation);
+    return () => window.removeEventListener(LEARNING_DATA_UPDATED_EVENT, refreshOnLearningMutation);
+  }, [fetchJourney]);
+
   return (
-    <JourneyContext.Provider value={{ journeyNodes: user ? journeyNodes : [], user, loading: authLoading, refreshJourney: fetchJourney }}>
+    <JourneyContext.Provider value={{ journeyNodes: user ? journeyNodes : [], user, loading: authLoading || journeyLoading, refreshJourney: fetchJourney }}>
       {children}
     </JourneyContext.Provider>
   );

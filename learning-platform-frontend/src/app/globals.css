@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  /* One family, used everywhere. Weights carry the hierarchy. */
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-heading: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-accent: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* Manrope keeps dense study screens clear while giving headings a quieter premium feel. */
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-accent: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, sans-serif;
 
   /* Muted green accent — used sparingly, for primary intent only. */
   --color-primary: #3f6f57;
@@ -30,7 +30,7 @@
 :root {
   --background: #fbfbfd;
   --foreground: #1a1a1f;
-  --font-jakarta: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-manrope: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 html {

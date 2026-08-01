@@ -4,9 +4,6 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   ArrowRight,
-  BookOpenCheck,
-  Brain,
-  ClipboardCheck,
   Search,
   ShieldCheck,
   Timer,
@@ -14,33 +11,6 @@ import {
 import PracticeSession from '@/components/practice/PracticeSession';
 import TopicSearch from '@/components/search/TopicSearch';
 import { practiceScopeFromSearchParams } from '@/lib/practice';
-
-const modes = [
-  {
-    eyebrow: 'Reviewed practice',
-    title: 'Balanced 15-question set',
-    description:
-      'The backend builds 5 Easy, 5 Medium, and 5 Hard questions from reviewed database content. Answers save live; explanations unlock only after submission.',
-    icon: <ClipboardCheck className="h-5 w-5" aria-hidden="true" />,
-    state: 'Available now',
-  },
-  {
-    eyebrow: 'Tutor mode',
-    title: 'Adaptive Practice Studio',
-    description:
-      'For learning with hints and AI tutor support, open the topic in Learn. That flow updates the automatic level route.',
-    icon: <Brain className="h-5 w-5" aria-hidden="true" />,
-    state: 'Open from Learn',
-  },
-  {
-    eyebrow: 'Review mode',
-    title: 'Mistake repair queue',
-    description:
-      'This will become database-backed through Notebook after wrong answers are saved as repair cards. No frontend mock history is shown.',
-    icon: <BookOpenCheck className="h-5 w-5" aria-hidden="true" />,
-    state: 'Next module',
-  },
-];
 
 export default function PracticePage() {
   const searchParams = useSearchParams();
@@ -80,31 +50,6 @@ export default function PracticePage() {
               <TopicSearch destination="practice" />
             </div>
           </div>
-        </section>
-
-        <section className="mt-6 grid gap-4 lg:grid-cols-3">
-          {modes.map((mode) => (
-            <article
-              key={mode.eyebrow}
-              className="rounded-[1.5rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.045)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(20,20,30,0.07)]"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary-tint text-primary">
-                  {mode.icon}
-                </span>
-                <span className="rounded-full bg-canvas px-3 py-1 text-[11px] font-semibold text-ink-soft">
-                  {mode.state}
-                </span>
-              </div>
-              <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-ink-mute">
-                {mode.eyebrow}
-              </p>
-              <h2 className="mt-2 font-heading text-xl font-semibold text-ink">
-                {mode.title}
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-ink-soft">{mode.description}</p>
-            </article>
-          ))}
         </section>
 
         <section className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">

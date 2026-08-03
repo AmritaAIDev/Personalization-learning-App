@@ -48,6 +48,14 @@ export class AdaptiveController {
     return { data: await this.adaptiveService.getQuestionCoverage(query) };
   }
 
+  @Get('placement')
+  async getPlacement(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: CreateLearningSessionDto,
+  ) {
+    return { data: await this.adaptiveService.getPlacement(user.id, query) };
+  }
+
   @Get('flashcards')
   getFlashcards(
     @CurrentUser() user: AuthenticatedUser,

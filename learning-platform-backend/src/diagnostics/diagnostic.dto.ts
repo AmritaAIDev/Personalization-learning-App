@@ -9,12 +9,27 @@ import {
   Min,
 } from 'class-validator';
 import { DIAGNOSTIC_SUBJECT } from './diagnostic.types';
+import { DiagnosticAttemptMode } from './diagnostic.types';
 
 export class CreateDiagnosticDto {
   @IsOptional()
   @IsString()
   @IsIn([DIAGNOSTIC_SUBJECT])
   subject?: string;
+
+  @IsOptional()
+  @IsIn(Object.values(DiagnosticAttemptMode))
+  mode?: DiagnosticAttemptMode;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  chapter?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  topic?: string;
 }
 
 export class SaveDiagnosticAnswerDto {

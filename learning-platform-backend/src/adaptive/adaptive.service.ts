@@ -46,7 +46,7 @@ import { LearningAnswer } from './learning-answer.entity';
 import { LearningSessionItem } from './learning-session-item.entity';
 import { LearningSession } from './learning-session.entity';
 import { LearningTopicState } from './learning-topic-state.entity';
-import { TutorService, type TutorMessagePayload } from './tutor.service';
+import { TutorService } from './tutor.service';
 import {
   resolveCoordinateCompletion,
   resolveSecondFailure,
@@ -220,6 +220,18 @@ export class AdaptiveService {
     return this.contentService.getCoverage(this.toScope(input));
   }
 
+  async getPlacement(userId: string, input: CreateLearningSessionDto) {
+    const scope = this.toScope(input);
+    const state = await this.statesRepository.findOne({
+      where: { userId, ...scope },
+      select: { id: true, currentLevel: true },
+    });
+    return {
+      needsDecision: !state,
+      currentLevel: state?.currentLevel ?? null,
+    };
+  }
+
   async createOrResume(
     user: AuthenticatedUser,
     input: CreateLearningSessionDto,
@@ -335,24 +347,25 @@ export class AdaptiveService {
       this.applyAnswer(manager, userId, sessionId, sessionItemId, input),
     );
 
-    let assistantMessage: TutorMessagePayload | null = null;
+    const tutorPending =
+      mutation.kind === 'SOCRATIC_HINT' || mutation.shouldExplainSecondFailure;
     if (mutation.kind === 'SOCRATIC_HINT') {
-      assistantMessage = await this.tutorService.createSocraticHint(
+      void this.tutorService.createSocraticHint(
         userId,
         mutation.session,
         mutation.sessionItemId,
         mutation.question,
         mutation.selectedOption,
-      );
+      ).catch(() => undefined);
     }
     if (mutation.shouldExplainSecondFailure) {
-      assistantMessage = await this.tutorService.createAnswerExplanation(
+      void this.tutorService.createAnswerExplanation(
         userId,
         mutation.session,
         mutation.sessionItemId,
         mutation.question,
         mutation.selectedOption,
-      );
+      ).catch(() => undefined);
     }
     if (mutation.prefetchScope && mutation.prefetchLevel) {
       void this.prefetchPracticeContinuity(
@@ -366,7 +379,8 @@ export class AdaptiveService {
       ...(await this.getSession(userId, sessionId)),
       feedback: {
         kind: mutation.kind,
-        assistantMessage,
+        assistantMessage: null,
+        tutorPending,
         route: mutation.route,
       },
     };
@@ -482,6 +496,7 @@ export class AdaptiveService {
       ...scope,
       count,
       sourceMaterial,
+      excludedPrompts: input.excludedPrompts ?? [],
     });
     return generated.map((card, index) => ({
       id: `live-${Date.now()}-${index}`,
@@ -691,7 +706,16 @@ export class AdaptiveService {
         placement: describeSavedPlacement(existing.currentLevel, scope.topic),
       };
     }
-    const placement = await this.estimateInitialPlacement(userId, scope);
+    const placement = inferInitialPlacement(scope.topic, {
+      sameChapterAnswered: 0,
+      sameChapterCorrect: 0,
+      sameChapterMastered: 0,
+      sameSubjectAnswered: 0,
+      sameSubjectCorrect: 0,
+      sameSubjectMastered: 0,
+      masteredPrerequisites: 0,
+      averagePeerLevel: 0,
+    });
     try {
       const state = await this.statesRepository.save(
         this.statesRepository.create({

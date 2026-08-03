@@ -1,10 +1,34 @@
 @import "tailwindcss";
 
+.flashcard-markdown > * + * {
+  margin-top: 0.75rem;
+}
+
+.flashcard-markdown p {
+  margin: 0;
+}
+
+.flashcard-markdown ul,
+.flashcard-markdown ol {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.flashcard-markdown li + li {
+  margin-top: 0.25rem;
+}
+
+.flashcard-markdown .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+
 @theme {
-  /* Manrope keeps dense study screens clear while giving headings a quieter premium feel. */
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-heading: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-accent: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* Urbanist creates a consistent, modern learning-product voice across UI and study content. */
+  --font-sans: var(--font-urbanist), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-urbanist), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-accent: var(--font-urbanist), ui-sans-serif, system-ui, -apple-system, sans-serif;
 
   /* Muted green accent — used sparingly, for primary intent only. */
   --color-primary: #3f6f57;
@@ -30,7 +54,6 @@
 :root {
   --background: #fbfbfd;
   --foreground: #1a1a1f;
-  --font-manrope: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 html {
@@ -117,6 +140,12 @@ textarea:focus-visible {
 /* Connector path draw-in — premium, once, on arrival. */
 @keyframes draw-path {
   to { stroke-dashoffset: 0; }
+}
+
+.dashboard-draw {
+  stroke-dasharray: 500;
+  stroke-dashoffset: 500;
+  animation: draw-path 0.7s var(--ease-out-soft) both;
 }
 
 /* Playful, refined node entrance (no pulsing). */
@@ -216,11 +245,15 @@ textarea:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .animate-rise,
   .animate-fade,
-  .skeleton::after {
+  .skeleton::after,
+  .dashboard-draw {
     animation: none;
   }
   .animate-rise {
     opacity: 1;
     transform: none;
+  }
+  .dashboard-draw {
+    stroke-dashoffset: 0;
   }
 }

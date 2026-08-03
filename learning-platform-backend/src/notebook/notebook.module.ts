@@ -9,5 +9,6 @@ import { NotebookService } from './notebook.service';
   imports: [TypeOrmModule.forFeature([PracticeAnswer, LearningAnswer])],
   controllers: [NotebookController],
   providers: [NotebookService],
+  exports: [NotebookService],
 })
 export class NotebookModule {}

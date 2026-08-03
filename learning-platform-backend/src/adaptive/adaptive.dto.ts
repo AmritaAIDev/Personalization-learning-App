@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { IsIn, IsInt, Max, Min } from 'class-validator';
 import { FlashcardRating } from './adaptive.types';
 
@@ -67,6 +67,14 @@ export class GenerateFlashcardsDto extends CreateLearningSessionDto {
   @Min(3)
   @Max(12)
   count?: number;
+
+  /** Ephemeral client session context used only to avoid repeat prompts. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(48)
+  @IsString({ each: true })
+  @MaxLength(240, { each: true })
+  excludedPrompts?: string[];
 }
 
 export class ReviewFlashcardDto {

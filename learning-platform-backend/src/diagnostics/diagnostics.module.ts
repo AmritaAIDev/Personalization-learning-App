@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Question } from '../question.entity';
+import { LearningTopicState } from '../adaptive/learning-topic-state.entity';
 import { DiagnosticAnswer } from './diagnostic-answer.entity';
 import { DiagnosticAttempt } from './diagnostic-attempt.entity';
 import { DiagnosticsController } from './diagnostics.controller';
@@ -14,6 +15,7 @@ import { LearningResource } from './learning-resource.entity';
       DiagnosticAnswer,
       LearningResource,
       Question,
+      LearningTopicState,
     ]),
   ],
   controllers: [DiagnosticsController],

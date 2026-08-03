@@ -36,6 +36,7 @@ import { TutorMessage } from './adaptive/tutor-message.entity';
 import { NotebookModule } from './notebook/notebook.module';
 import { Doubt } from './doubts/doubt.entity';
 import { DoubtsModule } from './doubts/doubts.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -98,6 +99,7 @@ import { DoubtsModule } from './doubts/doubts.module';
     AdaptiveModule,
     NotebookModule,
     DoubtsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

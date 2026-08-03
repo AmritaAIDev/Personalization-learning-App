@@ -13,6 +13,11 @@ export enum DiagnosticAttemptStatus {
   EXPIRED = 'EXPIRED',
 }
 
+export enum DiagnosticAttemptMode {
+  PROGRAM = 'PROGRAM',
+  TOPIC_PLACEMENT = 'TOPIC_PLACEMENT',
+}
+
 export enum LearningResourceType {
   VIDEO = 'VIDEO',
   NOTES = 'NOTES',

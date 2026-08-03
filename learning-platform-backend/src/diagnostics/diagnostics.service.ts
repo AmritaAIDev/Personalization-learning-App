@@ -9,6 +9,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { randomInt } from 'node:crypto';
 import { In, Repository } from 'typeorm';
 import { Question, QuestionPublicationStatus } from '../question.entity';
+import { LearningTopicState } from '../adaptive/learning-topic-state.entity';
+import { LearningTopicStatus } from '../adaptive/adaptive.types';
 import { BLOOM_LEVELS, normalizeBloomLevel } from '../adaptive/adaptive.types';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { DiagnosticAnswer } from './diagnostic-answer.entity';
@@ -21,6 +23,7 @@ import {
 import { LearningResource } from './learning-resource.entity';
 import {
   DiagnosticAnalysis,
+  DiagnosticAttemptMode,
   DiagnosticAttemptStatus,
   DIAGNOSTIC_DURATION_MINUTES,
   DIAGNOSTIC_QUESTION_COUNT,
@@ -54,10 +57,21 @@ export class DiagnosticsService {
     private readonly questionsRepository: Repository<Question>,
     @InjectRepository(LearningResource)
     private readonly resourcesRepository: Repository<LearningResource>,
+    @InjectRepository(LearningTopicState)
+    private readonly topicStatesRepository: Repository<LearningTopicState>,
   ) {}
 
   async createAttempt(user: AuthenticatedUser, input: CreateDiagnosticDto) {
+    const mode = input.mode ?? DiagnosticAttemptMode.PROGRAM;
+    const isTopicPlacement = mode === DiagnosticAttemptMode.TOPIC_PLACEMENT;
+    if (isTopicPlacement && (!input.chapter?.trim() || !input.topic?.trim())) {
+      throw new BadRequestException(
+        'A topic placement check needs a subject, chapter, and topic.',
+      );
+    }
     const subject = input.subject ?? DIAGNOSTIC_SUBJECT;
+    const chapter = isTopicPlacement ? input.chapter!.trim() : null;
+    const topic = isTopicPlacement ? input.topic!.trim() : null;
     const activeAttempt = await this.attemptsRepository.findOne({
       where: {
         userId: user.id,
@@ -67,15 +81,28 @@ export class DiagnosticsService {
       order: { startedAt: 'DESC' },
     });
 
-    if (activeAttempt && activeAttempt.expiresAt.getTime() > Date.now()) {
+    if (
+      activeAttempt &&
+      activeAttempt.expiresAt.getTime() > Date.now() &&
+      activeAttempt.mode === mode &&
+      activeAttempt.subject === subject &&
+      activeAttempt.chapter === chapter &&
+      activeAttempt.topic === topic
+    ) {
       return this.toAttemptPayload(activeAttempt);
+    }
+
+    if (activeAttempt && activeAttempt.expiresAt.getTime() > Date.now()) {
+      throw new ConflictException(
+        'Finish or resume your current placement check before starting another one.',
+      );
     }
 
     if (activeAttempt) {
       await this.finalizeAttempt(activeAttempt, true);
     }
 
-    const questions = await this.getQuestionSet(subject);
+    const questions = await this.getQuestionSet(user.id, subject, chapter, topic);
     const startedAt = new Date();
     const expiresAt = new Date(
       startedAt.getTime() + DIAGNOSTIC_DURATION_MINUTES * 60 * 1000,
@@ -83,8 +110,13 @@ export class DiagnosticsService {
     const attempt = this.attemptsRepository.create({
       userId: user.id,
       subject,
-      title: 'Class XII Physics - Electrostatics Diagnostic',
-      chapterScope: [...ELECTROSTATICS_CHAPTERS],
+      mode,
+      chapter,
+      topic,
+      title: isTopicPlacement
+        ? `${topic} placement check`
+        : 'Class XII Physics - Electrostatics Diagnostic',
+      chapterScope: chapter ? [chapter] : [...ELECTROSTATICS_CHAPTERS],
       questionIds: questions.map((question) => question.id),
       status: DiagnosticAttemptStatus.IN_PROGRESS,
       totalQuestions: questions.length,
@@ -257,27 +289,30 @@ export class DiagnosticsService {
   }
 
   async getDashboard(userId: string) {
-    const completedAttempts = await this.attemptsRepository.find({
-      where: {
-        userId,
-        status: In([
-          DiagnosticAttemptStatus.SUBMITTED,
-          DiagnosticAttemptStatus.EXPIRED,
-        ]),
-      },
-      order: { submittedAt: 'DESC' },
-    });
-    const activeAttempt = await this.attemptsRepository.findOne({
-      where: { userId, status: DiagnosticAttemptStatus.IN_PROGRESS },
-      order: { startedAt: 'DESC' },
-    });
-    const publishedQuestions = await this.questionsRepository.find({
-      where: {
-        subject: DIAGNOSTIC_SUBJECT,
-        chapter: In([...ELECTROSTATICS_CHAPTERS]),
-        status: QuestionPublicationStatus.PUBLISHED,
-      },
-    });
+    const [completedAttempts, activeAttempt, publishedQuestions] =
+      await Promise.all([
+        this.attemptsRepository.find({
+          where: {
+            userId,
+            status: In([
+              DiagnosticAttemptStatus.SUBMITTED,
+              DiagnosticAttemptStatus.EXPIRED,
+            ]),
+          },
+          order: { submittedAt: 'DESC' },
+        }),
+        this.attemptsRepository.findOne({
+          where: { userId, status: DiagnosticAttemptStatus.IN_PROGRESS },
+          order: { startedAt: 'DESC' },
+        }),
+        this.questionsRepository.find({
+          where: {
+            subject: DIAGNOSTIC_SUBJECT,
+            chapter: In([...ELECTROSTATICS_CHAPTERS]),
+            status: QuestionPublicationStatus.PUBLISHED,
+          },
+        }),
+      ]);
     const scores = completedAttempts.map((attempt) => attempt.scorePercent);
 
     return {
@@ -347,24 +382,53 @@ export class DiagnosticsService {
     return { data: { clearedAttempts: result.affected ?? 0 } };
   }
 
-  private async getQuestionSet(subject: string): Promise<Question[]> {
+  private async getQuestionSet(
+    userId: string,
+    subject: string,
+    chapter: string | null = null,
+    topic: string | null = null,
+  ): Promise<Question[]> {
     const bank = await this.questionsRepository.find({
       where: {
         subject,
-        chapter: In([...ELECTROSTATICS_CHAPTERS]),
+        ...(chapter ? { chapter } : { chapter: In([...ELECTROSTATICS_CHAPTERS]) }),
+        ...(topic ? { topic } : {}),
         status: QuestionPublicationStatus.PUBLISHED,
       },
       order: { question_id: 'ASC' },
     });
     if (!this.hasBalancedDifficultyCoverage(bank)) {
       throw new ServiceUnavailableException(
-        'The diagnostic question bank needs at least five published Easy, Medium, and Hard questions.',
+        'This placement check needs at least five published Easy, Medium, and Hard questions for the selected topic.',
       );
     }
 
+    // Prefer unseen published questions from the learner's recent completed
+    // diagnostics. When coverage is too small, fall back safely to the full
+    // reviewed bank rather than creating an incomplete or unbalanced test.
+    const recentAttempts = await this.attemptsRepository.find({
+      where: {
+        userId,
+        subject,
+        status: In([
+          DiagnosticAttemptStatus.SUBMITTED,
+          DiagnosticAttemptStatus.EXPIRED,
+        ]),
+      },
+      order: { submittedAt: 'DESC' },
+      take: 4,
+    });
+    const recentlyUsed = new Set(
+      recentAttempts.flatMap((attempt) => attempt.questionIds),
+    );
+    const unseenBank = bank.filter((question) => !recentlyUsed.has(question.id));
+    const selectionBank = this.hasBalancedDifficultyCoverage(unseenBank)
+      ? unseenBank
+      : bank;
+
     const selected = ['Easy', 'Medium', 'Hard'].flatMap((difficulty) =>
       this.pickDiverseQuestions(
-        bank.filter((question) => question.difficulty === difficulty),
+        selectionBank.filter((question) => question.difficulty === difficulty),
         DIAGNOSTIC_QUESTIONS_PER_DIFFICULTY,
       ),
     );
@@ -396,9 +460,10 @@ export class DiagnosticsService {
       let bestScore = Number.POSITIVE_INFINITY;
       for (let index = 0; index < pool.length; index += 1) {
         const candidate = pool[index];
-        const score =
-          (bloomUsage.get(candidate.bloom_level) ?? 0) * 10 +
-          (chapterUsage.get(candidate.chapter) ?? 0) * 3;
+          const score =
+            (bloomUsage.get(candidate.bloom_level) ?? 0) * 10 +
+            (chapterUsage.get(candidate.chapter) ?? 0) * 3 -
+            Math.min(candidate.quality_score ?? 0, 100) / 1000;
         if (score < bestScore) {
           bestScore = score;
           bestIndex = index;
@@ -482,6 +547,45 @@ export class DiagnosticsService {
       : DiagnosticAttemptStatus.SUBMITTED;
     attempt.submittedAt = new Date();
     await this.attemptsRepository.save(attempt);
+    if (attempt.mode === DiagnosticAttemptMode.TOPIC_PLACEMENT && !expired) {
+      await this.applyTopicPlacement(attempt);
+    }
+  }
+
+  private async applyTopicPlacement(attempt: DiagnosticAttempt): Promise<void> {
+    if (!attempt.chapter || !attempt.topic || !attempt.analysis) return;
+    const existing = await this.topicStatesRepository.findOne({
+      where: {
+        userId: attempt.userId,
+        subject: attempt.subject,
+        chapter: attempt.chapter,
+        topic: attempt.topic,
+      },
+    });
+    if (existing?.totalAnswered) return;
+    const level = this.placementLevel(attempt.analysis.scorePercent);
+    const state = existing ?? this.topicStatesRepository.create({
+      userId: attempt.userId,
+      subject: attempt.subject,
+      chapter: attempt.chapter,
+      topic: attempt.topic,
+      streakCounter: 0,
+      totalAnswered: 0,
+      totalCorrect: 0,
+      masteredAt: null,
+    });
+    state.currentLevel = level;
+    state.status = LearningTopicStatus.ACTIVE;
+    state.lastActivityAt = new Date();
+    await this.topicStatesRepository.save(state);
+  }
+
+  private placementLevel(score: number): number {
+    if (score >= 85) return 9;
+    if (score >= 70) return 7;
+    if (score >= 55) return 5;
+    if (score >= 40) return 3;
+    return 1;
   }
 
   private buildAnalysis(

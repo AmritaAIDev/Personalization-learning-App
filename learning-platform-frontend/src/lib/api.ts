@@ -28,6 +28,7 @@ type MemoryCacheEntry = {
 
 const memoryReadCache = new Map<string, MemoryCacheEntry>();
 const inFlightReadRequests = new Map<string, Promise<unknown>>();
+const DEFAULT_MEMORY_READ_TTL_MS = 60_000;
 
 export const LEARNING_DATA_UPDATED_EVENT = 'jee-ai:learning-data-updated';
 
@@ -79,9 +80,13 @@ export async function apiFetch<T>(
   const requestKey = `${method}:${API_URL}${path}`;
   const now = Date.now();
 
+  const cacheTtlMs = isRead
+    ? (memoryCacheTtlMs ?? DEFAULT_MEMORY_READ_TTL_MS)
+    : 0;
+
   if (!isRead) {
     clearApiMemoryCache();
-  } else if (memoryCacheTtlMs && memoryCacheTtlMs > 0) {
+  } else if (cacheTtlMs > 0) {
     const cached = memoryReadCache.get(requestKey);
     if (cached && cached.expiresAt > now) return cached.payload as T;
     if (cached) memoryReadCache.delete(requestKey);
@@ -95,9 +100,9 @@ export async function apiFetch<T>(
 
   try {
     const payload = await request;
-    if (isRead && memoryCacheTtlMs && memoryCacheTtlMs > 0) {
+    if (isRead && cacheTtlMs > 0) {
       memoryReadCache.set(requestKey, {
-        expiresAt: now + memoryCacheTtlMs,
+        expiresAt: now + cacheTtlMs,
         payload,
       });
     }

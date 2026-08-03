@@ -1,23 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
   BadgeCheck,
   BookMarked,
-  BrainCircuit,
   CheckCircle2,
   CircleAlert,
   Compass,
-  Gauge,
-  Info,
   Layers3,
   LoaderCircle,
   MessagesSquare,
   RefreshCw,
   SearchCheck,
+  Sparkles,
   Target,
   Trophy,
 } from 'lucide-react';
@@ -92,63 +90,6 @@ function getTopicState(
   );
 }
 
-function TabButton({
-  active,
-  label,
-  description,
-  icon,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  description: string;
-  icon: ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`group flex min-h-12 items-center gap-3 rounded-2xl px-3.5 py-2.5 text-left transition duration-200 ${
-        active
-          ? 'bg-ink text-white shadow-[0_10px_24px_rgba(20,20,30,0.16)]'
-          : 'border border-hairline bg-surface text-ink-soft hover:border-primary/25 hover:bg-primary-tint/40 hover:text-ink'
-      }`}
-    >
-      <span
-        className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${
-          active ? 'bg-white/12 text-white' : 'bg-canvas text-primary'
-        }`}
-      >
-        {icon}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-[13px] font-semibold">{label}</span>
-        <span
-          className={`mt-0.5 hidden text-[11px] leading-4 sm:block ${
-            active ? 'text-white/60' : 'text-ink-mute'
-          }`}
-        >
-          {description}
-        </span>
-      </span>
-    </button>
-  );
-}
-
-function routeStatusDetail(topicState: LearningState | null): string {
-  if (!topicState) {
-    return 'No saved topic state yet. The first practice round will create placement evidence.';
-  }
-  if (topicState.status === 'MASTERED') {
-    return 'This topic is mastered. Use flashcards or review practice to keep it durable.';
-  }
-  if (topicState.status === 'PAUSED_FOR_PREREQUISITE') {
-    return 'This route is paused because prerequisite evidence is more important right now.';
-  }
-  return 'This level comes from saved answer history and updates only after practice evidence.';
-}
-
 function formatTransitionLabel(value: string): string {
   return value
     .toLowerCase()
@@ -196,8 +137,6 @@ function TopicOverview({
         item.chapter === scope.chapter &&
         item.topic === scope.topic,
     ) ?? [];
-  const suggestions =
-    dashboard?.suggestions.filter((item) => item.topic !== scope.topic) ?? [];
   const accuracy =
     topicState && topicState.totalAnswered > 0
       ? Math.round((topicState.totalCorrect / topicState.totalAnswered) * 100)
@@ -211,47 +150,21 @@ function TopicOverview({
           ? 'In progress'
           : 'Ready to place';
   const coordinate = topicState?.currentCoordinate;
-  const routeCards = [
-    {
-      label: 'Current level',
-      value: topicState ? `Level ${topicState.currentLevel}` : 'Not placed',
-      detail: coordinate?.label ?? 'Practice starts the automatic placement flow',
-      icon: <Gauge className="h-4 w-4" aria-hidden="true" />,
-    },
-    {
-      label: 'Cognitive target',
-      value: coordinate?.bloomLevel ?? 'Pending',
-      detail: coordinate
-        ? `${coordinate.difficulty} difficulty checkpoint`
-        : 'Bloom and difficulty are chosen by backend evidence',
-      icon: <BrainCircuit className="h-4 w-4" aria-hidden="true" />,
-    },
-    {
-      label: 'Decision source',
-      value: topicState ? 'Saved evidence' : 'First round',
-      detail: routeStatusDetail(topicState),
-      icon: <Info className="h-4 w-4" aria-hidden="true" />,
-    },
-  ];
 
   return (
     <div className="space-y-5">
       <div className="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]">
-        <section className="rounded-[1.5rem] border border-[#ececf0] bg-white p-5 shadow-[0_14px_34px_rgba(20, 20, 30,0.05)] sm:p-6">
+        <section className="overflow-hidden rounded-[1.75rem] border border-[#e2ece6] bg-white shadow-[0_16px_38px_rgba(20,20,30,0.06)]">
+          <div className="border-b border-[#e6efe9] bg-[linear-gradient(135deg,#f5faf7_0%,#ffffff_62%)] p-5 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="flex items-center gap-2 text-xs font-medium text-ink-mute">
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-primary">
                 <SearchCheck className="h-4 w-4" aria-hidden="true" />
-                Current route
+                Current learning route
               </p>
               <h2 className="mt-2 font-heading text-2xl font-bold tracking-tight text-[#1a1a1f]">
                 {topicState ? topicState.stageLabel : 'Start placement through practice'}
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#52525b]">
-                {topicState
-                  ? topicState.nextFocus
-                  : 'The system will place the student automatically from the first adaptive round.'}
-              </p>
             </div>
             <button
               type="button"
@@ -269,39 +182,24 @@ function TopicOverview({
               style={{ width: `${topicState?.masteryPercent ?? 0}%` }}
             />
           </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            {[
-              ['Route', `${topicState?.masteryPercent ?? 0}% complete`],
-              ['Accuracy', accuracy === null ? 'No answers yet' : `${accuracy}%`],
-              ['Status', status],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl border border-[#ececf0] bg-[#fbfbfd] p-4">
-                <p className="text-[11px] font-medium text-ink-mute">{label}</p>
-                <p className="mt-2 text-sm font-bold text-[#1a1a1f]">{value}</p>
-              </div>
-            ))}
           </div>
-
-          <div className="mt-5 rounded-[1.25rem] border border-[#ececf0] bg-[#fbfbfd] p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-mute">
-              Automatic level decision
-            </p>
-            <div className="mt-4 grid gap-3 lg:grid-cols-3">
-              {routeCards.map((card) => (
-                <article key={card.label} className="rounded-2xl bg-white p-4">
-                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#eef3f0] text-[#3f6f57]">
-                    {card.icon}
-                  </span>
-                  <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-mute">
-                    {card.label}
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-[#1a1a1f]">{card.value}</p>
-                  <p className="mt-2 text-xs leading-5 text-[#52525b]">{card.detail}</p>
-                </article>
-              ))}
+          <dl className="grid divide-y divide-[#e6efe9] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <div className="px-5 py-4 sm:px-6">
+              <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-mute">Mastery</dt>
+              <dd className="mt-1 font-heading text-xl font-bold text-ink">{topicState?.masteryPercent ?? 0}%</dd>
             </div>
-          </div>
+            <div className="px-5 py-4 sm:px-6">
+              <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-mute">Accuracy</dt>
+              <dd className="mt-1 font-heading text-xl font-bold text-ink">{accuracy === null ? '—' : `${accuracy}%`}</dd>
+            </div>
+            <div className="px-5 py-4 sm:px-6">
+              <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-mute">Checkpoint</dt>
+              <dd className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-bold text-ink">
+                <span>{coordinate ? `Level ${topicState?.currentLevel}` : 'Not placed'}</span>
+                <span className="text-ink-mute">{coordinate ? `${coordinate.bloomLevel} · ${coordinate.difficulty}` : status}</span>
+              </dd>
+            </div>
+          </dl>
         </section>
 
       <section className="space-y-5">
@@ -338,32 +236,6 @@ function TopicOverview({
           )}
         </article>
 
-        <article className="rounded-[1.5rem] border border-[#ececf0] bg-white p-5 shadow-[0_14px_34px_rgba(20, 20, 30,0.05)]">
-          <p className="text-[13px] font-medium text-ink-mute">Suggested next</p>
-          {suggestions.length === 0 ? (
-            <p className="mt-4 text-sm leading-6 text-[#52525b]">
-              Suggestions will appear after more completed activity.
-            </p>
-          ) : (
-            <div className="mt-4 space-y-2">
-              {suggestions.slice(0, 3).map((item) => (
-                <Link
-                  key={`${item.subject}-${item.chapter}-${item.topic}`}
-                  href={learningUrl(item, { tab: 'overview' })}
-                  className="group flex items-center justify-between gap-3 rounded-2xl border border-[#ececf0] bg-[#fbfbfd] px-4 py-3 transition hover:border-[#3f6f57]/35 hover:bg-[#eef3f0]"
-                >
-                  <div>
-                    <p className="text-sm font-bold text-[#1a1a1f]">{item.topic}</p>
-                    <p className="mt-0.5 text-xs leading-5 text-[#52525b]">
-                      {item.reason}
-                    </p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-[#3f6f57] transition group-hover:translate-x-0.5" />
-                </Link>
-              ))}
-            </div>
-          )}
-        </article>
       </section>
       </div>
       <SubtopicExplorer scope={scope} />
@@ -372,7 +244,6 @@ function TopicOverview({
 }
 
 function PracticeWorkspace({
-  scope,
   payload,
   feedback,
   loading,
@@ -382,8 +253,8 @@ function PracticeWorkspace({
   onAnswer,
   onContinue,
   onStop,
+  onOpenFlashcards,
 }: {
-  scope: LearningScope;
   payload: LearningSessionPayload | null;
   feedback: LearningAnswerPayload['feedback'] | null;
   loading: boolean;
@@ -393,6 +264,7 @@ function PracticeWorkspace({
   onAnswer: (selectedOption: string) => void;
   onContinue: () => void;
   onStop: () => void;
+  onOpenFlashcards: () => void;
 }) {
   if (!payload && loading) {
     return (
@@ -486,8 +358,8 @@ function PracticeWorkspace({
   );
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-[1.35rem] border border-[#ececf0] bg-white px-4 py-4 shadow-[0_12px_28px_rgba(20, 20, 30,0.045)]">
+    <div className="space-y-4 xl:flex xl:h-full xl:flex-col xl:overflow-hidden">
+      <section className="rounded-[1.35rem] border border-[#ececf0] bg-white px-4 py-3 shadow-[0_12px_28px_rgba(20,20,30,0.045)]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-medium text-ink-mute">
@@ -497,18 +369,13 @@ function PracticeWorkspace({
               {payload.placement.stageLabel} - {payload.session.coordinate.label}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs font-bold">
-            <span className="rounded-full bg-[#eef3f0] px-3 py-2 text-[#2c4c3d]">
-              {payload.placement.confidence} confidence
-            </span>
-            <span className="rounded-full bg-[#f4f4f6] px-3 py-2 text-[#52525b]">
-              {payload.state.masteryPercent}% topic route
-            </span>
+          <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
             <span className="rounded-full bg-[#1a1a1f] px-3 py-2 text-white">
               {complete
                 ? 'Round complete'
                 : `Question ${payload.session.currentSequence}/${payload.session.totalQuestions}`}
             </span>
+            <button type="button" onClick={onOpenFlashcards} className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-primary/20 bg-primary-tint px-3 text-primary transition hover:bg-primary hover:text-white"><Sparkles className="h-3.5 w-3.5" /> Flashcards</button>
           </div>
         </div>
         <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#f2f2f5]">
@@ -519,8 +386,8 @@ function PracticeWorkspace({
         </div>
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.95fr)] xl:items-stretch">
-        <section className="flex min-h-[38rem] flex-col rounded-[1.5rem] border border-[#ececf0] bg-white p-5 shadow-[0_16px_40px_rgba(20, 20, 30,0.05)] sm:p-6">
+      <div className="grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.9fr)] xl:items-stretch">
+        <section className="flex min-h-[32rem] flex-col rounded-[1.5rem] border border-[#ececf0] bg-white p-4 shadow-[0_16px_40px_rgba(20,20,30,0.05)] sm:p-5 xl:min-h-0">
           {complete ? (
             <div className="flex flex-1 flex-col items-center justify-center text-center">
               <span
@@ -580,17 +447,11 @@ function PracticeWorkspace({
                 >
                   Stop for now
                 </button>
-                <Link
-                  href={learningUrl(scope, { tab: 'flashcards' })}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dedee3] px-5 py-2.5 text-sm font-bold text-[#52525b] transition hover:bg-[#f4f4f6]"
-                >
-                  Review flashcards
-                </Link>
               </div>
             </div>
           ) : current ? (
             <div className="flex min-h-0 flex-1 flex-col">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-medium text-ink-mute">
                     Question card
@@ -605,23 +466,24 @@ function PracticeWorkspace({
                   </span>
                 ) : null}
               </div>
-              <div className="rounded-[1.35rem] border border-[#ececf0] bg-[#fbfbfd] p-3">
+              <div className="rounded-[1.35rem] border border-[#ececf0] bg-[#fbfbfd] p-2.5">
                 <QuestionCard
                   questionText={current.questionText}
                   options={current.options}
                   disabled={answering}
+                  compact
                   onSelect={(option) => onAnswer(option)}
                 />
               </div>
               {answering ? (
-                <p className="mt-4 flex items-center gap-2 rounded-xl bg-[#eef3f0] px-4 py-3 text-sm font-semibold text-[#2c4c3d]">
+                <p className="mt-3 flex items-center gap-2 rounded-xl bg-[#eef3f0] px-3 py-2.5 text-sm font-semibold text-[#2c4c3d]">
                   <LoaderCircle className="h-4 w-4 animate-spin text-[#3f6f57]" aria-hidden="true" />
                   Checking your reasoning...
                 </p>
               ) : null}
               {feedback ? (
                 <div
-                  className={`mt-4 flex items-start gap-3 rounded-2xl border p-4 text-sm ${
+                  className={`mt-3 flex items-start gap-3 rounded-2xl border p-3.5 text-sm ${
                     feedback.kind === 'SOCRATIC_HINT'
                       ? 'border-amber-200 bg-amber-50 text-amber-900'
                       : feedback.kind === 'CORRECT'
@@ -664,11 +526,12 @@ function PracticeWorkspace({
           ) : null}
         </section>
 
-        <div className="min-h-[38rem]">
+        <div className="min-h-[32rem] xl:min-h-0">
           <StudyAssistant
             key={payload.session.id}
             sessionId={payload.session.id}
             autoOpenMessage={feedback?.assistantMessage ?? null}
+            refreshWhen={feedback?.tutorPending ?? false}
             variant="panel"
             title="Linked tutor"
           />
@@ -686,6 +549,7 @@ export default function AdaptiveStudySession({
   initialTab: LearningTab;
 }) {
   const [activeTab, setActiveTab] = useState<LearningTab>(initialTab);
+  const [flashcardsOpen, setFlashcardsOpen] = useState(initialTab === 'flashcards');
   const [payload, setPayload] = useState<LearningSessionPayload | null>(null);
   const [feedback, setFeedback] = useState<LearningAnswerPayload['feedback'] | null>(
     null,
@@ -716,14 +580,21 @@ export default function AdaptiveStudySession({
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
+      setActiveTab(initialTab);
+      setFlashcardsOpen(initialTab === 'flashcards');
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [initialTab]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
       setPayload(null);
       setFeedback(null);
       setError(null);
-      setActiveTab(initialTab);
       void refreshDashboard(true);
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, [initialTab, refreshDashboard, scope.chapter, scope.subject, scope.topic]);
+  }, [refreshDashboard, scope.chapter, scope.subject, scope.topic]);
 
   const start = async () => {
     setLoading(true);
@@ -781,9 +652,9 @@ export default function AdaptiveStudySession({
   const topicState = getTopicState(dashboard, scope);
 
   return (
-    <div className="mx-auto max-w-7xl p-5 sm:p-8 lg:p-10">
-      <header className="rounded-[1.75rem] border border-hairline bg-surface p-4 shadow-[0_16px_40px_rgba(20,20,30,0.055)] sm:p-5">
-        <div className="grid gap-4 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:items-center">
+    <div className={`mx-auto max-w-7xl p-5 sm:p-8 lg:p-10 ${activeTab !== 'overview' ? 'xl:h-[100dvh] xl:overflow-hidden xl:p-6' : ''}`}>
+      {activeTab === 'overview' ? <header className="rounded-[1.75rem] border border-hairline bg-surface p-4 shadow-[0_16px_40px_rgba(20,20,30,0.055)] sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Link
             href="/"
             className="inline-flex min-h-9 w-fit items-center justify-center gap-2 rounded-xl border border-hairline px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-primary/30 hover:bg-primary-tint/40 hover:text-primary"
@@ -792,7 +663,7 @@ export default function AdaptiveStudySession({
             Search
           </Link>
 
-          <div className="min-w-0 text-left xl:text-center">
+          <div className="min-w-0 text-left sm:text-right">
             <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-ink-mute">
               <Compass className="h-4 w-4" aria-hidden="true" />
               Topic workspace
@@ -800,7 +671,7 @@ export default function AdaptiveStudySession({
             <h1 className="mt-1 truncate font-heading text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
               {scope.topic}
             </h1>
-            <div className="mt-2 flex flex-wrap gap-2 xl:justify-center">
+            <div className="mt-2 flex flex-wrap gap-2 sm:justify-end">
               <span className="rounded-full bg-canvas px-3 py-1.5 text-xs font-semibold text-ink-soft">
                 {scope.chapter}
               </span>
@@ -810,31 +681,8 @@ export default function AdaptiveStudySession({
             </div>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[34rem]">
-            <TabButton
-              active={activeTab === 'overview'}
-              label="Dashboard"
-              description="Route status"
-              icon={<SearchCheck className="h-4 w-4" aria-hidden="true" />}
-              onClick={() => setActiveTab('overview')}
-            />
-            <TabButton
-              active={activeTab === 'flashcards'}
-              label="Flashcards"
-              description="Live AI recall"
-              icon={<BookMarked className="h-4 w-4" aria-hidden="true" />}
-              onClick={() => setActiveTab('flashcards')}
-            />
-            <TabButton
-              active={activeTab === 'practice'}
-              label="Practice Studio"
-              description="Question + tutor"
-              icon={<MessagesSquare className="h-4 w-4" aria-hidden="true" />}
-              onClick={() => setActiveTab('practice')}
-            />
-          </div>
         </div>
-      </header>
+      </header> : null}
 
       {dashboardError && activeTab === 'overview' ? (
         <p
@@ -850,7 +698,7 @@ export default function AdaptiveStudySession({
         All three panels stay mounted so each section loads in the background and
         switching tabs is instant — inactive panels are hidden, not unmounted.
       */}
-      <div className="mt-6">
+      <div className={activeTab === 'overview' ? 'mt-6' : ''}>
         <div className={activeTab === 'overview' ? 'animate-fade' : 'hidden'}>
           {dashboardLoading ? (
             <DashboardSkeleton />
@@ -863,12 +711,8 @@ export default function AdaptiveStudySession({
             />
           )}
         </div>
-        <div className={activeTab === 'flashcards' ? 'animate-fade' : 'hidden'}>
-          <FlashcardDeck scope={scope} active={activeTab === 'flashcards'} />
-        </div>
-        <div className={activeTab === 'practice' ? 'animate-fade' : 'hidden'}>
+        <div className={activeTab !== 'overview' ? 'space-y-5 animate-fade' : 'hidden'}>
           <PracticeWorkspace
-            scope={scope}
             payload={payload}
             feedback={feedback}
             loading={loading}
@@ -878,7 +722,9 @@ export default function AdaptiveStudySession({
             onAnswer={(selectedOption) => void answer(selectedOption)}
             onContinue={() => void start()}
             onStop={stopPractice}
+            onOpenFlashcards={() => setFlashcardsOpen(true)}
           />
+          {flashcardsOpen ? <FlashcardDeck scope={scope} onClose={() => setFlashcardsOpen(false)} /> : null}
         </div>
       </div>
     </div>

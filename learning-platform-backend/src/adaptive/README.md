@@ -2,6 +2,8 @@
 
 This module implements the student-facing, database-backed JEE learning journey. It is deliberately separate from the secure 15-question `PracticeModule`:
 
+New topics begin at Level 1 unless the student completes a topic-scoped placement check. The adaptive session service owns this rule; cross-topic performance is not used to silently raise a fresh topic's starting level.
+
 - `PracticeModule` is a reviewable 5 Easy / 5 Medium / 5 Hard assessment with answer keys revealed only after submission.
 - `AdaptiveModule` is formative. It serves one five-question coordinate at a time, permits one Socratic retry, and persists its routing decision after each answer.
 

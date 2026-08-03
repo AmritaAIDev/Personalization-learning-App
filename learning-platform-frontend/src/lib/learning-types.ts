@@ -108,6 +108,7 @@ export type LearningAnswerPayload = LearningSessionPayload & {
       | 'MASTERED'
       | 'REINFORCE';
     assistantMessage: TutorMessage | null;
+    tutorPending: boolean;
     route: LearningScope | null;
   };
 };

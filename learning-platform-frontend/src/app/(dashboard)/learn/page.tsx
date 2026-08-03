@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ArrowRight, Compass, SearchX } from 'lucide-react';
 import AdaptiveStudySession from '@/components/learning/AdaptiveStudySession';
+import TopicPlacementGate from '@/components/learning/TopicPlacementGate';
 import TopicSearch from '@/components/search/TopicSearch';
 import {
   learningScopeFromSearchParams,
@@ -49,6 +50,9 @@ export default function LearnPage() {
         </section>
       </div>
     );
+  }
+  if (searchParams.get('placement') === 'ask') {
+    return <TopicPlacementGate scope={scope} tab={learningTabFromSearchParams(searchParams)} />;
   }
   return (
     <AdaptiveStudySession

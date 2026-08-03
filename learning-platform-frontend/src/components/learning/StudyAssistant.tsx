@@ -120,6 +120,7 @@ function TutorText({ content }: { content: string }) {
 type StudyAssistantProps = {
   sessionId: string;
   autoOpenMessage: TutorMessage | null;
+  refreshWhen?: boolean;
   variant?: 'floating' | 'panel';
   title?: string;
 };
@@ -127,6 +128,7 @@ type StudyAssistantProps = {
 export default function StudyAssistant({
   sessionId,
   autoOpenMessage,
+  refreshWhen = false,
   variant = 'floating',
   title = 'Study assistant',
 }: StudyAssistantProps) {
@@ -141,6 +143,7 @@ export default function StudyAssistant({
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const loadedSessionRef = useRef<string | null>(null);
+  const refreshConversationRef = useRef<() => void>(() => undefined);
 
   const autoMessageVisible =
     autoOpenMessage !== null && autoOpenMessage.id !== dismissedAutoMessageId;
@@ -197,6 +200,21 @@ export default function StudyAssistant({
       setLoading(false);
     }
   }, [loading, messages.length, sessionId]);
+
+  useEffect(() => {
+    refreshConversationRef.current = () => void loadConversation(true);
+  }, [loadConversation]);
+
+  useEffect(() => {
+    if (!refreshWhen) return;
+    let attempts = 0;
+    const interval = window.setInterval(() => {
+      attempts += 1;
+      refreshConversationRef.current();
+      if (attempts >= 6) window.clearInterval(interval);
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [refreshWhen, sessionId]);
 
   useEffect(() => {
     if (!isOpen || loadedSessionRef.current === sessionId) return;
@@ -259,7 +277,7 @@ export default function StudyAssistant({
       aria-label={title}
       className={
         variant === 'panel'
-          ? 'flex h-full min-h-[38rem] flex-col overflow-hidden rounded-[1.5rem] border border-[#eadde0] bg-white shadow-[0_16px_40px_rgba(20, 20, 30,0.06)]'
+          ? 'flex h-full min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-[#eadde0] bg-white shadow-[0_16px_40px_rgba(20, 20, 30,0.06)]'
           : 'mb-3 flex h-[min(39rem,calc(100vh-9rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-[1.75rem] border border-[#eadde0] bg-white shadow-[0_24px_70px_rgba(20, 20, 30,0.24)]'
       }
     >

@@ -39,7 +39,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
   const [journeyLoading, setJourneyLoading] = useState(false);
   const { user, loading: authLoading } = useAuth();
 
-  const fetchJourney = useCallback(async () => {
+  const fetchJourney = useCallback(async (force = false) => {
     if (authLoading) return;
     if (!user) {
       setJourneyNodes([]);
@@ -48,7 +48,10 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     }
     setJourneyLoading(true);
     try {
-      const journeyData = await apiFetch<JourneyNode[]>('/api/sessions/journey');
+      const journeyData = await apiFetch<JourneyNode[]>(
+        '/api/sessions/journey',
+        force ? {} : { memoryCacheTtlMs: 45_000 },
+      );
       setJourneyNodes(Array.isArray(journeyData) ? journeyData : []);
     } catch (error) {
       console.error('Failed to fetch the learner journey.', error);
@@ -66,13 +69,13 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
   }, [fetchJourney]);
 
   useEffect(() => {
-    const refreshOnLearningMutation = () => void fetchJourney();
+    const refreshOnLearningMutation = () => void fetchJourney(true);
     window.addEventListener(LEARNING_DATA_UPDATED_EVENT, refreshOnLearningMutation);
     return () => window.removeEventListener(LEARNING_DATA_UPDATED_EVENT, refreshOnLearningMutation);
   }, [fetchJourney]);
 
   return (
-    <JourneyContext.Provider value={{ journeyNodes: user ? journeyNodes : [], user, loading: authLoading || journeyLoading, refreshJourney: fetchJourney }}>
+    <JourneyContext.Provider value={{ journeyNodes: user ? journeyNodes : [], user, loading: authLoading || journeyLoading, refreshJourney: () => fetchJourney(true) }}>
       {children}
     </JourneyContext.Provider>
   );

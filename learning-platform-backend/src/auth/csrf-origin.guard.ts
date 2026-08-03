@@ -6,6 +6,10 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AuthenticatedRequest } from './auth.types';
+import {
+  configuredAllowedOrigins,
+  isAllowedBrowserOrigin,
+} from './origin-policy';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -24,13 +28,9 @@ export class CsrfOriginGuard implements CanActivate {
     }
 
     const origin = request.get('origin');
-    const allowedOrigins = (
-      this.configService.get<string>('FRONTEND_ORIGIN') ??
-      'http://localhost:3000,https://personalization-learning-app.vercel.app'
-    )
-      .split(',')
-      .map((value) => value.trim().replace(/\/$/, ''))
-      .filter(Boolean);
+    const allowedOrigins = configuredAllowedOrigins(
+      this.configService.get<string>('FRONTEND_ORIGIN'),
+    );
 
     if (!isAllowedOrigin(origin, allowedOrigins)) {
       throw new ForbiddenException('Request origin is not allowed.');
@@ -44,21 +44,5 @@ function isAllowedOrigin(
   origin: string | undefined,
   allowedOrigins: string[],
 ): boolean {
-  if (!origin) return false;
-  const normalized = origin.replace(/\/$/, '');
-  if (allowedOrigins.includes(normalized)) return true;
-
-  try {
-    const url = new URL(normalized);
-    const host = url.hostname.toLowerCase();
-    return (
-      url.protocol === 'https:' &&
-      host.endsWith('.vercel.app') &&
-      (host === 'personalization-learning-app.vercel.app' ||
-        host.startsWith('personalization-learning-app-') ||
-        host.startsWith('personalization-learning-'))
-    );
-  } catch {
-    return false;
-  }
+  return isAllowedBrowserOrigin(origin, allowedOrigins);
 }

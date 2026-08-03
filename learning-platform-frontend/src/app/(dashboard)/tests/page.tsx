@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -8,93 +8,37 @@ import {
   ArrowRight,
   BarChart3,
   BookOpenCheck,
-  Brain,
-  ClipboardList,
+  ClipboardCheck,
+  Clock3,
   LoaderCircle,
-  NotebookTabs,
-  PlayCircle,
-  RotateCcw,
-  Target,
-  TimerReset,
+  Play,
 } from 'lucide-react';
-import PageHero from '@/components/product/PageHero';
 import { ApiError, apiFetch } from '@/lib/api';
-import type {
-  DashboardPayload,
-  DiagnosticAttemptPayload,
-  HistoryItem,
-} from '@/lib/diagnostic-types';
+import type { DashboardPayload, DiagnosticAttemptPayload, HistoryItem } from '@/lib/diagnostic-types';
 
 function formatDate(value: string | null) {
   if (!value) return 'Not completed';
-  return new Intl.DateTimeFormat('en-IN', {
-    day: 'numeric',
-    month: 'short',
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' }).format(new Date(value));
 }
 
 function scoreTone(score: number) {
-  if (score >= 70) return 'text-emerald-700 bg-emerald-50 border-emerald-200';
-  if (score >= 40) return 'text-amber-700 bg-amber-50 border-amber-200';
-  return 'text-rose-700 bg-rose-50 border-rose-200';
+  if (score >= 70) return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
+  if (score >= 40) return 'bg-amber-50 text-amber-800 ring-amber-100';
+  return 'bg-rose-50 text-rose-700 ring-rose-100';
+}
+
+function TestRecord({ attempt }: { attempt: HistoryItem }) {
+  return (
+    <Link href={`/analysis/${attempt.id}`} className="group flex items-center gap-4 rounded-2xl border border-hairline bg-canvas px-4 py-3.5 transition hover:border-primary/30 hover:bg-white hover:shadow-[0_12px_26px_rgba(20,20,30,0.06)]">
+      <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl text-sm font-bold ring-1 ${scoreTone(attempt.scorePercent)}`}>{attempt.scorePercent}%</span>
+      <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-ink">{attempt.correctCount}/{attempt.totalQuestions} correct</span><span className="mt-0.5 block text-xs font-semibold text-ink-mute">{formatDate(attempt.completedAt)} · {attempt.weakTopics.length ? `${attempt.weakTopics.length} areas to repair` : 'No repair areas flagged'}</span></span>
+      <ArrowRight className="h-4 w-4 shrink-0 text-ink-mute transition group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true" />
+    </Link>
+  );
 }
 
 function TestsSkeleton() {
-  return (
-    <div className="mt-9 grid gap-4">
-      <section className="rounded-[1.65rem] border border-hairline bg-surface p-6 shadow-[0_14px_34px_rgba(20,20,30,0.05)]">
-        <div className="h-5 w-44 animate-pulse rounded-full bg-ink/10" />
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          {[0, 1, 2].map((item) => (
-            <div key={item} className="h-28 animate-pulse rounded-2xl bg-ink/8" />
-          ))}
-        </div>
-      </section>
-      <div className="grid gap-4 lg:grid-cols-[0.62fr_0.38fr]">
-        <div className="h-80 animate-pulse rounded-[1.65rem] bg-ink/8" />
-        <div className="h-80 animate-pulse rounded-[1.65rem] bg-ink/8" />
-      </div>
-    </div>
-  );
-}
-
-function HistoryCard({ attempt }: { attempt: HistoryItem }) {
-  return (
-    <Link
-      href={`/analysis/${attempt.id}`}
-      className="group rounded-2xl border border-hairline bg-canvas p-4 transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_14px_30px_rgba(20,20,30,0.07)]"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-mute">
-            {formatDate(attempt.completedAt)}
-          </p>
-          <h3 className="mt-2 text-sm font-semibold leading-6 text-ink">
-            {attempt.title}
-          </h3>
-          <p className="mt-1 text-xs font-semibold text-ink-mute">
-            {attempt.correctCount}/{attempt.totalQuestions} correct
-          </p>
-        </div>
-        <span
-          className={`rounded-2xl border px-3 py-2 font-heading text-xl font-semibold ${scoreTone(
-            attempt.scorePercent,
-          )}`}
-        >
-          {attempt.scorePercent}%
-        </span>
-      </div>
-      {attempt.weakTopics.length > 0 ? (
-        <p className="mt-3 text-xs font-semibold text-rose-700">
-          Repair: {attempt.weakTopics.slice(0, 3).join(' · ')}
-        </p>
-      ) : (
-        <p className="mt-3 text-xs font-semibold text-emerald-700">
-          No weak topics flagged in this attempt.
-        </p>
-      )}
-    </Link>
-  );
+  return <div className="mt-7 grid gap-4"><div className="h-64 rounded-[1.8rem] skeleton" /><div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]"><div className="h-56 rounded-[1.5rem] skeleton" /><div className="h-56 rounded-[1.5rem] skeleton" /></div></div>;
 }
 
 export default function TestsPage() {
@@ -104,330 +48,75 @@ export default function TestsPage() {
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadDashboard() {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await apiFetch<DashboardPayload>('/api/diagnostics/dashboard');
-        if (!cancelled) setDashboard(data);
-      } catch (caught) {
-        if (!cancelled) {
-          setError(
-            caught instanceof ApiError
-              ? caught.message
-              : 'Unable to load test details right now.',
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setDashboard(await apiFetch<DashboardPayload>('/api/diagnostics/dashboard'));
+    } catch (reason) {
+      setError(reason instanceof ApiError ? reason.message : 'Tests could not be loaded right now.');
+    } finally {
+      setLoading(false);
     }
-
-    void loadDashboard();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
-  async function startDiagnostic() {
-    if (dashboard?.activeAttempt) {
+  useEffect(() => {
+    const timeout = window.setTimeout(() => void loadDashboard(), 0);
+    return () => window.clearTimeout(timeout);
+  }, [loadDashboard]);
+
+  const startOrResume = async () => {
+    if (!dashboard || launching) return;
+    if (dashboard.activeAttempt) {
       router.push(`/diagnostic/${dashboard.activeAttempt.id}`);
       return;
     }
-
     setLaunching(true);
     setError(null);
     try {
-      const attempt = await apiFetch<DiagnosticAttemptPayload>('/api/diagnostics', {
+      const payload = await apiFetch<DiagnosticAttemptPayload>('/api/diagnostics', {
         method: 'POST',
-        body: JSON.stringify({ subject: dashboard?.stats.subject ?? 'Physics' }),
+        body: JSON.stringify({ subject: 'Physics' }),
       });
-      router.push(`/diagnostic/${attempt.attempt.id}`);
-    } catch (caught) {
-      setError(
-        caught instanceof ApiError
-          ? caught.message
-          : 'Unable to start the baseline diagnostic.',
-      );
+      router.push(`/diagnostic/${payload.attempt.id}`);
+    } catch (reason) {
+      setError(reason instanceof ApiError ? reason.message : 'Your test could not be opened.');
     } finally {
       setLaunching(false);
     }
-  }
+  };
 
-  const weakTopics = useMemo(
-    () =>
-      Array.from(
-        new Set(dashboard?.recentAttempts.flatMap((attempt) => attempt.weakTopics) ?? []),
-      ).slice(0, 6),
-    [dashboard],
-  );
-
-  const actionLabel = dashboard?.activeAttempt
-    ? 'Resume baseline'
-    : dashboard?.stats.testsTaken
-      ? 'Retake baseline'
-      : 'Start baseline';
+  const latestAttempt = dashboard?.recentAttempts[0] ?? null;
+  const repairTopics = useMemo(() => latestAttempt?.weakTopics.slice(0, 4) ?? [], [latestAttempt]);
+  const canStart = Boolean(dashboard?.diagnostic.ready || dashboard?.activeAttempt);
+  const actionLabel = dashboard?.activeAttempt ? 'Resume test' : dashboard?.stats.testsTaken ? 'Start another test' : 'Start test';
 
   return (
     <div className="min-h-screen bg-canvas pb-20">
-      <main className="mx-auto w-full max-w-6xl px-5 pt-10 sm:px-8 sm:pt-16 lg:px-10">
-        <PageHero
-          eyebrow="Tests"
-          title="Turn every score into a repair plan."
-          description="Baseline diagnostics, reviewed practice, and future mocks stay connected to Learn, Notebook, and weak-topic repair."
-          action={
-            <button
-              type="button"
-              onClick={() => void startDiagnostic()}
-              disabled={launching || loading || Boolean(dashboard?.diagnostic && !dashboard.diagnostic.ready)}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-ink px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-55"
-            >
-              {launching ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <PlayCircle className="h-4 w-4" aria-hidden="true" />
-              )}
-              {launching ? 'Opening test' : actionLabel}
-            </button>
-          }
-        />
+      <main className="mx-auto w-full max-w-6xl px-5 pt-8 sm:px-8 sm:pt-10 lg:px-10">
+        <header className="flex flex-col gap-4 border-b border-hairline pb-6 sm:flex-row sm:items-end sm:justify-between">
+          <div><p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Tests</p><h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-ink sm:text-4xl">Test centre</h1><p className="mt-2 text-sm text-ink-soft">A secure, timed check that turns into a focused repair plan.</p></div>
+          <button type="button" onClick={() => void startOrResume()} disabled={loading || launching || !canStart} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(20,20,30,0.16)] transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-55">{launching ? <LoaderCircle className="h-4 w-4 animate-spin" /> : dashboard?.activeAttempt ? <Play className="h-4 w-4" /> : <ClipboardCheck className="h-4 w-4" />}{launching ? 'Opening test' : actionLabel}</button>
+        </header>
 
         {loading ? <TestsSkeleton /> : null}
+        {error ? <div className="mt-6 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="font-bold">Something interrupted Tests</p><p className="mt-1">{error}</p><button type="button" onClick={() => void loadDashboard()} className="mt-3 font-bold underline underline-offset-4">Try again</button></div></div> : null}
 
-        {!loading && error ? (
-          <div className="mt-9 flex items-start gap-3 rounded-[1.65rem] border border-rose-200 bg-rose-50 p-6 text-rose-800">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-            <div>
-              <h2 className="font-semibold">Tests could not load</h2>
-              <p className="mt-1 text-sm leading-6">{error}</p>
-            </div>
+        {!loading && dashboard ? <>
+          <section className="mt-7 overflow-hidden rounded-[1.8rem] bg-ink p-5 text-white shadow-[0_18px_45px_rgba(20,20,30,0.16)] sm:p-7">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">{dashboard.activeAttempt ? 'Test in progress' : 'Next assessment'}</p><h2 className="mt-3 font-heading text-2xl font-bold tracking-tight sm:text-3xl">{dashboard.diagnostic.title}</h2><p className="mt-2 text-sm text-white/65">{dashboard.diagnostic.chapters.join(' · ')}</p></div>{dashboard.activeAttempt ? <Link href={`/diagnostic/${dashboard.activeAttempt.id}`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-ink transition hover:bg-primary-tint">{dashboard.activeAttempt.answeredCount} answers saved <ArrowRight className="h-4 w-4" /></Link> : null}</div>
+            <div className="mt-7 grid grid-cols-3 gap-2 border-t border-white/10 pt-5 sm:max-w-md sm:gap-3"><span className="rounded-xl bg-white/8 px-3 py-3"><span className="block text-lg font-bold">{dashboard.diagnostic.questionCount}</span><span className="mt-1 block text-[10px] font-bold uppercase tracking-[0.13em] text-white/50">Questions</span></span><span className="rounded-xl bg-white/8 px-3 py-3"><span className="block text-lg font-bold">{dashboard.diagnostic.durationMinutes} min</span><span className="mt-1 block text-[10px] font-bold uppercase tracking-[0.13em] text-white/50">Timed</span></span><span className="rounded-xl bg-white/8 px-3 py-3"><span className="block text-lg font-bold">3 tiers</span><span className="mt-1 block text-[10px] font-bold uppercase tracking-[0.13em] text-white/50">Balanced</span></span></div>
+          </section>
+
+          {!dashboard.diagnostic.ready && !dashboard.activeAttempt ? <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><Clock3 className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="font-bold">Your next test is being prepared</p><p className="mt-1 leading-6">It will open when the reviewed question bank has balanced coverage across all three difficulty tiers.</p></div></div> : null}
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-[0.78fr_1.22fr]">
+            <section className="rounded-[1.55rem] border border-hairline bg-surface p-5 shadow-[0_12px_30px_rgba(20,20,30,0.045)]"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-mute">Your record</p><div className="mt-5 grid grid-cols-3 gap-2"><div><p className="font-heading text-2xl font-bold text-ink">{dashboard.stats.testsTaken}</p><p className="mt-1 text-[11px] font-semibold text-ink-mute">Taken</p></div><div><p className="font-heading text-2xl font-bold text-ink">{dashboard.stats.bestScore == null ? '—' : `${dashboard.stats.bestScore}%`}</p><p className="mt-1 text-[11px] font-semibold text-ink-mute">Best</p></div><div><p className="font-heading text-2xl font-bold text-ink">{dashboard.stats.averageScore == null ? '—' : `${dashboard.stats.averageScore}%`}</p><p className="mt-1 text-[11px] font-semibold text-ink-mute">Average</p></div></div><div className="mt-6 border-t border-hairline pt-5"><Link href="/notebook" className="inline-flex items-center gap-2 text-sm font-bold text-primary transition hover:text-primary-strong"><BookOpenCheck className="h-4 w-4" /> Open mistake notebook <ArrowRight className="h-4 w-4" /></Link></div></section>
+            <section className="rounded-[1.55rem] border border-hairline bg-surface p-5 shadow-[0_12px_30px_rgba(20,20,30,0.045)]"><div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-mute">Recent tests</p><h2 className="mt-1 font-heading text-xl font-bold text-ink">Your learning record</h2></div><BarChart3 className="h-5 w-5 text-primary" /></div><div className="mt-5 grid gap-2">{dashboard.recentAttempts.length ? dashboard.recentAttempts.map((attempt) => <TestRecord key={attempt.id} attempt={attempt} />) : <div className="rounded-2xl border border-dashed border-hairline bg-canvas p-5 text-sm leading-6 text-ink-mute">Your submitted tests will appear here with their score and repair areas.</div>}</div></section>
           </div>
-        ) : null}
 
-        {!loading && dashboard ? (
-          <>
-            <section className="mt-9 rounded-[1.65rem] border border-hairline bg-surface p-6 shadow-[0_14px_34px_rgba(20,20,30,0.05)]">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
-                    Test command center
-                  </p>
-                  <h2 className="mt-2 font-heading text-2xl font-semibold text-ink">
-                    {dashboard.stats.subject} readiness
-                  </h2>
-                </div>
-                {dashboard.activeAttempt ? (
-                  <Link
-                    href={`/diagnostic/${dashboard.activeAttempt.id}`}
-                    className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
-                  >
-                    {dashboard.activeAttempt.answeredCount} saved answers
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
-                ) : null}
-              </div>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-hairline bg-canvas p-5">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-ink-mute">
-                    <ClipboardList className="h-4 w-4 text-primary" aria-hidden="true" />
-                    Tests taken
-                  </p>
-                  <p className="mt-3 font-heading text-3xl font-semibold text-ink">
-                    {dashboard.stats.testsTaken}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-hairline bg-canvas p-5">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-ink-mute">
-                    <Target className="h-4 w-4 text-primary" aria-hidden="true" />
-                    Best score
-                  </p>
-                  <p className="mt-3 font-heading text-3xl font-semibold text-ink">
-                    {dashboard.stats.bestScore == null ? '-' : `${dashboard.stats.bestScore}%`}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-hairline bg-canvas p-5">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-ink-mute">
-                    <BarChart3 className="h-4 w-4 text-primary" aria-hidden="true" />
-                    Average
-                  </p>
-                  <p className="mt-3 font-heading text-3xl font-semibold text-ink">
-                    {dashboard.stats.averageScore == null
-                      ? '-'
-                      : `${dashboard.stats.averageScore}%`}
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <div className="mt-4 grid gap-4 lg:grid-cols-[0.62fr_0.38fr]">
-              <section className="rounded-[1.65rem] border border-hairline bg-surface p-6 shadow-[0_14px_34px_rgba(20,20,30,0.05)]">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-mute">
-                  Test modes
-                </p>
-                <div className="mt-5 grid gap-3">
-                  <button
-                    type="button"
-                    onClick={() => void startDiagnostic()}
-                    disabled={launching || Boolean(dashboard.diagnostic && !dashboard.diagnostic.ready)}
-                    className="group flex items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-primary-tint p-5 text-left transition hover:border-primary/40 disabled:cursor-not-allowed disabled:opacity-55"
-                  >
-                    <span className="flex items-start gap-3">
-                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white text-primary">
-                        <ClipboardList className="h-5 w-5" aria-hidden="true" />
-                      </span>
-                      <span>
-                        <span className="block font-heading text-xl font-semibold text-ink">
-                          Baseline diagnostic
-                        </span>
-                        <span className="mt-1 block text-sm leading-6 text-ink-soft">
-                          {dashboard.diagnostic.questionCount} questions ·{' '}
-                          {dashboard.diagnostic.durationMinutes} min · readiness map
-                        </span>
-                      </span>
-                    </span>
-                    <ArrowRight className="h-5 w-5 text-primary" aria-hidden="true" />
-                  </button>
-
-                  <Link
-                    href="/practice"
-                    className="group flex items-center justify-between gap-4 rounded-2xl border border-hairline bg-canvas p-5 transition hover:border-primary/30 hover:bg-white"
-                  >
-                    <span className="flex items-start gap-3">
-                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white text-primary">
-                        <TimerReset className="h-5 w-5" aria-hidden="true" />
-                      </span>
-                      <span>
-                        <span className="block font-heading text-xl font-semibold text-ink">
-                          Reviewed practice test
-                        </span>
-                        <span className="mt-1 block text-sm leading-6 text-ink-soft">
-                          Balanced Easy, Medium, Hard set from the reviewed question bank.
-                        </span>
-                      </span>
-                    </span>
-                    <ArrowRight className="h-5 w-5 text-primary" aria-hidden="true" />
-                  </Link>
-
-                  <div className="rounded-2xl border border-dashed border-hairline bg-canvas p-5">
-                    <div className="flex items-start gap-3">
-                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white text-ink-mute">
-                        <BookOpenCheck className="h-5 w-5" aria-hidden="true" />
-                      </span>
-                      <div>
-                        <h3 className="font-heading text-xl font-semibold text-ink">
-                          Full-length mock
-                        </h3>
-                        <p className="mt-1 text-sm leading-6 text-ink-soft">
-                          Planned mode. It should reuse the same analysis and repair flow once mock-test schema is added.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <aside className="space-y-4">
-                <section className="rounded-[1.65rem] bg-ink p-6 text-white shadow-[0_14px_34px_rgba(20,20,30,0.12)]">
-                  <div className="flex items-center gap-3">
-                    <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/10">
-                      <Brain className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    <div>
-                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">
-                        Repair queue
-                      </p>
-                      <h2 className="mt-1 font-heading text-xl font-semibold">
-                        {weakTopics.length ? `${weakTopics.length} weak topics` : 'No weak topics yet'}
-                      </h2>
-                    </div>
-                  </div>
-                  <div className="mt-5 space-y-2">
-                    {weakTopics.length ? (
-                      weakTopics.map((topic) => (
-                        <Link
-                          key={topic}
-                          href={`/learn?topic=${encodeURIComponent(topic)}`}
-                          className="block rounded-2xl bg-white/8 px-4 py-3 text-sm font-semibold text-white/85 transition hover:bg-white/12"
-                        >
-                          {topic}
-                        </Link>
-                      ))
-                    ) : (
-                      <p className="rounded-2xl bg-white/8 p-4 text-sm leading-6 text-white/70">
-                        Complete a diagnostic or practice test and weak-topic repair links will appear here.
-                      </p>
-                    )}
-                  </div>
-                </section>
-
-                <section className="rounded-[1.65rem] border border-hairline bg-surface p-6 shadow-[0_14px_34px_rgba(20,20,30,0.05)]">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-mute">
-                    After test
-                  </p>
-                  <div className="mt-4 grid gap-3">
-                    <Link
-                      href="/notebook"
-                      className="flex items-center justify-between rounded-2xl border border-hairline bg-canvas px-4 py-3 text-sm font-semibold text-ink-soft transition hover:border-primary/30 hover:text-primary"
-                    >
-                      <span className="inline-flex items-center gap-2">
-                        <NotebookTabs className="h-4 w-4" aria-hidden="true" />
-                        Review mistakes
-                      </span>
-                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                    </Link>
-                    <Link
-                      href="/practice"
-                      className="flex items-center justify-between rounded-2xl border border-hairline bg-canvas px-4 py-3 text-sm font-semibold text-ink-soft transition hover:border-primary/30 hover:text-primary"
-                    >
-                      <span className="inline-flex items-center gap-2">
-                        <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                        Practice weak topics
-                      </span>
-                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                    </Link>
-                  </div>
-                </section>
-              </aside>
-            </div>
-
-            <section className="mt-4 rounded-[1.65rem] border border-hairline bg-surface p-6 shadow-[0_14px_34px_rgba(20,20,30,0.05)]">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-mute">
-                    Recent analysis
-                  </p>
-                  <h2 className="mt-2 font-heading text-2xl font-semibold text-ink">
-                    Submitted diagnostic history
-                  </h2>
-                </div>
-                <Link
-                  href="/profile"
-                  className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-hairline px-4 py-2 text-sm font-semibold text-ink-soft transition hover:border-primary/30 hover:text-primary"
-                >
-                  Full history
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </Link>
-              </div>
-
-              {dashboard.recentAttempts.length ? (
-                <div className="mt-5 grid gap-3 lg:grid-cols-2">
-                  {dashboard.recentAttempts.map((attempt) => (
-                    <HistoryCard key={attempt.id} attempt={attempt} />
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-5 rounded-2xl border border-dashed border-hairline bg-canvas p-6 text-sm leading-6 text-ink-mute">
-                  No submitted diagnostic yet. Start the baseline to create the first real test record.
-                </div>
-              )}
-            </section>
-          </>
-        ) : null}
+          {latestAttempt ? <section className="mt-4 flex flex-col gap-4 rounded-[1.55rem] border border-primary/15 bg-primary-tint/35 p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">From your latest test</p><h2 className="mt-2 font-heading text-xl font-bold text-ink">{repairTopics.length ? 'Repair the concepts that cost marks' : 'Keep the momentum going'}</h2>{repairTopics.length ? <div className="mt-3 flex flex-wrap gap-2">{repairTopics.map((topic) => <span key={topic} className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-primary ring-1 ring-primary/10">{topic}</span>)}</div> : <p className="mt-2 text-sm text-ink-soft">No weak concepts were flagged in the latest test.</p>}</div><Link href={`/analysis/${latestAttempt.id}`} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-strong">View test analysis <ArrowRight className="h-4 w-4" /></Link></section> : null}
+        </> : null}
       </main>
     </div>
   );

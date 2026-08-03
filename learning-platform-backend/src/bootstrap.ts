@@ -3,6 +3,10 @@ import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import {
+  configuredAllowedOrigins,
+  isAllowedBrowserOrigin,
+} from './auth/origin-policy';
 
 type CreateNestAppOptions = {
   enableShutdownHooks?: boolean;
@@ -10,15 +14,7 @@ type CreateNestAppOptions = {
 
 export async function createNestApp(options: CreateNestAppOptions = {}) {
   const app = await NestFactory.create(AppModule);
-  const configuredOrigins = process.env.FRONTEND_ORIGIN?.trim();
-  const defaultOrigins = [
-    'http://localhost:3000',
-    'https://personalization-learning-app.vercel.app',
-  ];
-  const allowedOrigins = (configuredOrigins || defaultOrigins.join(','))
-    .split(',')
-    .map((value) => value.trim().replace(/\/$/, ''))
-    .filter(Boolean);
+  const allowedOrigins = configuredAllowedOrigins(process.env.FRONTEND_ORIGIN);
 
   app.use(helmet());
   app.use(cookieParser());
@@ -31,7 +27,10 @@ export async function createNestApp(options: CreateNestAppOptions = {}) {
         callback(null, true);
         return;
       }
-      callback(new Error('Origin is not allowed by CORS.'), false);
+      // Do not turn an untrusted browser origin into a server error. With no
+      // CORS headers the browser blocks the response, while the CSRF guard
+      // separately rejects every unsafe request from that origin.
+      callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -56,20 +55,5 @@ function isAllowedOrigin(
   allowedOrigins: string[],
 ): boolean {
   if (!origin) return true;
-  const normalized = origin.replace(/\/$/, '');
-  if (allowedOrigins.includes(normalized)) return true;
-
-  try {
-    const url = new URL(normalized);
-    const host = url.hostname.toLowerCase();
-    return (
-      url.protocol === 'https:' &&
-      host.endsWith('.vercel.app') &&
-      (host === 'personalization-learning-app.vercel.app' ||
-        host.startsWith('personalization-learning-app-') ||
-        host.startsWith('personalization-learning-'))
-    );
-  } catch {
-    return false;
-  }
+  return isAllowedBrowserOrigin(origin, allowedOrigins);
 }

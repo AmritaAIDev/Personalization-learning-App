@@ -13,10 +13,11 @@ export function learningScopeFromSearchParams(
 
 export function learningUrl(
   scope: LearningScope,
-  options?: { tab?: LearningTab },
+  options?: { tab?: LearningTab; placement?: 'ask' },
 ): string {
   const params = new URLSearchParams(scope);
   if (options?.tab) params.set('tab', options.tab);
+  if (options?.placement === 'ask') params.set('placement', 'ask');
   return `/learn?${params.toString()}`;
 }
 

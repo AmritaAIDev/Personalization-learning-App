@@ -144,8 +144,8 @@ export default function DiagnosticAttemptPage() {
   const isLastQuestion = currentIndex === payload.questions.length - 1;
 
   return (
-    <div className="mx-auto max-w-7xl p-4 sm:p-7 lg:p-10">
-      <header className="flex flex-col gap-4 border-b border-[#ececf0] pb-5 lg:flex-row lg:items-center lg:justify-between">
+    <div className="mx-auto max-w-7xl p-4 sm:p-7 lg:flex lg:h-[100dvh] lg:flex-col lg:overflow-hidden lg:p-6">
+      <header className="shrink-0 flex flex-col gap-4 border-b border-[#ececf0] pb-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-medium text-ink-mute">Secure diagnostic</p>
           <h1 className="mt-1 font-heading text-xl font-bold text-[#1a1a1f] sm:text-2xl">{payload.attempt.title}</h1>
@@ -158,8 +158,8 @@ export default function DiagnosticAttemptPage() {
 
       {error && <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700" role="alert">{error}</p>}
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_17rem]">
-        <section className="rounded-[1.75rem] border border-[#ececf0] bg-white p-5 shadow-[0_14px_34px_rgba(20, 20, 30,0.05)] sm:p-8">
+      <div className="mt-5 grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_17rem]">
+        <section className="rounded-[1.5rem] border border-[#ececf0] bg-white p-4 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:p-6 xl:min-h-0 xl:overflow-y-auto">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2 text-xs font-bold">
               <span className="rounded-full bg-[#e7efe9] px-3 py-1.5 text-[#2c4c3d]">{question.chapter}</span>
@@ -170,9 +170,9 @@ export default function DiagnosticAttemptPage() {
             <p className="text-sm font-semibold text-[#52525b]">Question {currentIndex + 1} of {payload.questions.length}</p>
           </div>
 
-          <h2 className="mt-8 font-heading text-xl font-bold leading-8 text-[#1a1a1f] sm:text-2xl">{question.questionText}</h2>
+          <h2 className="mt-6 font-heading text-lg font-bold leading-7 text-[#1a1a1f] sm:text-xl sm:leading-8">{question.questionText}</h2>
 
-          <div className="mt-8 space-y-3" role="radiogroup" aria-label="Answer options">
+          <div className="mt-5 space-y-2.5" role="radiogroup" aria-label="Answer options">
             {question.options.map((option, index) => {
               const selected = answers[question.id] === option;
               return (
@@ -183,7 +183,7 @@ export default function DiagnosticAttemptPage() {
                   aria-checked={selected}
                   disabled={isSavingCurrent || submitting || remainingSeconds === 0}
                   onClick={() => void saveSelection(option)}
-                  className={`flex w-full items-center gap-4 rounded-2xl border p-4 text-left text-sm font-medium transition sm:p-5 ${
+                  className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm font-medium transition sm:px-4 ${
                     selected ? 'border-[#3f6f57] bg-[#eef3f0] text-[#83112b] ring-1 ring-[#3f6f57]' : 'border-[#ececf0] bg-white text-[#1a1a1f] hover:border-[#3f6f57]/45 hover:bg-[#f7faf8]'
                   } disabled:cursor-not-allowed disabled:opacity-70`}
                 >
@@ -196,7 +196,7 @@ export default function DiagnosticAttemptPage() {
           </div>
           <p className="mt-4 flex items-center gap-2 text-xs font-medium text-[#52525b]"><Save className="h-4 w-4 text-[#3f6f57]" aria-hidden="true" /> {isSavingCurrent ? 'Saving answer…' : answers[question.id] ? 'Answer saved securely.' : 'Select an option to save it.'}</p>
 
-          <div className="mt-9 flex flex-col-reverse gap-3 border-t border-[#ececf0] pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[#ececf0] pt-5 sm:flex-row sm:items-center sm:justify-between">
             <button type="button" onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))} disabled={currentIndex === 0 || submitting} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dedee3] px-4 py-2.5 text-sm font-bold text-[#52525b] hover:bg-[#f4f4f6] disabled:cursor-not-allowed disabled:opacity-50"><ArrowLeft className="h-4 w-4" aria-hidden="true" /> Previous</button>
             {isLastQuestion ? (
               <button type="button" onClick={() => void submitAttempt()} disabled={submitting || savingQuestionId !== null} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#3f6f57] px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20, 20, 30,0.22)] transition hover:bg-[#315844] disabled:cursor-not-allowed disabled:opacity-60">{submitting ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" /> : <>Submit diagnostic <Send className="h-4 w-4" aria-hidden="true" /></>}</button>
@@ -206,7 +206,7 @@ export default function DiagnosticAttemptPage() {
           </div>
         </section>
 
-        <aside className="rounded-[1.75rem] border border-[#ececf0] bg-white p-5 shadow-[0_14px_34px_rgba(20, 20, 30,0.05)] xl:self-start">
+        <aside className="rounded-[1.5rem] border border-[#ececf0] bg-white p-4 shadow-[0_14px_34px_rgba(20,20,30,0.05)] xl:min-h-0 xl:overflow-y-auto">
           <div className="flex items-center justify-between"><h2 className="font-heading text-lg font-bold text-[#1a1a1f]">Question map</h2><span className="text-xs font-semibold text-[#52525b]">{answeredCount} saved</span></div>
           <div className="mt-5 grid grid-cols-5 gap-2" aria-label="Question navigation">
             {payload.questions.map((item, index) => {

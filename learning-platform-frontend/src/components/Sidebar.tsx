@@ -4,8 +4,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Atom,
-  BookOpen,
-  ClipboardCheck,
   Compass,
   HelpCircle,
   Home,
@@ -13,6 +11,8 @@ import {
   LogOut,
   Map,
   NotebookTabs,
+  PanelLeftClose,
+  PanelLeftOpen,
   PenLine,
   SquarePen,
   Timer,
@@ -37,14 +37,12 @@ const navigation: Array<{
   { label: 'Tests', href: '/tests', icon: Timer },
   { label: 'Notebook', href: '/notebook', icon: NotebookTabs },
   { label: 'Doubts', href: '/doubts', icon: HelpCircle },
-  { label: 'Baseline', href: '/diagnostic', icon: ClipboardCheck },
-  { label: 'Curriculum', href: '/topics', icon: BookOpen },
   { label: 'Content', href: '/content', icon: PenLine, roles: ['admin'] },
 ];
 
 const workspaceLabels = new Set(['Learn', 'Practice', 'Tests', 'Notebook', 'Doubts']);
 const overviewLabels = new Set(['Dashboard', 'Journey']);
-const planningLabels = new Set(['Baseline', 'Curriculum', 'Content']);
+const planningLabels = new Set(['Content']);
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -52,6 +50,7 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleLogout = async () => {
     setError(null);
@@ -67,19 +66,29 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="fixed inset-x-0 bottom-0 z-40 flex h-[68px] w-full items-center border-t border-hairline bg-surface/85 px-2 backdrop-blur-xl md:sticky md:top-0 md:h-screen md:w-[76px] md:shrink-0 md:flex-col md:border-r md:border-t-0 md:bg-surface md:px-3 md:py-6 md:backdrop-blur-none lg:w-[272px] lg:px-4 lg:py-7">
+    <aside className={`fixed inset-x-0 bottom-0 z-40 flex h-[68px] w-full items-center border-t border-hairline bg-surface/85 px-2 backdrop-blur-xl transition-[width,padding] duration-300 md:sticky md:top-0 md:h-screen md:w-[76px] md:shrink-0 md:flex-col md:border-r md:border-t-0 md:bg-surface md:px-3 md:py-6 md:backdrop-blur-none lg:overflow-y-auto lg:py-5 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden ${isCollapsed ? 'lg:w-[76px] lg:px-3' : 'lg:w-[272px] lg:px-4'}`}>
       <Link
         href="/"
-        className="mb-8 hidden items-center gap-2.5 md:flex md:justify-center lg:justify-start lg:px-2"
+        className={`mb-5 hidden shrink-0 items-center gap-2.5 md:flex md:justify-center ${isCollapsed ? 'lg:justify-center' : 'lg:justify-start lg:px-2'}`}
         aria-label="JEE AI Competency Engine dashboard"
       >
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-white">
           <Atom className="h-5 w-5" aria-hidden="true" />
         </span>
-        <span className="hidden leading-none lg:block">
+        <span className={`hidden leading-none ${isCollapsed ? '' : 'lg:block'}`}>
           <span className="block text-[15px] font-semibold tracking-tight text-ink">JEE AI</span>
         </span>
       </Link>
+
+      <button
+        type="button"
+        onClick={() => setIsCollapsed((value) => !value)}
+        className="mb-4 hidden h-8 w-full items-center justify-center rounded-lg text-ink-mute transition hover:bg-canvas hover:text-ink lg:flex"
+        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {isCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+      </button>
 
       <nav
         className="flex min-w-0 flex-1 items-center justify-around gap-1 md:block md:w-full md:space-y-1 lg:hidden"
@@ -95,7 +104,7 @@ export default function Sidebar() {
                 key={href}
                 href={href}
                 title={label}
-                className={`group flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-[10px] font-medium transition-all duration-200 md:h-10 md:flex-row md:justify-center md:gap-3 md:text-[13.5px] lg:justify-start lg:px-3 ${workspaceItem ? 'lg:hidden' : ''} ${
+                className={`group flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-[10px] font-semibold transition-all duration-200 md:h-10 md:flex-row md:justify-center md:gap-3 md:text-[13.5px] lg:justify-start lg:px-3 ${workspaceItem ? 'lg:hidden' : ''} ${
                   active
                     ? 'text-primary md:bg-primary-tint'
                     : 'text-ink-mute hover:text-ink md:hover:bg-canvas'
@@ -113,22 +122,29 @@ export default function Sidebar() {
           title="Overview"
           items={navigation.filter((item) => overviewLabels.has(item.label))}
           pathname={pathname}
+          collapsed={isCollapsed}
         />
-        <div className="my-6 border-t border-hairline" />
-        <WorkspaceSelector />
-        <div className="my-6 border-t border-hairline" />
-        <SidebarSection
-          title="Learning plan"
-          items={navigation.filter(
-            (item) =>
-              planningLabels.has(item.label) &&
-              (!item.roles || item.roles.includes(user?.role ?? 'student')),
-          )}
-          pathname={pathname}
-        />
+        <div className="my-3 border-t border-hairline" />
+        <WorkspaceSelector compact={isCollapsed} />
+        {navigation.some(
+          (item) =>
+            planningLabels.has(item.label) &&
+            (!item.roles || item.roles.includes(user?.role ?? 'student')),
+        ) ? (
+          <SidebarSection
+            title=""
+            items={navigation.filter(
+              (item) =>
+                planningLabels.has(item.label) &&
+                (!item.roles || item.roles.includes(user?.role ?? 'student')),
+            )}
+            pathname={pathname}
+            collapsed={isCollapsed}
+          />
+        ) : null}
       </div>
 
-      <div className="mt-auto hidden w-full md:block">
+      <div className="mt-auto hidden w-full shrink-0 border-t border-hairline pt-2.5 md:block">
         {error && (
           <p className="mb-3 hidden text-xs text-primary lg:block" role="alert">
             {error}
@@ -136,13 +152,13 @@ export default function Sidebar() {
         )}
         <Link
           href="/profile"
-          className="mb-1 flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-canvas md:justify-center lg:justify-start"
+          className={`mb-1 flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-canvas md:justify-center ${isCollapsed ? 'lg:justify-center' : 'lg:justify-start'}`}
           title="Profile"
         >
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-canvas text-sm font-semibold text-ink-soft ring-1 ring-hairline">
             {user?.name?.charAt(0).toUpperCase() ?? <UserRound className="h-4 w-4" />}
           </span>
-          <span className="hidden min-w-0 lg:block">
+          <span className={`hidden min-w-0 ${isCollapsed ? '' : 'lg:block'}`}>
             <span className="block truncate text-[13.5px] font-semibold text-ink">{user?.name}</span>
             <span className="block truncate text-xs text-ink-mute">Level {user?.level}</span>
           </span>
@@ -151,14 +167,14 @@ export default function Sidebar() {
           type="button"
           onClick={() => void handleLogout()}
           disabled={isSigningOut}
-          className="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[13.5px] font-medium text-ink-mute transition-colors hover:bg-canvas hover:text-ink disabled:cursor-not-allowed disabled:opacity-60 md:justify-center lg:justify-start"
+          className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[13.5px] font-medium text-ink-mute transition-colors hover:bg-canvas hover:text-ink disabled:cursor-not-allowed disabled:opacity-60 md:justify-center ${isCollapsed ? 'lg:justify-center' : 'lg:justify-start'}`}
         >
           {isSigningOut ? (
             <LoaderCircle className="h-[18px] w-[18px] animate-spin" aria-hidden="true" />
           ) : (
             <LogOut className="h-[18px] w-[18px]" aria-hidden="true" />
           )}
-          <span className="hidden lg:block">Sign out</span>
+          <span className={`hidden ${isCollapsed ? '' : 'lg:block'}`}>Sign out</span>
         </button>
       </div>
     </aside>
@@ -169,29 +185,32 @@ function SidebarSection({
   title,
   items,
   pathname,
+  collapsed,
 }: {
   title: string;
   items: typeof navigation;
   pathname: string;
+  collapsed: boolean;
 }) {
   return (
     <section>
-      <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-ink-mute">{title}</p>
-      <nav className="space-y-1" aria-label={title}>
+      {title ? <p className={collapsed ? 'sr-only' : 'mb-1 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-ink-mute'}>{title}</p> : null}
+      <nav className="space-y-0.5" aria-label={title || 'Additional navigation'}>
         {items.map(({ label, href, icon: Icon }) => {
           const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
-              className={`flex h-10 items-center gap-3 rounded-xl px-3 text-[13.5px] font-medium transition-all duration-200 ${
+              title={collapsed ? label : undefined}
+              className={`flex h-9 items-center gap-3 rounded-xl text-[13px] font-semibold transition-all duration-200 ${collapsed ? 'justify-center px-0' : 'px-3'} ${
                 active
                   ? 'bg-primary-tint text-primary shadow-[0_6px_16px_rgba(20,20,30,0.035)]'
                   : 'text-ink-soft hover:bg-canvas hover:text-ink'
               }`}
             >
               <Icon className="h-[17px] w-[17px] shrink-0" aria-hidden="true" />
-              <span>{label}</span>
+              <span className={collapsed ? 'sr-only' : ''}>{label}</span>
             </Link>
           );
         })}

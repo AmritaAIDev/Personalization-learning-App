@@ -8,11 +8,25 @@ describe('SessionsService', () => {
   const statesRepository = {
     find: findMock,
   } as unknown as Repository<LearningTopicState>;
+  const getRawMany = jest.fn();
+  const questionsRepository = {
+    createQueryBuilder: jest.fn(() => ({
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      addGroupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      getRawMany,
+    })),
+  };
 
-  const service = new SessionsService(statesRepository);
+  const service = new SessionsService(statesRepository, questionsRepository as never);
 
   beforeEach(() => {
     jest.clearAllMocks();
+    getRawMany.mockResolvedValue([]);
   });
 
   it('projects the adaptive state into journey chapters without legacy sessions', async () => {
@@ -38,6 +52,10 @@ describe('SessionsService', () => {
         totalCorrect: 18,
       },
     ] as LearningTopicState[]);
+    getRawMany.mockResolvedValue([
+      { subject: 'Physics', chapter: 'Electric Charges and Fields', topic: 'Gauss Law' },
+      { subject: 'Physics', chapter: 'Electric Charges and Fields', topic: 'Electric charge & field' },
+    ]);
 
     await expect(service.getJourneyForUser('student-1')).resolves.toEqual([
       {
@@ -81,6 +99,9 @@ describe('SessionsService', () => {
         totalCorrect: 0,
       },
     ] as LearningTopicState[]);
+    getRawMany.mockResolvedValue([
+      { subject: 'Physics', chapter: 'Electrostatics', topic: 'Electric flux' },
+    ]);
 
     const [chapter] = await service.getJourneyForUser('student-1');
 

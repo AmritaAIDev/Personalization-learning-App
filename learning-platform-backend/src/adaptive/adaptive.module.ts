@@ -48,6 +48,6 @@ import { TutorService } from './tutor.service';
     GenerationWorkerService,
     TutorService,
   ],
-  exports: [AdaptiveService],
+  exports: [AdaptiveService, CompetencyService],
 })
 export class AdaptiveModule {}

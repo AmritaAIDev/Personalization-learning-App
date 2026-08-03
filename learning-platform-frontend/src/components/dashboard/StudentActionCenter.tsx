@@ -1,0 +1,331 @@
+'use client';
+
+import Link from 'next/link';
+import { useState, type ReactNode } from 'react';
+import {
+  ArrowRight,
+  BookOpenCheck,
+  CircleCheck,
+  ClipboardCheck,
+  Flame,
+  GraduationCap,
+  Search,
+} from 'lucide-react';
+import { learningUrl } from '@/lib/learning';
+import type { GrowthPoint } from '@/lib/growth-types';
+import type {
+  StudentDashboardAction,
+  StudentDashboardPayload,
+} from '@/lib/student-dashboard-types';
+
+function actionHref(action: StudentDashboardAction): string {
+  if (action.kind === 'RESUME_DIAGNOSTIC' && action.attemptId) {
+    return `/diagnostic/${action.attemptId}`;
+  }
+  if (action.kind === 'REVIEW_MISTAKES') return '/notebook';
+  if (action.kind === 'CONTINUE_LEARNING' && action.scope) {
+    return learningUrl(action.scope, { tab: 'practice' });
+  }
+  return '/topics';
+}
+
+function relativeDate(value: string): string {
+  const days = Math.floor((Date.now() - new Date(value).getTime()) / 86_400_000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return `${days} days ago`;
+}
+
+function actionIcon(kind: StudentDashboardAction['kind']) {
+  if (kind === 'RESUME_DIAGNOSTIC') return <ClipboardCheck className="h-4 w-4" />;
+  if (kind === 'REVIEW_MISTAKES') return <BookOpenCheck className="h-4 w-4" />;
+  if (kind === 'FIND_TOPIC') return <Search className="h-4 w-4" />;
+  return <GraduationCap className="h-4 w-4" />;
+}
+
+function momentumPoints(timeline: GrowthPoint[]): string {
+  const points = timeline.slice(-8);
+  if (points.length < 2) return '';
+  const lastIndex = points.length - 1;
+  return points
+    .map((point, index) => {
+      const x = 8 + (index / lastIndex) * 224;
+      const y = 72 - (Math.min(Math.max(point.masteryPercent, 0), 100) / 100) * 56;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+}
+
+export default function StudentActionCenter({ data }: { data: StudentDashboardPayload }) {
+  return (
+    <section className="mt-8" aria-label="Student learning desk">
+      <article className="animate-rise grid gap-5 rounded-2xl border border-hairline bg-white p-5 shadow-[0_10px_28px_rgba(20,20,30,0.04)] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center sm:p-6">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">Next action</p>
+          <h2 className="mt-1 truncate font-heading text-2xl font-bold tracking-tight text-ink">{data.today.primary.title}</h2>
+          <p className="mt-1 truncate text-sm text-ink-mute">{data.today.primary.detail}</p>
+        </div>
+        <dl className="flex items-center gap-5 border-y border-hairline py-3 lg:border-x lg:border-y-0 lg:px-5 lg:py-0">
+          <DeskStat label="Streak" value={`${data.student.streak}d`} icon={<Flame className="h-3.5 w-3.5" />} />
+          <DeskStat label="Mastery" value={`${data.growth.overall.score}%`} icon={<GraduationCap className="h-3.5 w-3.5" />} />
+          <DeskStat label="Reviewed" value={`${data.courseProgress.masteredTopics}`} icon={<CircleCheck className="h-3.5 w-3.5" />} />
+        </dl>
+        <Link
+          href={actionHref(data.today.primary)}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-strong"
+        >
+          Open task
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      </article>
+
+      <div className="animate-rise mt-7 grid gap-7 xl:grid-cols-[minmax(0,1fr)_18rem] [animation-delay:80ms]">
+        <section aria-labelledby="plan-heading">
+          <div className="flex items-end justify-between border-b border-hairline pb-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">Today</p>
+              <h2 id="plan-heading" className="mt-1 font-heading text-2xl font-bold tracking-tight text-ink">Study queue</h2>
+            </div>
+            <span className="text-xs font-medium text-ink-mute">{data.today.actions.length} tasks</span>
+          </div>
+          <ol className="divide-y divide-hairline">
+            {data.today.actions.map((action, index) => (
+              <li key={action.id}>
+                <Link
+                  href={actionHref(action)}
+                  className="group flex items-center gap-4 rounded-xl py-4 transition-[background-color,padding,transform] duration-300 ease-out-soft hover:bg-canvas hover:px-3 hover:pl-5 active:scale-[0.995]"
+                >
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-hairline text-xs font-semibold text-ink-soft transition duration-300 group-hover:border-primary/30 group-hover:bg-white group-hover:text-primary">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-ink">
+                      <span className="text-primary">{actionIcon(action.kind)}</span>
+                      <span className="truncate">{action.title}</span>
+                    </span>
+                    <span className="mt-1 block truncate text-xs text-ink-mute">{action.detail}</span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-ink-mute transition duration-300 group-hover:translate-x-1 group-hover:text-primary" />
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <aside className="border-t border-hairline pt-5 xl:border-l xl:border-t-0 xl:pl-7 xl:pt-0" aria-label="Learning signals">
+          <h2 className="font-heading text-xl font-bold tracking-tight text-ink">Signals</h2>
+          <div className="mt-4 flex items-start gap-5">
+            <ProgressRing value={data.growth.overall.score} label="Mastery" detail={data.growth.overall.band} />
+          </div>
+          <div className="mt-5 border-t border-hairline pt-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold text-ink">Momentum</span>
+              <span className="text-xs font-medium text-ink-mute">{data.growth.overall.momentum > 0 ? '+' : ''}{data.growth.overall.momentum} pts</span>
+            </div>
+            <MomentumGraph timeline={data.growth.timeline} />
+          </div>
+          <div className="mt-4 flex items-center justify-between border-t border-hairline pt-4 text-xs">
+            <span className="text-ink-mute">Revision due</span>
+            <Link href="/notebook" className="font-semibold text-orange-600 transition hover:text-primary">{data.revision.dueCount} to repair</Link>
+          </div>
+        </aside>
+      </div>
+
+      <SubjectCoverageExplorer subjects={data.subjectCoverage} />
+
+      <div className="animate-rise mt-7 grid gap-8 border-t border-hairline pt-7 xl:grid-cols-[0.88fr_1.12fr] [animation-delay:150ms]">
+        <section aria-labelledby="revision-heading">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 id="revision-heading" className="font-heading text-2xl font-bold tracking-tight text-ink">Review queue</h2>
+            </div>
+            <Link href="/notebook" className="text-xs font-semibold text-primary hover:text-primary-strong">Open notebook</Link>
+          </div>
+          {data.revision.topics.length > 0 ? (
+            <div className="mt-5 space-y-3">
+              {data.revision.topics.map((topic) => (
+                <Link
+                  key={`${topic.subject}-${topic.chapter}-${topic.topic}`}
+                  href="/notebook"
+                  className="group flex items-center gap-3 border-l-2 border-orange-400 py-1 pl-3 transition-[border-color,padding] duration-300 ease-out-soft hover:border-primary hover:pl-4"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-ink">{topic.topic}</span>
+                    <span className="mt-0.5 block truncate text-xs text-ink-mute">{topic.chapter} · {topic.count} mistakes</span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-ink-mute transition group-hover:translate-x-1 group-hover:text-primary" />
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-5 text-sm leading-6 text-ink-soft">No review is due now. Your next adaptive task is the best use of this session.</p>
+          )}
+
+        </section>
+
+        <section aria-labelledby="activity-heading">
+          <h2 id="activity-heading" className="font-heading text-2xl font-bold tracking-tight text-ink">Recent learning</h2>
+          {data.activity.length > 0 ? (
+            <ol className="mt-5 space-y-0 border-l border-hairline pl-5">
+              {data.activity.map((item) => (
+                <li key={item.id} className="relative border-b border-hairline py-3 transition-colors duration-300 hover:bg-canvas last:border-b-0 first:pt-0">
+                  <span className="absolute -left-[1.65rem] top-4 h-2.5 w-2.5 rounded-full border-2 border-white bg-primary first:top-0" />
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-ink">{item.title}</p>
+                      <p className="mt-1 truncate text-xs text-ink-mute">{item.detail}</p>
+                    </div>
+                    <time className="shrink-0 text-[11px] font-medium text-ink-mute">{relativeDate(item.occurredAt)}</time>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="mt-5 text-sm leading-6 text-ink-soft">Your finished checkpoints and diagnostics will build a learning record here.</p>
+          )}
+        </section>
+      </div>
+
+    </section>
+  );
+}
+
+function SubjectCoverageExplorer({
+  subjects,
+}: {
+  subjects: StudentDashboardPayload['subjectCoverage'];
+}) {
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(subjects[0]?.subject ?? null);
+  const selected = subjects.find((subject) => subject.subject === selectedSubject) ?? subjects[0] ?? null;
+
+  if (!selected) return null;
+
+  return (
+    <section className="animate-rise mt-7 rounded-2xl border border-hairline bg-white p-5 shadow-[0_10px_28px_rgba(20,20,30,0.04)] sm:p-6 [animation-delay:140ms]" aria-labelledby="subject-map-heading">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">Coverage</p>
+          <h2 id="subject-map-heading" className="mt-1 font-heading text-2xl font-bold tracking-tight text-ink">Course coverage</h2>
+        </div>
+        <div className="flex max-w-full gap-1 overflow-x-auto pb-1 custom-scrollbar" role="tablist" aria-label="Subject filters">
+          {subjects.map((subject) => {
+            const active = selected.subject === subject.subject;
+            return (
+              <button
+                key={subject.subject}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setSelectedSubject(subject.subject)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-[background-color,color,transform] duration-300 ease-out-soft ${
+                  active
+                    ? 'bg-ink text-white shadow-sm'
+                    : 'bg-canvas text-ink-soft hover:-translate-y-0.5 hover:bg-primary-tint hover:text-primary'
+                }`}
+              >
+                {subject.subject}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-7 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-center">
+        <div>
+          <div className="flex items-end justify-between">
+            <span className="font-heading text-4xl font-bold tracking-tight text-ink">{selected.totalTopics}</span>
+            <span className="mb-1 text-xs font-semibold text-ink-mute">reviewed topics</span>
+          </div>
+          <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-canvas" aria-label={`${selected.subject} topic coverage`}>
+            {selected.masteredTopics > 0 ? <span className="bg-primary transition-[width] duration-700 ease-out-soft" style={{ width: `${(selected.masteredTopics / selected.totalTopics) * 100}%` }} /> : null}
+            {selected.activeTopics > 0 ? <span className="bg-orange-400 transition-[width] duration-700 ease-out-soft" style={{ width: `${(selected.activeTopics / selected.totalTopics) * 100}%` }} /> : null}
+            {selected.pausedTopics > 0 ? <span className="bg-rose-400 transition-[width] duration-700 ease-out-soft" style={{ width: `${(selected.pausedTopics / selected.totalTopics) * 100}%` }} /> : null}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-ink-mute">
+            <CoverageLegend tone="bg-primary" label={`${selected.masteredTopics} done`} />
+            <CoverageLegend tone="bg-orange-400" label={`${selected.activeTopics} active`} />
+            {selected.pausedTopics > 0 ? <CoverageLegend tone="bg-rose-400" label={`${selected.pausedTopics} paused`} /> : null}
+            <CoverageLegend tone="bg-[#dcdce2]" label={`${selected.notStartedTopics} next`} />
+          </div>
+        </div>
+
+        <div className="grid gap-x-6 divide-y divide-hairline border-y border-hairline lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+          {selected.topics.slice(0, 5).map((topic) => (
+            <Link
+              key={`${topic.chapter}-${topic.topic}`}
+              href={learningUrl(topic, { tab: 'practice' })}
+              className="group flex min-w-0 items-center gap-3 py-3 transition-colors duration-300 hover:bg-canvas lg:px-3"
+            >
+              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${coverageTone(topic.status)}`} aria-hidden="true" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-ink">{topic.topic}</span>
+                <span className="mt-0.5 block truncate text-[11px] text-ink-mute">{topic.chapter} · {coverageLabel(topic.status)}{topic.score !== null ? ` · ${topic.score}%` : ''}</span>
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-ink-mute transition duration-300 group-hover:translate-x-1 group-hover:text-primary" />
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CoverageLegend({ tone, label }: { tone: string; label: string }) {
+  return <span className="flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${tone}`} />{label}</span>;
+}
+
+function coverageTone(status: 'MASTERED' | 'ACTIVE' | 'PAUSED' | 'NOT_STARTED'): string {
+  if (status === 'MASTERED') return 'bg-primary';
+  if (status === 'ACTIVE') return 'bg-orange-400';
+  if (status === 'PAUSED') return 'bg-rose-400';
+  return 'bg-[#c6c6ce]';
+}
+
+function coverageLabel(status: 'MASTERED' | 'ACTIVE' | 'PAUSED' | 'NOT_STARTED'): string {
+  if (status === 'MASTERED') return 'Mastered';
+  if (status === 'ACTIVE') return 'In progress';
+  if (status === 'PAUSED') return 'Paused';
+  return 'Not started';
+}
+
+function DeskStat({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
+  return (
+    <div>
+      <dt className="flex items-center gap-1 text-[10px] font-semibold text-ink-mute">{icon}{label}</dt>
+      <dd className="mt-1 text-base font-semibold text-ink">{value}</dd>
+    </div>
+  );
+}
+
+function ProgressRing({ value, label, detail, tone = 'primary' }: { value: number; label: string; detail: string; tone?: 'primary' | 'soft' }) {
+  const safeValue = Math.min(Math.max(value, 0), 100);
+  const circumference = 226.2;
+  const color = tone === 'soft' ? '#99b6a4' : '#3f6f57';
+  return (
+    <div className="group text-center">
+      <div className="relative h-20 w-20 transition-transform duration-300 group-hover:-translate-y-1" role="img" aria-label={`${label}: ${safeValue}%`}>
+        <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+          <circle cx="50" cy="50" r="36" fill="none" stroke="#ececf0" strokeWidth="8" />
+          <circle cx="50" cy="50" r="36" fill="none" stroke={color} strokeWidth="8" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - safeValue / 100)} className="transition-[stroke-dashoffset] duration-700 ease-out-soft" />
+        </svg>
+        <span className="absolute inset-0 grid place-items-center text-sm font-semibold text-ink">{safeValue}%</span>
+      </div>
+      <p className="mt-2 text-xs font-semibold text-ink">{label}</p>
+      <p className="mt-0.5 max-w-20 text-[10px] leading-4 text-ink-mute">{detail}</p>
+    </div>
+  );
+}
+
+function MomentumGraph({ timeline }: { timeline: GrowthPoint[] }) {
+  const points = momentumPoints(timeline);
+  if (!points) {
+    return <p className="mt-4 text-xs leading-5 text-ink-mute">The growth curve appears after two completed checkpoints.</p>;
+  }
+  return (
+    <svg viewBox="0 0 240 80" className="mt-3 h-20 w-full overflow-visible" preserveAspectRatio="none" role="img" aria-label="Mastery momentum over recent completed checkpoints">
+      <defs><linearGradient id="dashboardMomentum" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3f6f57" stopOpacity="0.2" /><stop offset="100%" stopColor="#3f6f57" stopOpacity="0" /></linearGradient></defs>
+      <polyline points={`${points} 232,72 8,72`} fill="url(#dashboardMomentum)" stroke="none" />
+      <polyline points={points} fill="none" stroke="#3f6f57" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="dashboard-draw" />
+    </svg>
+  );
+}

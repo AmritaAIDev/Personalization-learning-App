@@ -59,20 +59,20 @@ function momentumPoints(timeline: GrowthPoint[]): string {
 export default function StudentActionCenter({ data }: { data: StudentDashboardPayload }) {
   return (
     <section className="mt-8" aria-label="Student learning desk">
-      <article className="animate-rise grid gap-5 rounded-2xl border border-hairline bg-white p-5 shadow-[0_10px_28px_rgba(20,20,30,0.04)] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center sm:p-6">
+      <article className="animate-rise grid gap-5 overflow-hidden rounded-[1.75rem] bg-ink p-5 text-white shadow-[0_18px_42px_rgba(20,20,30,0.15)] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center sm:p-6">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">Next action</p>
-          <h2 className="mt-1 truncate font-heading text-2xl font-bold tracking-tight text-ink">{data.today.primary.title}</h2>
-          <p className="mt-1 truncate text-sm text-ink-mute">{data.today.primary.detail}</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-tint/80">Your next step</p>
+          <h2 className="mt-1 truncate font-heading text-2xl font-bold tracking-tight text-white">{data.today.primary.title}</h2>
+          <p className="mt-1 truncate text-sm text-white/65">{data.today.primary.detail}</p>
         </div>
-        <dl className="flex items-center gap-5 border-y border-hairline py-3 lg:border-x lg:border-y-0 lg:px-5 lg:py-0">
-          <DeskStat label="Streak" value={`${data.student.streak}d`} icon={<Flame className="h-3.5 w-3.5" />} />
-          <DeskStat label="Mastery" value={`${data.growth.overall.score}%`} icon={<GraduationCap className="h-3.5 w-3.5" />} />
-          <DeskStat label="Reviewed" value={`${data.courseProgress.masteredTopics}`} icon={<CircleCheck className="h-3.5 w-3.5" />} />
+        <dl className="flex items-center gap-5 border-y border-white/10 py-3 lg:border-x lg:border-y-0 lg:px-5 lg:py-0">
+          <DeskStat label="Streak" value={`${data.student.streak}d`} icon={<Flame className="h-3.5 w-3.5" />} inverse />
+          <DeskStat label="Mastery" value={`${data.growth.overall.score}%`} icon={<GraduationCap className="h-3.5 w-3.5" />} inverse />
+          <DeskStat label="Reviewed" value={`${data.courseProgress.masteredTopics}`} icon={<CircleCheck className="h-3.5 w-3.5" />} inverse />
         </dl>
         <Link
           href={actionHref(data.today.primary)}
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-strong"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:bg-primary-tint"
         >
           Open task
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -288,11 +288,11 @@ function coverageLabel(status: 'MASTERED' | 'ACTIVE' | 'PAUSED' | 'NOT_STARTED')
   return 'Not started';
 }
 
-function DeskStat({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
+function DeskStat({ label, value, icon, inverse = false }: { label: string; value: string; icon: ReactNode; inverse?: boolean }) {
   return (
     <div>
-      <dt className="flex items-center gap-1 text-[10px] font-semibold text-ink-mute">{icon}{label}</dt>
-      <dd className="mt-1 text-base font-semibold text-ink">{value}</dd>
+      <dt className={`flex items-center gap-1 text-[10px] font-semibold ${inverse ? 'text-white/55' : 'text-ink-mute'}`}>{icon}{label}</dt>
+      <dd className={`mt-1 text-base font-semibold ${inverse ? 'text-white' : 'text-ink'}`}>{value}</dd>
     </div>
   );
 }

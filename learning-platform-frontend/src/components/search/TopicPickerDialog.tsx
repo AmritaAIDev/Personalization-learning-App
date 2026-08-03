@@ -80,15 +80,29 @@ export default function TopicPickerDialog({
   const states = useMemo(() => topicStateMap(dashboard), [dashboard]);
   const results = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return catalog.slice(0, 12);
-    return catalog
-      .filter((entry) =>
-        [entry.subject, entry.chapter, entry.topic].some((value) =>
-          value.toLowerCase().includes(normalized),
-        ),
-      )
-      .slice(0, 18);
-  }, [catalog, query]);
+    const matching = normalized
+      ? catalog.filter((entry) =>
+          [entry.subject, entry.chapter, entry.topic].some((value) =>
+            value.toLowerCase().includes(normalized),
+          ),
+        )
+      : catalog;
+    const statusOrder: Record<string, number> = {
+      ACTIVE: 0,
+      PAUSED_FOR_PREREQUISITE: 1,
+      MASTERED: 2,
+    };
+    return [...matching]
+      .sort((left, right) => {
+        const leftState = states.get(topicKey(scopeFor(left)));
+        const rightState = states.get(topicKey(scopeFor(right)));
+        const leftOrder = leftState ? (statusOrder[leftState.status] ?? 3) : 4;
+        const rightOrder = rightState ? (statusOrder[rightState.status] ?? 3) : 4;
+        if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+        return left.topic.localeCompare(right.topic);
+      })
+      .slice(0, normalized ? 18 : 12);
+  }, [catalog, query, states]);
 
   const openTopic = (entry: QuestionCatalogEntry) => {
     const scope = scopeFor(entry);
@@ -99,20 +113,20 @@ export default function TopicPickerDialog({
   if (!open || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-hidden bg-ink/35 p-4 backdrop-blur-sm sm:p-8" role="dialog" aria-modal="true" aria-label="Find a learning topic">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-hidden bg-ink/35 p-3 backdrop-blur-sm sm:p-8" role="dialog" aria-modal="true" aria-label="Find a learning topic">
       <button type="button" className="absolute inset-0 cursor-default" onClick={onClose} aria-label="Close topic search" />
-      <section className="relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[1.75rem] border border-white/70 bg-surface shadow-[0_28px_90px_rgba(20,20,30,0.22)] sm:max-h-[calc(100dvh-4rem)]">
-        <header className="flex items-start justify-between gap-4 border-b border-hairline px-5 py-5 sm:px-7">
+      <section className="relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] border border-white/70 bg-surface shadow-[0_28px_90px_rgba(20,20,30,0.22)] sm:max-h-[calc(100dvh-4rem)] sm:rounded-[1.75rem]">
+        <header className="flex items-start justify-between gap-4 border-b border-hairline px-4 py-4 sm:px-7 sm:py-5">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Topic finder</p>
-            <h2 className="mt-1 font-heading text-2xl font-bold tracking-tight text-ink">Choose where to learn next</h2>
+            <h2 className="mt-1 font-heading text-2xl font-bold tracking-tight text-ink">Choose your next topic</h2>
           </div>
           <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-xl text-ink-mute transition hover:bg-canvas hover:text-ink" aria-label="Close topic search">
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </header>
 
-        <div className="flex min-h-0 flex-1 flex-col p-5 sm:p-7">
+        <div className="flex min-h-0 flex-1 flex-col p-4 sm:p-7">
           <label className="relative block">
             <span className="sr-only">Search topics and chapters</span>
             <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" aria-hidden="true" />
@@ -126,10 +140,10 @@ export default function TopicPickerDialog({
             />
           </label>
 
-          <div className="mt-5 flex items-center justify-between gap-4">
+          <div className="mt-5 flex items-center justify-between gap-4" aria-live="polite">
             <div>
               <p className="text-sm font-semibold text-ink">{query.trim() ? 'Matching topics' : 'Suggested topics'}</p>
-              <p className="mt-0.5 text-xs text-ink-mute">Choose a topic; its subtopics open in the learning workspace.</p>
+              <p className="mt-0.5 text-xs text-ink-mute">Your active topics stay at the top.</p>
             </div>
             {loading ? <span className="flex items-center gap-2 text-xs font-medium text-ink-mute"><LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Loading</span> : null}
           </div>

@@ -119,7 +119,7 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
 
   if (loading) {
     return (
-      <div className="mx-auto flex min-h-screen max-w-4xl items-center p-5 sm:p-8">
+      <div className="mx-auto flex min-h-screen max-w-4xl items-center p-4 sm:p-8">
         <section className="w-full rounded-[2rem] border border-hairline bg-surface p-6 shadow-[0_22px_70px_rgba(20,20,30,0.07)]">
           <p className="flex items-center gap-3 text-sm font-semibold text-ink-soft">
             <LoaderCircle className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
@@ -176,8 +176,8 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
   const isLastQuestion = currentIndex === payload.questions.length - 1;
 
   return (
-    <div className="mx-auto max-w-7xl p-5 sm:p-8 lg:p-10">
-      <header className="rounded-[1.75rem] border border-hairline bg-surface p-5 shadow-[0_16px_40px_rgba(20,20,30,0.055)]">
+    <div className="mx-auto max-w-7xl p-4 sm:p-8 lg:p-10">
+      <header className="rounded-[1.5rem] border border-hairline bg-surface p-4 shadow-[0_16px_40px_rgba(20,20,30,0.055)] sm:rounded-[1.75rem] sm:p-5">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="flex items-center gap-2 text-xs font-medium text-ink-mute">
@@ -294,7 +294,7 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
           </div>
         </section>
 
-        <aside className="rounded-[1.75rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)] xl:self-start">
+        <aside className="rounded-[1.5rem] border border-hairline bg-surface p-4 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:rounded-[1.75rem] sm:p-5 xl:self-start">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-heading text-lg font-bold text-ink">Question map</h2>
             <span className="text-xs font-semibold text-ink-soft">{answeredCount} saved</span>

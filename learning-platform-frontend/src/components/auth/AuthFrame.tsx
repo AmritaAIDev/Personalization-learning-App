@@ -9,8 +9,8 @@ interface AuthFrameProps {
 
 export default function AuthFrame({ title, subtitle, children }: AuthFrameProps) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-canvas p-4 sm:p-6 lg:p-10">
-      <div className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-[1.75rem] bg-surface hairline elevate lg:grid-cols-[1.02fr_0.98fr] animate-rise">
+    <main className="flex min-h-[100dvh] items-center justify-center bg-canvas px-4 py-6 sm:p-6 lg:p-10">
+      <div className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-[1.5rem] bg-surface hairline elevate sm:rounded-[1.75rem] lg:grid-cols-[1.02fr_0.98fr] animate-rise">
         {/* Brand panel — calm, typographic, no glow or grid. */}
         <section className="relative hidden flex-col justify-between bg-ink p-12 text-white lg:flex">
           <div className="flex items-center gap-3">
@@ -37,7 +37,7 @@ export default function AuthFrame({ title, subtitle, children }: AuthFrameProps)
         </section>
 
         {/* Form panel. */}
-        <section className="flex items-center justify-center p-8 sm:p-12">
+        <section className="min-w-0 flex items-center justify-center p-6 sm:p-10 lg:p-12">
           <div className="w-full max-w-sm">
             <div className="mb-9 flex items-center gap-3 lg:hidden">
               <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-white">

@@ -652,7 +652,7 @@ export default function AdaptiveStudySession({
   const topicState = getTopicState(dashboard, scope);
 
   return (
-    <div className={`mx-auto max-w-7xl p-5 sm:p-8 lg:p-10 ${activeTab !== 'overview' ? 'xl:h-[100dvh] xl:overflow-hidden xl:p-6' : ''}`}>
+    <div className={`mx-auto max-w-7xl p-4 sm:p-8 lg:p-10 ${activeTab !== 'overview' ? 'xl:h-[100dvh] xl:overflow-hidden xl:p-6' : ''}`}>
       {activeTab === 'overview' ? <header className="rounded-[1.75rem] border border-hairline bg-surface p-4 shadow-[0_16px_40px_rgba(20,20,30,0.055)] sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Link

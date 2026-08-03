@@ -43,6 +43,7 @@ const navigation: Array<{
 const workspaceLabels = new Set(['Learn', 'Practice', 'Tests', 'Notebook', 'Doubts']);
 const overviewLabels = new Set(['Dashboard', 'Journey']);
 const planningLabels = new Set(['Content']);
+const mobileLabels = new Set(['Dashboard', 'Journey', 'Learn', 'Practice', 'Tests']);
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -66,7 +67,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className={`fixed inset-x-0 bottom-0 z-40 flex h-[68px] w-full items-center border-t border-hairline bg-surface/85 px-2 backdrop-blur-xl transition-[width,padding] duration-300 md:sticky md:top-0 md:h-screen md:w-[76px] md:shrink-0 md:flex-col md:border-r md:border-t-0 md:bg-surface md:px-3 md:py-6 md:backdrop-blur-none lg:overflow-y-auto lg:py-5 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden ${isCollapsed ? 'lg:w-[76px] lg:px-3' : 'lg:w-[272px] lg:px-4'}`}>
+    <aside className={`fixed inset-x-0 bottom-0 z-40 flex h-[calc(4.5rem+env(safe-area-inset-bottom))] w-full items-center border-t border-hairline bg-surface/90 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl transition-[width,padding] duration-300 md:sticky md:top-0 md:h-screen md:w-[76px] md:shrink-0 md:flex-col md:border-r md:border-t-0 md:bg-surface md:px-3 md:py-6 md:backdrop-blur-none lg:overflow-y-auto lg:py-5 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden ${isCollapsed ? 'lg:w-[76px] lg:px-3' : 'lg:w-[272px] lg:px-4'}`}>
       <Link
         href="/"
         className={`mb-5 hidden shrink-0 items-center gap-2.5 md:flex md:justify-center ${isCollapsed ? 'lg:justify-center' : 'lg:justify-start lg:px-2'}`}
@@ -95,7 +96,11 @@ export default function Sidebar() {
         aria-label="Student navigation"
       >
         {navigation
-          .filter((item) => !item.roles || item.roles.includes(user?.role ?? 'student'))
+          .filter(
+            (item) =>
+              mobileLabels.has(item.label) &&
+              (!item.roles || item.roles.includes(user?.role ?? 'student')),
+          )
           .map(({ label, href, icon: Icon }) => {
             const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
             const workspaceItem = workspaceLabels.has(label);
@@ -104,7 +109,7 @@ export default function Sidebar() {
                 key={href}
                 href={href}
                 title={label}
-                className={`group flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-[10px] font-semibold transition-all duration-200 md:h-10 md:flex-row md:justify-center md:gap-3 md:text-[13.5px] lg:justify-start lg:px-3 ${workspaceItem ? 'lg:hidden' : ''} ${
+                className={`group flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 text-[10px] font-semibold transition-all duration-200 md:h-10 md:flex-row md:justify-center md:gap-3 md:px-2 md:text-[13.5px] lg:justify-start lg:px-3 ${workspaceItem ? 'lg:hidden' : ''} ${
                   active
                     ? 'text-primary md:bg-primary-tint'
                     : 'text-ink-mute hover:text-ink md:hover:bg-canvas'
@@ -132,7 +137,7 @@ export default function Sidebar() {
             (!item.roles || item.roles.includes(user?.role ?? 'student')),
         ) ? (
           <SidebarSection
-            title=""
+            title="Admin"
             items={navigation.filter(
               (item) =>
                 planningLabels.has(item.label) &&

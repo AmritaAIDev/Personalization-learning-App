@@ -169,7 +169,7 @@ export default function FlashcardDeck({
   return createPortal(
     <div className="fixed inset-0 z-[90] flex items-stretch bg-[#102017]/55 p-0 backdrop-blur-md sm:items-center sm:justify-center sm:p-6" role="presentation">
       <section role="dialog" aria-modal="true" aria-label={`Flashcards for ${topic}`} className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[#f7faf8] shadow-2xl sm:h-[min(48rem,calc(100dvh-3rem))] sm:max-w-4xl sm:rounded-[2rem]">
-        <header className="flex items-center justify-between gap-4 border-b border-primary/10 bg-white px-5 py-4 sm:px-7">
+        <header className="flex items-center justify-between gap-4 border-b border-primary/10 bg-white px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-7 sm:py-4">
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-primary"><Sparkles className="h-3.5 w-3.5" /> Recall space</p>
             <h2 className="mt-1 truncate font-heading text-xl font-bold tracking-tight text-ink sm:text-2xl">{topic}</h2>
@@ -177,7 +177,7 @@ export default function FlashcardDeck({
           <button type="button" onClick={onClose} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-hairline bg-canvas text-ink-soft transition hover:bg-white hover:text-ink" aria-label="Close flashcards"><X className="h-5 w-5" /></button>
         </header>
 
-        <div className="flex min-h-0 flex-1 flex-col p-4 sm:p-7">
+        <div className="flex min-h-0 flex-1 flex-col p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-7">
           {error ? <div className="mx-auto my-auto max-w-md rounded-2xl border border-rose-100 bg-rose-50 p-5 text-sm text-rose-800" role="alert"><p className="flex items-start gap-2 font-semibold"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0" /> {error}</p><button type="button" onClick={() => void begin()} className="mt-4 font-bold underline underline-offset-4">Try again</button></div> : null}
           {!error && (generating || !card || awaitingNext) ? <div className="mx-auto my-auto w-full max-w-2xl rounded-[1.75rem] border border-[#e7ebe8] bg-white p-6 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:p-9" aria-label="Loading flashcard"><div className="h-3 w-20 rounded-full skeleton" /><div className="mt-9 h-7 w-4/5 rounded-full skeleton" /><div className="mt-4 h-7 w-3/5 rounded-full skeleton" /><div className="mt-16 h-10 w-40 rounded-xl skeleton" /></div> : null}
           {!error && card && !awaitingNext ? <>

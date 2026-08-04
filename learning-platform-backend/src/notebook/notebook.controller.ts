@@ -15,4 +15,11 @@ export class NotebookController {
       data: await this.notebookService.getMistakes(user.id),
     };
   }
+
+  @Get('concepts')
+  async getConcepts(@CurrentUser() user: AuthenticatedUser) {
+    return {
+      data: await this.notebookService.getConceptGroups(user.id),
+    };
+  }
 }

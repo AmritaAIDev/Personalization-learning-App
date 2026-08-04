@@ -1,20 +1,24 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
-  CircleHelp,
+  CheckCircle2,
+  CircleAlert,
   Clock3,
   LoaderCircle,
   Save,
   Send,
-} from 'lucide-react';
-import { apiFetch } from '@/lib/api';
-import type { DiagnosticAttemptPayload } from '@/lib/diagnostic-types';
-import { formatDuration } from '@/lib/format';
+} from "lucide-react";
+import { apiFetch } from "@/lib/api";
+import type { DiagnosticAttemptPayload } from "@/lib/diagnostic-types";
+import { formatDuration } from "@/lib/format";
+import StudyMarkdown from "@/components/learning/StudyMarkdown";
+import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
+
+const OPTION_KEYS = ["1", "2", "3", "4", "5", "6"];
 
 export default function DiagnosticAttemptPage() {
   const params = useParams<{ attemptId: string }>();
@@ -27,18 +31,31 @@ export default function DiagnosticAttemptPage() {
   const [loading, setLoading] = useState(true);
   const [savingQuestionId, setSavingQuestionId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmingSubmit, setConfirmingSubmit] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useBodyScrollLock(confirmingSubmit);
 
   const loadAttempt = useCallback(async () => {
     if (!attemptId) return;
     try {
-      const data = await apiFetch<DiagnosticAttemptPayload>(`/api/diagnostics/${attemptId}`);
+      const data = await apiFetch<DiagnosticAttemptPayload>(
+        `/api/diagnostics/${attemptId}`,
+      );
       setPayload(data);
-      setAnswers(Object.fromEntries(data.answers.map((answer) => [answer.questionId, answer.selectedOption])));
-      setNow(new Date().getTime());
+      setAnswers(
+        Object.fromEntries(
+          data.answers.map((answer) => [
+            answer.questionId,
+            answer.selectedOption,
+          ]),
+        ),
+      );
+      setNow(Date.now());
       setError(null);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Unable to load this diagnostic.');
+      setError(
+        reason instanceof Error ? reason.message : "Unable to load this test.",
+      );
     } finally {
       setLoading(false);
     }
@@ -51,6 +68,7 @@ export default function DiagnosticAttemptPage() {
     void loadInitialAttempt();
   }, [loadAttempt]);
 
+  // Live countdown clock.
   useEffect(() => {
     if (!payload) return;
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
@@ -59,7 +77,10 @@ export default function DiagnosticAttemptPage() {
 
   const remainingSeconds = useMemo(() => {
     if (!payload) return 0;
-    return Math.max(0, Math.ceil((new Date(payload.attempt.expiresAt).getTime() - now) / 1000));
+    return Math.max(
+      0,
+      Math.ceil((new Date(payload.attempt.expiresAt).getTime() - now) / 1000),
+    );
   }, [now, payload]);
 
   const submitAttempt = useCallback(async () => {
@@ -67,25 +88,28 @@ export default function DiagnosticAttemptPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await apiFetch(`/api/diagnostics/${payload.attempt.id}/submit`, { method: 'POST' });
+      await apiFetch(`/api/diagnostics/${payload.attempt.id}/submit`, {
+        method: "POST",
+      });
       router.replace(`/analysis/${payload.attempt.id}`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Unable to submit the diagnostic.');
+      setError(
+        reason instanceof Error ? reason.message : "Unable to submit the test.",
+      );
       setSubmitting(false);
     }
   }, [payload, router, submitting]);
 
+  // Auto-submit when the timer runs out, or redirect if already submitted.
   useEffect(() => {
     if (!payload) return;
-    if (payload.attempt.status !== 'IN_PROGRESS') {
+    if (payload.attempt.status !== "IN_PROGRESS") {
       router.replace(`/analysis/${payload.attempt.id}`);
       return;
     }
     if (remainingSeconds === 0) {
-      const submitTimer = window.setTimeout(() => {
-        void submitAttempt();
-      }, 0);
-      return () => window.clearTimeout(submitTimer);
+      const timer = window.setTimeout(() => void submitAttempt(), 0);
+      return () => window.clearTimeout(timer);
     }
   }, [payload, remainingSeconds, router, submitAttempt]);
 
@@ -102,14 +126,20 @@ export default function DiagnosticAttemptPage() {
     const expiresAt = new Date(payload.attempt.expiresAt).getTime();
     const elapsedSeconds = Math.max(
       0,
-      Math.min(Math.floor((expiresAt - startedAt) / 1000), Math.floor((now - startedAt) / 1000)),
+      Math.min(
+        Math.floor((expiresAt - startedAt) / 1000),
+        Math.floor((now - startedAt) / 1000),
+      ),
     );
 
     try {
-      await apiFetch(`/api/diagnostics/${payload.attempt.id}/answers/${question.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ selectedOption, elapsedSeconds }),
-      });
+      await apiFetch(
+        `/api/diagnostics/${payload.attempt.id}/answers/${question.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ selectedOption, elapsedSeconds }),
+        },
+      );
     } catch (reason) {
       setAnswers((current) => {
         const restored = { ...current };
@@ -117,111 +147,416 @@ export default function DiagnosticAttemptPage() {
         else restored[question.id] = previousOption;
         return restored;
       });
-      setError(reason instanceof Error ? reason.message : 'Your answer could not be saved.');
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Your answer could not be saved.",
+      );
     } finally {
       setSavingQuestionId(null);
     }
   };
 
+  const goTo = useCallback(
+    (index: number) => {
+      if (!payload) return;
+      setCurrentIndex(
+        Math.max(0, Math.min(payload.questions.length - 1, index)),
+      );
+    },
+    [payload],
+  );
+
+  // Keyboard: 1-N to answer, arrows to move between questions.
+  useEffect(() => {
+    if (!payload || confirmingSubmit || submitting) return;
+    const question = payload.questions[currentIndex];
+    if (!question) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        goTo(currentIndex + 1);
+        return;
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        goTo(currentIndex - 1);
+        return;
+      }
+      const index = OPTION_KEYS.indexOf(event.key);
+      if (index < 0) return;
+      const option = question.options[index];
+      if (!option) return;
+      event.preventDefault();
+      void saveSelection(option);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payload, currentIndex, confirmingSubmit, submitting, goTo]);
+
   if (loading) {
-    return <div className="grid min-h-screen place-items-center text-sm font-semibold text-[#52525b]"><span className="flex items-center gap-3"><LoaderCircle className="h-5 w-5 animate-spin text-[#3f6f57]" /> Preparing your diagnostic…</span></div>;
+    return (
+      <div className="grid min-h-screen place-items-center text-sm font-semibold text-ink-soft">
+        <span className="flex items-center gap-3">
+          <LoaderCircle
+            className="h-5 w-5 animate-spin text-primary"
+            aria-hidden="true"
+          />
+          Preparing your test…
+        </span>
+      </div>
+    );
   }
 
   if (!payload) {
     return (
       <div className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center p-6 text-center">
-        <CircleHelp className="h-8 w-8 text-rose-600" aria-hidden="true" />
-        <h1 className="mt-4 font-heading text-2xl font-bold text-[#1a1a1f]">We couldn&apos;t open this diagnostic</h1>
-        <p className="mt-2 text-sm text-[#52525b]">{error ?? 'The attempt may no longer be available.'}</p>
-        <button type="button" onClick={() => void loadAttempt()} className="mt-5 rounded-xl bg-[#3f6f57] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#315844]">Try again</button>
+        <CircleAlert className="h-9 w-9 text-rose-600" aria-hidden="true" />
+        <h1 className="mt-4 font-heading text-2xl font-semibold text-ink">
+          This test could not be opened
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-ink-soft">
+          {error ?? "Please return to the test centre and try again."}
+        </p>
+        <button
+          type="button"
+          onClick={() => void loadAttempt()}
+          className="mt-5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:bg-primary-strong"
+        >
+          Try again
+        </button>
       </div>
     );
   }
 
   const question = payload.questions[currentIndex];
-  const answeredCount = Object.keys(answers).length;
-  const isSavingCurrent = savingQuestionId === question.id;
   const isLastQuestion = currentIndex === payload.questions.length - 1;
+  const answeredCount = payload.questions.filter((item) =>
+    Boolean(answers[item.id]),
+  ).length;
+  const progressPercent = Math.round(
+    (answeredCount / Math.max(1, payload.questions.length)) * 100,
+  );
+  const isSavingCurrent = savingQuestionId === question.id;
+  const lowTime = remainingSeconds <= 60;
 
   return (
-    <div className="mx-auto max-w-7xl p-4 sm:p-7 lg:flex lg:h-[100dvh] lg:flex-col lg:overflow-hidden lg:p-6">
-      <header className="shrink-0 flex flex-col gap-4 border-b border-[#ececf0] pb-5 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-xs font-medium text-ink-mute">Secure diagnostic</p>
-          <h1 className="mt-1 font-heading text-xl font-bold text-[#1a1a1f] sm:text-2xl">{payload.attempt.title}</h1>
-          <p className="mt-1 text-sm text-[#52525b]">{answeredCount}/{payload.attempt.totalQuestions} answers saved</p>
+    <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+      <header className="rounded-2xl border border-hairline bg-surface px-3 py-2.5 shadow-[0_8px_22px_rgba(20,20,30,0.04)] sm:px-4">
+        <div className="flex items-center gap-3">
+          <h1 className="min-w-0 truncate font-heading text-sm font-bold tracking-tight text-ink sm:text-base">
+            {payload.attempt.title}
+          </h1>
+          <span
+            className={`ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold text-white ${
+              lowTime ? "animate-pulse bg-rose-600" : "bg-ink"
+            }`}
+          >
+            <Clock3 className="h-3 w-3" aria-hidden="true" />
+            {formatDuration(remainingSeconds)}
+          </span>
+          <button
+            type="button"
+            onClick={() => setConfirmingSubmit(true)}
+            disabled={submitting}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-[13px] font-bold text-white transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Send className="h-3.5 w-3.5" aria-hidden="true" />
+            Submit
+          </button>
         </div>
-        <div className={`flex items-center gap-3 self-start rounded-xl border px-4 py-3 font-heading text-2xl font-bold tabular-nums ${remainingSeconds <= 300 ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-[#f2b6c5] bg-[#eef3f0] text-[#2c4c3d]'}`} aria-live="polite">
-          <Clock3 className="h-5 w-5" aria-hidden="true" /> {formatDuration(remainingSeconds)}
+        <div className="mt-2 flex items-center gap-3 text-[11px] font-semibold text-ink-mute">
+          <span className="shrink-0 text-ink-soft">
+            {answeredCount}/{payload.questions.length} answered
+          </span>
+          <div
+            className="h-1.5 flex-1 overflow-hidden rounded-full bg-canvas"
+            role="progressbar"
+            aria-valuenow={answeredCount}
+            aria-valuemin={0}
+            aria-valuemax={payload.questions.length}
+            aria-label="Answered questions"
+          >
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-500"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <span className="shrink-0 tabular-nums">{progressPercent}%</span>
         </div>
       </header>
 
-      {error && <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700" role="alert">{error}</p>}
+      {error ? (
+        <p
+          className="mt-4 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"
+          role="alert"
+        >
+          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          {error}
+        </p>
+      ) : null}
 
-      <div className="mt-5 grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_17rem]">
-        <section className="rounded-[1.5rem] border border-[#ececf0] bg-white p-4 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:p-6 xl:min-h-0 xl:overflow-y-auto">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-2 text-xs font-bold">
-              <span className="rounded-full bg-[#e7efe9] px-3 py-1.5 text-[#2c4c3d]">{question.chapter}</span>
-              <span className="rounded-full bg-[#f4f4f6] px-3 py-1.5 text-[#52525b]">{question.topic}</span>
-              <span className="rounded-full bg-[#f4f4f6] px-3 py-1.5 text-[#52525b]">{question.difficulty}</span>
-              <span className="rounded-full bg-[#f4f4f6] px-3 py-1.5 text-[#52525b]">{question.bloomLevel}</span>
+      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
+        <section>
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] font-bold">
+            <span className="rounded-full bg-primary-tint px-2 py-0.5 text-primary">
+              {question.difficulty}
+            </span>
+            <span className="px-0.5 text-ink-mute">{"\u00B7"}</span>
+            <span className="rounded-full bg-canvas px-2 py-0.5 text-ink-soft">
+              {question.bloomLevel}
+            </span>
+            <span className="px-0.5 text-ink-mute">{"\u00B7"}</span>
+            <span className="rounded-full bg-canvas px-2 py-0.5 text-ink-soft">
+              {question.marks} mark{question.marks === 1 ? "" : "s"}
+            </span>
+            <span className="ml-auto text-[11px] font-medium text-ink-mute">
+              Question {currentIndex + 1} of {payload.questions.length}
+            </span>
+          </div>
+
+          <section className="rounded-[1.25rem] border border-hairline bg-surface p-4 shadow-[0_12px_28px_rgba(20,20,30,0.045)] sm:p-5">
+            <StudyMarkdown className="font-heading text-lg font-bold leading-7 text-ink sm:text-xl sm:leading-8">
+              {question.questionText}
+            </StudyMarkdown>
+            <div
+              className="mt-4 space-y-2.5"
+              role="radiogroup"
+              aria-label="Answer options"
+            >
+              {question.options.map((option, index) => {
+                const selected = answers[question.id] === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    disabled={submitting}
+                    onClick={() => void saveSelection(option)}
+                    className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition sm:px-4 ${
+                      selected
+                        ? "border-primary bg-primary-tint text-primary-strong ring-1 ring-primary"
+                        : "border-hairline bg-canvas text-ink hover:border-primary/45 hover:bg-primary-tint/40"
+                    } disabled:cursor-not-allowed disabled:opacity-60`}
+                  >
+                    <span
+                      className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg text-xs font-bold ${
+                        selected
+                          ? "bg-primary text-white"
+                          : "bg-surface text-ink-mute"
+                      }`}
+                      aria-hidden="true"
+                    >
+                      {String.fromCharCode(65 + index)}
+                    </span>
+                    <StudyMarkdown className="flex-1 min-w-0 text-sm font-medium">
+                      {option}
+                    </StudyMarkdown>
+                    {selected ? (
+                      <CheckCircle2
+                        className="h-5 w-5 shrink-0 text-primary"
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-sm font-semibold text-[#52525b]">Question {currentIndex + 1} of {payload.questions.length}</p>
-          </div>
+            <p className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-ink-mute">
+              <Save className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+              {isSavingCurrent
+                ? "Saving answer…"
+                : answers[question.id]
+                  ? "Answer saved securely."
+                  : "Select an option to autosave. Press 1–" +
+                    question.options.length +
+                    " or arrow keys to navigate."}
+            </p>
+          </section>
 
-          <h2 className="mt-6 font-heading text-lg font-bold leading-7 text-[#1a1a1f] sm:text-xl sm:leading-8">{question.questionText}</h2>
-
-          <div className="mt-5 space-y-2.5" role="radiogroup" aria-label="Answer options">
-            {question.options.map((option, index) => {
-              const selected = answers[question.id] === option;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  disabled={isSavingCurrent || submitting || remainingSeconds === 0}
-                  onClick={() => void saveSelection(option)}
-                  className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm font-medium transition sm:px-4 ${
-                    selected ? 'border-[#3f6f57] bg-[#eef3f0] text-[#83112b] ring-1 ring-[#3f6f57]' : 'border-[#ececf0] bg-white text-[#1a1a1f] hover:border-[#3f6f57]/45 hover:bg-[#f7faf8]'
-                  } disabled:cursor-not-allowed disabled:opacity-70`}
-                >
-                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs font-bold ${selected ? 'border-[#3f6f57] bg-[#3f6f57] text-white' : 'border-[#d5d6d9] text-[#52525b]'}`}>{String.fromCharCode(65 + index)}</span>
-                  <span className="leading-6">{option}</span>
-                  {selected && <Check className="ml-auto h-5 w-5 shrink-0 text-[#3f6f57]" aria-hidden="true" />}
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-4 flex items-center gap-2 text-xs font-medium text-[#52525b]"><Save className="h-4 w-4 text-[#3f6f57]" aria-hidden="true" /> {isSavingCurrent ? 'Saving answer…' : answers[question.id] ? 'Answer saved securely.' : 'Select an option to save it.'}</p>
-
-          <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[#ececf0] pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <button type="button" onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))} disabled={currentIndex === 0 || submitting} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dedee3] px-4 py-2.5 text-sm font-bold text-[#52525b] hover:bg-[#f4f4f6] disabled:cursor-not-allowed disabled:opacity-50"><ArrowLeft className="h-4 w-4" aria-hidden="true" /> Previous</button>
+          <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              onClick={() => goTo(currentIndex - 1)}
+              disabled={currentIndex === 0 || submitting}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-hairline px-4 py-2.5 text-sm font-bold text-ink-soft transition hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              Previous
+            </button>
             {isLastQuestion ? (
-              <button type="button" onClick={() => void submitAttempt()} disabled={submitting || savingQuestionId !== null} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#3f6f57] px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20, 20, 30,0.22)] transition hover:bg-[#315844] disabled:cursor-not-allowed disabled:opacity-60">{submitting ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" /> : <>Submit diagnostic <Send className="h-4 w-4" aria-hidden="true" /></>}</button>
+              <button
+                type="button"
+                onClick={() => setConfirmingSubmit(true)}
+                disabled={submitting || savingQuestionId !== null}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20,20,30,0.22)] transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? (
+                  <LoaderCircle
+                    className="h-4 w-4 animate-spin"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Send className="h-4 w-4" aria-hidden="true" />
+                )}
+                Submit test
+              </button>
             ) : (
-              <button type="button" onClick={() => setCurrentIndex((index) => Math.min(payload.questions.length - 1, index + 1))} disabled={submitting} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1a1a1f] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#2a2a30] disabled:cursor-not-allowed disabled:opacity-60">Next <ArrowRight className="h-4 w-4" aria-hidden="true" /></button>
+              <button
+                type="button"
+                onClick={() => goTo(currentIndex + 1)}
+                disabled={submitting}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-5 py-2.5 text-sm font-bold text-white transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Next
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </button>
             )}
           </div>
         </section>
 
-        <aside className="rounded-[1.5rem] border border-[#ececf0] bg-white p-4 shadow-[0_14px_34px_rgba(20,20,30,0.05)] xl:min-h-0 xl:overflow-y-auto">
-          <div className="flex items-center justify-between"><h2 className="font-heading text-lg font-bold text-[#1a1a1f]">Question map</h2><span className="text-xs font-semibold text-[#52525b]">{answeredCount} saved</span></div>
-          <div className="mt-5 grid grid-cols-5 gap-2" aria-label="Question navigation">
+        <aside className="rounded-[1.25rem] border border-hairline bg-surface p-4 shadow-[0_12px_28px_rgba(20,20,30,0.045)] xl:min-h-0 xl:overflow-y-auto">
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-sm font-bold text-ink">
+              Question map
+            </h2>
+            <span className="text-xs font-semibold text-ink-mute">
+              {answeredCount} saved
+            </span>
+          </div>
+          <div
+            className="mt-4 grid grid-cols-5 gap-2"
+            aria-label="Question navigation"
+          >
             {payload.questions.map((item, index) => {
               const isCurrent = index === currentIndex;
               const isAnswered = Boolean(answers[item.id]);
-              return <button key={item.id} type="button" onClick={() => setCurrentIndex(index)} disabled={submitting} aria-label={`Go to question ${index + 1}${isAnswered ? ', answered' : ''}`} aria-current={isCurrent ? 'step' : undefined} className={`grid aspect-square place-items-center rounded-lg text-xs font-bold transition ${isCurrent ? 'bg-[#3f6f57] text-white ring-2 ring-[#a8c4b6]' : isAnswered ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-[#f4f4f6] text-[#52525b] hover:bg-[#e7e8ea]'}`}>{index + 1}</button>;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => goTo(index)}
+                  disabled={submitting}
+                  aria-label={`Go to question ${index + 1}${isAnswered ? ", answered" : ""}`}
+                  aria-current={isCurrent ? "step" : undefined}
+                  className={`grid aspect-square place-items-center rounded-lg text-xs font-bold transition ${
+                    isCurrent
+                      ? "bg-primary text-white ring-2 ring-primary/30"
+                      : isAnswered
+                        ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                        : "bg-canvas text-ink-mute hover:bg-primary-tint/50"
+                  }`}
+                >
+                  {index + 1}
+                </button>
+              );
             })}
           </div>
-          <div className="mt-6 space-y-2 border-t border-[#ececf0] pt-5 text-xs text-[#52525b]">
-            <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /> Answer saved</p>
-            <p className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-slate-300" /> Not yet answered</p>
+          <div className="mt-5 space-y-2 border-t border-hairline pt-4 text-[11px] text-ink-mute">
+            <p className="flex items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 rounded-full bg-emerald-400"
+                aria-hidden="true"
+              />
+              Answer saved
+            </p>
+            <p className="flex items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 rounded-full bg-slate-300"
+                aria-hidden="true"
+              />
+              Not yet answered
+            </p>
           </div>
-          <button type="button" onClick={() => void submitAttempt()} disabled={submitting || savingQuestionId !== null} className="mt-6 inline-flex w-full min-h-11 items-center justify-center gap-2 rounded-xl border border-[#f2b6c5] bg-[#eef3f0] px-4 py-2.5 text-sm font-bold text-[#2c4c3d] hover:bg-[#e7efe9] disabled:cursor-not-allowed disabled:opacity-60">{submitting ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />} Submit now</button>
+          <button
+            type="button"
+            onClick={() => setConfirmingSubmit(true)}
+            disabled={submitting || savingQuestionId !== null}
+            className="mt-5 inline-flex w-full min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? (
+              <LoaderCircle
+                className="h-4 w-4 animate-spin"
+                aria-hidden="true"
+              />
+            ) : (
+              <Send className="h-4 w-4" aria-hidden="true" />
+            )}
+            Submit now
+          </button>
         </aside>
       </div>
+
+      {confirmingSubmit ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4 backdrop-blur-sm">
+          <section className="w-full max-w-md rounded-2xl border border-hairline bg-surface p-6 shadow-[0_24px_70px_rgba(20,20,30,0.24)]">
+            <h2 className="font-heading text-lg font-bold text-ink">
+              Submit this test?
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-ink-soft">
+              You have answered{" "}
+              <span className="font-bold text-ink">{answeredCount}</span> of{" "}
+              {payload.questions.length} questions. Scoring, solutions, and weak
+              concepts are produced by the backend once you submit — the attempt
+              cannot be edited afterwards.
+              {payload.questions.length - answeredCount > 0
+                ? ` ${payload.questions.length - answeredCount} question${
+                    payload.questions.length - answeredCount === 1 ? "" : "s"
+                  } will be marked unanswered.`
+                : ""}
+            </p>
+            {error ? (
+              <p
+                className="mt-4 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"
+                role="alert"
+              >
+                <CircleAlert
+                  className="mt-0.5 h-4 w-4 shrink-0"
+                  aria-hidden="true"
+                />
+                {error}
+              </p>
+            ) : null}
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmingSubmit(false)}
+                disabled={submitting}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-hairline px-5 py-2.5 text-sm font-bold text-ink-soft transition hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Keep working
+              </button>
+              <button
+                type="button"
+                onClick={() => void submitAttempt()}
+                disabled={submitting}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? (
+                  <LoaderCircle
+                    className="h-4 w-4 animate-spin"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Send className="h-4 w-4" aria-hidden="true" />
+                )}
+                Submit now
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

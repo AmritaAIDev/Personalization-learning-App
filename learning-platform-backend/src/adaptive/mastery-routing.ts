@@ -1,5 +1,4 @@
 import {
-  LEARNING_QUESTIONS_PER_SESSION,
   LearningSessionTransition,
   nextCoordinate,
   previousCoordinate,
@@ -13,11 +12,19 @@ export type CompletionDecision = {
   nextLevel: number | null;
 };
 
+/**
+ * A round advances when the learner resolved enough questions on the first try.
+ * The old gate demanded a perfect 5-streak, so a single recovered miss voided
+ * the whole round. Advancing on >= 80% first-try accuracy (4 of 5) keeps the
+ * standard high while forgiving one recovered slip.
+ */
 export function resolveCoordinateCompletion(
   currentLevel: number,
-  streakCounter: number,
+  firstTryCorrect: number,
+  totalQuestions: number,
 ): CompletionDecision {
-  if (streakCounter < LEARNING_QUESTIONS_PER_SESSION) {
+  const advanceThreshold = Math.ceil(totalQuestions * 0.8);
+  if (firstTryCorrect < advanceThreshold) {
     return {
       transition: LearningSessionTransition.REINFORCE,
       nextLevel: currentLevel,

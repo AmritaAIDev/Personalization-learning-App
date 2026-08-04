@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -13,31 +13,31 @@ import {
   LoaderCircle,
   RotateCcw,
   Target,
-} from 'lucide-react';
-import StudyMarkdown from '@/components/learning/StudyMarkdown';
-import { apiFetch } from '@/lib/api';
-import { learningUrl } from '@/lib/learning';
-import { practiceHref } from '@/lib/practice';
+} from "lucide-react";
+import StudyMarkdown from "@/components/learning/StudyMarkdown";
+import { apiFetch } from "@/lib/api";
+import { learningUrl } from "@/lib/learning";
+import { practiceHref } from "@/lib/practice";
 import type {
   PracticePerformanceRow,
   PracticeReviewPayload,
-} from '@/lib/practice-types';
+} from "@/lib/practice-types";
 
-type ResultFilter = 'all' | 'incorrect' | 'correct';
+type ResultFilter = "all" | "incorrect" | "correct";
 
 const FILTERS: Array<{ value: ResultFilter; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'incorrect', label: 'To revisit' },
-  { value: 'correct', label: 'Correct' },
+  { value: "all", label: "All" },
+  { value: "incorrect", label: "To revisit" },
+  { value: "correct", label: "Correct" },
 ];
 
 function PerformanceRow({ row }: { row: PracticePerformanceRow }) {
   const color =
-    row.status === 'strong'
-      ? '#15803d'
-      : row.status === 'average'
-        ? '#b45309'
-        : '#be123c';
+    row.status === "strong"
+      ? "#15803d"
+      : row.status === "average"
+        ? "#b45309"
+        : "#be123c";
 
   return (
     <div>
@@ -66,7 +66,7 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
   const [payload, setPayload] = useState<PracticeReviewPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<ResultFilter>('all');
+  const [filter, setFilter] = useState<ResultFilter>("all");
   const [openQuestionId, setOpenQuestionId] = useState<string | null>(null);
   const [hasToggledQuestion, setHasToggledQuestion] = useState(false);
 
@@ -81,7 +81,7 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
       setError(
         reason instanceof Error
           ? reason.message
-          : 'The practice review could not be loaded.',
+          : "The practice review could not be loaded.",
       );
     } finally {
       setLoading(false);
@@ -105,7 +105,7 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
         setError(
           reason instanceof Error
             ? reason.message
-            : 'The practice review could not be loaded.',
+            : "The practice review could not be loaded.",
         );
       })
       .finally(() => {
@@ -118,10 +118,10 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
 
   const results = useMemo(() => {
     if (!payload) return [];
-    if (filter === 'incorrect') {
+    if (filter === "incorrect") {
       return payload.results.filter((result) => !result.isCorrect);
     }
-    if (filter === 'correct') {
+    if (filter === "correct") {
       return payload.results.filter((result) => result.isCorrect);
     }
     return payload.results;
@@ -131,13 +131,17 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
   // than assigned, so the learner's own expand/collapse always wins afterwards.
   const activeQuestionId = hasToggledQuestion
     ? openQuestionId
-    : (payload?.results.find((result) => !result.isCorrect)?.questionId ?? null);
+    : (payload?.results.find((result) => !result.isCorrect)?.questionId ??
+      null);
 
   if (loading) {
     return (
       <div className="grid min-h-screen place-items-center p-6 text-sm font-semibold text-ink-soft">
         <span className="flex items-center gap-3">
-          <LoaderCircle className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
+          <LoaderCircle
+            className="h-5 w-5 animate-spin text-primary"
+            aria-hidden="true"
+          />
           Calculating your review…
         </span>
       </div>
@@ -152,7 +156,7 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
           We could not show this review
         </h1>
         <p className="mt-2 text-sm leading-6 text-ink-soft">
-          {error ?? 'This practice session may not be ready for review.'}
+          {error ?? "This practice session may not be ready for review."}
         </p>
         <button
           type="button"
@@ -198,10 +202,11 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
             <RotateCcw className="h-4 w-4" aria-hidden="true" /> Practice again
           </Link>
           <Link
-            href={learningUrl(scope, { tab: 'practice' })}
+            href={learningUrl(scope, { tab: "practice" })}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary-tint px-4 py-2.5 text-sm font-bold text-primary transition hover:bg-primary hover:text-white"
           >
-            <GraduationCap className="h-4 w-4" aria-hidden="true" /> Learn with tutor
+            <GraduationCap className="h-4 w-4" aria-hidden="true" /> Learn with
+            tutor
           </Link>
         </div>
       </header>
@@ -213,7 +218,7 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
             {analysis.scorePercent}%
           </p>
           <p className="mt-3 text-sm text-white/80">
-            {analysis.correct} correct · {analysis.incorrect} to revisit ·{' '}
+            {analysis.correct} correct · {analysis.incorrect} to revisit ·{" "}
             {analysis.total} total
           </p>
           <div className="mt-7 h-2 overflow-hidden rounded-full bg-white/15">
@@ -258,7 +263,8 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
             href="/"
             className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:text-primary-strong"
           >
-            Choose another unit <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            Choose another unit{" "}
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
         {analysis.weakConcepts.length > 0 ? (
@@ -304,8 +310,8 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
                 onClick={() => setFilter(item.value)}
                 className={`min-h-9 rounded-lg px-3 text-xs font-bold transition ${
                   filter === item.value
-                    ? 'bg-primary text-white'
-                    : 'text-ink-soft hover:bg-canvas'
+                    ? "bg-primary text-white"
+                    : "text-ink-soft hover:bg-canvas"
                 }`}
               >
                 {item.label}
@@ -340,8 +346,8 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
                   <span
                     className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
                       result.isCorrect
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-rose-50 text-rose-700'
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-rose-50 text-rose-700"
                     }`}
                   >
                     {result.isCorrect ? (
@@ -352,7 +358,7 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs font-medium text-ink-mute">
-                      Question {result.position} · {result.difficulty} ·{' '}
+                      Question {result.position} · {result.difficulty} ·{" "}
                       {result.bloomLevel}
                     </span>
                     <span className="mt-1 block text-sm font-bold leading-6 text-ink">
@@ -360,7 +366,7 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
                     </span>
                   </span>
                   <ChevronDown
-                    className={`h-5 w-5 shrink-0 text-ink-mute transition ${isOpen ? 'rotate-180' : ''}`}
+                    className={`h-5 w-5 shrink-0 text-ink-mute transition ${isOpen ? "rotate-180" : ""}`}
                     aria-hidden="true"
                   />
                 </button>
@@ -370,14 +376,14 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div
                         className={`rounded-xl p-4 ${
-                          result.isCorrect ? 'bg-canvas' : 'bg-rose-50'
+                          result.isCorrect ? "bg-canvas" : "bg-rose-50"
                         }`}
                       >
                         <p className="text-xs font-medium text-ink-mute">
                           Your answer
                         </p>
                         <p className="mt-2 text-sm font-semibold text-ink">
-                          {result.selectedOption ?? 'Not answered'}
+                          {result.selectedOption ?? "Not answered"}
                         </p>
                       </div>
                       <div className="rounded-xl bg-emerald-50 p-4">
@@ -390,12 +396,15 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
                       </div>
                     </div>
                     <div className="mt-4 rounded-xl border border-hairline bg-canvas p-4">
-                      <p className="text-xs font-medium text-ink-mute">Explanation</p>
+                      <p className="text-xs font-medium text-ink-mute">
+                        Explanation
+                      </p>
                       <StudyMarkdown className="mt-2 text-sm leading-6 text-ink-soft">
                         {result.solution}
                       </StudyMarkdown>
                     </div>
-                    {result.conceptTags.length > 0 || result.commonErrors.length > 0 ? (
+                    {result.conceptTags.length > 0 ||
+                    result.commonErrors.length > 0 ? (
                       <div className="mt-4 grid gap-4 sm:grid-cols-2">
                         {result.conceptTags.length > 0 ? (
                           <div>

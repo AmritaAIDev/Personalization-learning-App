@@ -18,9 +18,17 @@ export class AddTopicPlacementDiagnostics1785200000000 implements MigrationInter
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query('DROP INDEX IF EXISTS "IDX_diagnostic_attempts_topic_scope"');
-    await queryRunner.query('ALTER TABLE "diagnostic_attempts" DROP COLUMN IF EXISTS "topic"');
-    await queryRunner.query('ALTER TABLE "diagnostic_attempts" DROP COLUMN IF EXISTS "chapter"');
-    await queryRunner.query('ALTER TABLE "diagnostic_attempts" DROP COLUMN IF EXISTS "mode"');
+    await queryRunner.query(
+      'DROP INDEX IF EXISTS "IDX_diagnostic_attempts_topic_scope"',
+    );
+    await queryRunner.query(
+      'ALTER TABLE "diagnostic_attempts" DROP COLUMN IF EXISTS "topic"',
+    );
+    await queryRunner.query(
+      'ALTER TABLE "diagnostic_attempts" DROP COLUMN IF EXISTS "chapter"',
+    );
+    await queryRunner.query(
+      'ALTER TABLE "diagnostic_attempts" DROP COLUMN IF EXISTS "mode"',
+    );
   }
 }

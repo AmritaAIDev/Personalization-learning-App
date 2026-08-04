@@ -1,4 +1,5 @@
-export type CompetencyBand = 'Beginner' | 'Developing' | 'Proficient' | 'Advanced';
+export type CompetencyBand =
+  "Beginner" | "Developing" | "Proficient" | "Advanced";
 
 export interface CompetencyBreakdown {
   accuracy: number;

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useParams } from 'next/navigation';
-import PracticeReview from '@/components/practice/PracticeReview';
+import { useParams } from "next/navigation";
+import PracticeReview from "@/components/practice/PracticeReview";
 
 export default function PracticeReviewPage() {
   const params = useParams<{ attemptId: string }>();

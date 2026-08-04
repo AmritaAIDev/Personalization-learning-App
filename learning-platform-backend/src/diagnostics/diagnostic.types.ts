@@ -44,3 +44,27 @@ export interface DiagnosticAnalysis {
   weakTopics: string[];
   calculatedAt: string;
 }
+
+export interface DiagnosticReviewItem {
+  position: number;
+  questionId: string;
+  topic: string;
+  difficulty: string;
+  bloomLevel: string;
+  marks: number;
+  questionText: string;
+  options: string[];
+  selectedOption: string | null;
+  correctOption: string;
+  isCorrect: boolean;
+  solution: string;
+}
+
+export interface DiagnosticReviewPayload {
+  attempt: {
+    id: string;
+    status: DiagnosticAttemptStatus;
+    submittedAt: string | null;
+  };
+  questions: DiagnosticReviewItem[];
+}

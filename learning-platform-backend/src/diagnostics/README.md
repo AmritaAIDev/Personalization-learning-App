@@ -1,33 +1,61 @@
 # Diagnostics module
 
-## Topic placement
+Secure, database-backed JEE tests (the "Tests" tab). A new attempt selects fifteen
+published questions — five Easy, five Medium, five Hard — with varied Bloom levels
+and chapter coverage. The selector first avoids questions seen in the learner's
+four most recent completed tests, falling back to the reviewed bank only to keep
+the test balanced. AI-generated questions never enter a live test directly; they
+must be validated and published to the `questions` bank first.
 
-Topic placement is initiated only when a learner first opens a new topic. A `TOPIC_PLACEMENT` attempt stores the exact subject, chapter, and topic. On submission, its score places that untouched topic at Level 1, 3, 5, 7, or 9. Skipping placement creates the same topic through adaptive learning at Level 1. A placement result never overwrites answer-backed topic progress.
+## Key components
 
-The diagnostics module implements the secure JEE AI baseline-assessment flow.
+- `DiagnosticsController` — `/api/diagnostics`.
+- `DiagnosticsService` — attempt lifecycle, question selection, autosave, grading, analysis, review, recommendations, history.
+- `DiagnosticAttempt` / `DiagnosticAnswer` / `LearningResource` entities.
+- DTOs (`CreateDiagnosticDto`, `SaveDiagnosticAnswerDto`, `ClearDiagnosticHistoryDto`).
 
-## Student flow
+## API
 
-1. An authenticated student starts or resumes a server-owned 30-minute, 15-question diagnostic.
-2. The API sends sanitized questions only; correct answers and solutions stay in PostgreSQL.
-3. Answers are saved against the authenticated attempt, never against a client-supplied user ID.
-4. Submission is scored on the server and persists topic/Bloom performance plus weak topics.
-5. Recommendations are read from curated database resources for the calculated weak topics.
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/dashboard` | stats, readiness, active attempt, recent history |
+| GET | `/history` | submitted test history |
+| DELETE | `/history` | clear history (body `{ confirmation: 'DELETE' }`) |
+| POST | `/` | start/resume a 30-min, 15-question test (`PROGRAM` or `TOPIC_PLACEMENT`) |
+| GET | `/:attemptId` | student-safe attempt — no keys/solutions |
+| PATCH | `/:attemptId/answers/:questionId` | autosave one selection |
+| POST | `/:attemptId/submit` | grade server-side, persist analysis |
+| GET | `/:attemptId/analysis` | score, grade, topic/Bloom performance, weak topics |
+| GET | `/:attemptId/review` | per-question review (your answer vs correct, solution, isCorrect) |
+| GET | `/:attemptId/recommendations` | curated resources for weak topics |
+
+## Scoring
+
+- **Mark-weighted**: `scorePercent = earned marks ÷ total marks`, so a 5-mark
+  question outweighs a 1-mark question. Each question's `marks` column is used.
+- **Weak-topic sample-size guard**: a topic is flagged weak only if it had ≥2
+  questions in the attempt (an n=1 miss no longer produces a false "weak area").
+- Grade bands: ≥80 Excellent, ≥60 Good, ≥40 Average, else Needs work.
+
+## Per-question review
+
+`GET /:attemptId/review` returns each question with the learner's selected
+option, the correct option, a boolean `isCorrect`, and the worked `solution`.
+The frontend renders question, options, and solution through `StudyMarkdown` so
+equations display. This is the drill-down behind the analysis page's "Show
+review" toggle.
 
 ## Data integrity
 
-`diagnostic_attempts` freezes the selected question IDs. `diagnostic_answers` is unique per
-attempt/question and cascades when the owning attempt is deleted. Attempt expiry is enforced
-by the backend timestamp, so changing a browser timer cannot extend the test.
-# Diagnostics module
+`diagnostic_attempts` freezes the selected `questionIds`; `diagnostic_answers`
+is unique per attempt/question and cascades on attempt delete. Expiry is
+enforced by the backend `expiresAt` timestamp, so a changed browser timer cannot
+extend the test. Answers save against the authenticated attempt, never a
+client-supplied user ID.
 
-Tests are secure, database-backed diagnostics. A new attempt selects fifteen
-published questions: five Easy, five Medium, and five Hard, with varied Bloom
-levels and chapter coverage. The selector first avoids questions seen in the
-learner's four most recent completed tests; it only falls back to the reviewed
-bank if doing so is required to keep the test balanced.
+## Topic placement
 
-AI-generated questions never enter a live test directly. They must be validated
-and published to the `questions` bank first. Answers autosave server-side, the
-server performs scoring on submission, and the resulting analysis powers test
-history, weak-topic repair, and the Notebook.
+A `TOPIC_PLACEMENT` attempt stores the exact subject/chapter/topic and, on
+submission, places an untouched topic at Level 1/3/5/7/9. Placement never
+overwrites answer-backed topic progress; skipping placement starts a topic at
+Level 1 through adaptive learning.

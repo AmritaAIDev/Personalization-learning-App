@@ -1,4 +1,4 @@
-import type { Flashcard, FlashcardRating } from './learning-types';
+import type { Flashcard, FlashcardRating } from "./learning-types";
 
 /** How many cards ahead of the learner the deck tries to keep buffered. */
 export const FLASHCARD_PREFETCH_THRESHOLD = 2;
@@ -46,8 +46,8 @@ export function flashcardKey(card: Flashcard): string {
 
 export function normalizePrompt(value: string): string {
   return value
-    .toLocaleLowerCase('en-US')
-    .replace(/[^a-z0-9]+/g, ' ')
+    .toLocaleLowerCase("en-US")
+    .replace(/[^a-z0-9]+/g, " ")
     .trim()
     .slice(0, 240);
 }
@@ -110,7 +110,7 @@ export function rateFlashcard(
     [rating]: session.tally[rating] + 1,
   };
 
-  if (rating !== 'AGAIN') {
+  if (rating !== "AGAIN") {
     return {
       ...session,
       index: session.index + 1,

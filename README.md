@@ -1,46 +1,104 @@
 # JEE Competency Diagnosis & Adaptive Learning Platform
 
-Welcome to the JEE Competency Diagnosis and Adaptive Learning Assistant. This platform is an AI-powered, highly gamified learning application designed to help students master the JEE curriculum (Physics, Mathematics, and Chemistry) through adaptive micro-learning.
+An AI-powered adaptive learning platform for JEE (currently Class XII Physics —
+Electrostatics). It diagnoses competency, serves formative practice, repairs
+mistakes, and answers doubts — all grounded in a reviewed PostgreSQL question
+bank, with DeepSeek + Qdrant isolated behind dedicated services.
 
-## Project Structure
+## Monorepo layout
 
-This is a monorepo containing two main applications:
+- `learning-platform-backend/` — NestJS + TypeORM API (PostgreSQL). See
+  [`learning-platform-backend/README.md`](learning-platform-backend/README.md)
+  for the full architecture and **API endpoint reference**.
+- `learning-platform-frontend/` — Next.js student app. See
+  [`learning-platform-frontend/README.md`](learning-platform-frontend/README.md)
+  for components, rendering, and data fetching.
+- `students-sample/` — sample student reference material.
 
-- **`/learning-platform-frontend`**: A Next.js application providing the gamified user interface (Dashboard, Syllabus Skill Trees, and the interactive learning Arena).
-- **`/learning-platform-backend`**: A NestJS application handling business logic, user progress tracking, and AI-driven question generation using DeepSeek LLM and a Qdrant Vector Database.
+## Student surfaces
 
-## Features
+- **Learn** (`/learn`) — the adaptive workspace: a 12-coordinate Bloom ×
+  difficulty journey, five-question rounds with Socratic retry, a linked AI
+  tutor, and spaced-recall flashcards. Rounds auto-advance on ≥80% first-try
+  accuracy.
+- **Tests** (`/tests`) — a secure, timed 15-question diagnostic. Mark-weighted
+  scoring, weak-topic detection with a sample-size guard, per-question review
+  with worked solutions, and curated recommendations.
+- **Practice** (`/practice`) — a reviewed 15-question (5E/5M/5H) exam-style
+  attempt; answer keys are server-side until submission.
+- **Notebook** (`/notebook`) — mistakes clubbed by concept with an
+  LLM-synthesised recurring-gap summary (cached per topic) and an expandable
+  per-question drill-down.
+- **Doubts** (`/doubts`) — student-authored doubts resolved by the AI tutor
+  out-of-band (the form never blocks on the model).
 
-- **Gamified Dashboard**: Visual learning journeys with real-time progress tracking, identifying exactly what topics need attention.
-- **Immersive Syllabus Skill Trees**: A "Bento Box" hub that opens into a scrolling, video-game style skill tree mapping out chapters and subtopics for Physics, Math, and Chemistry.
-- **Active Learning Arena (In-Progress)**: An adaptive quiz interface where an AI tutor generates dynamic questions based on the student's weaknesses.
-- **AI-Driven Personalization**: Uses LLMs to generate high-quality JEE questions grounded in textbook context stored in a Vector DB (Qdrant).
+Admins get a separate content-review route (generate AI drafts, inspect keys,
+publish/archive).
 
-## Getting Started
+## Tech stack
 
-To run this platform locally, you will need to start both the frontend and backend servers.
+- Backend: NestJS, TypeORM, PostgreSQL, DeepSeek (OpenAI-compatible), Qdrant,
+  bcrypt session cookies, `@nestjs/throttler`, class-validator.
+- Frontend: Next.js (app router), React 19, Tailwind v4, KaTeX via
+  `react-markdown` + `remark-math` + `rehype-katex`, framer-motion,
+  `@xyflow/react`.
 
-### 1. Database Setup
-Ensure you have PostgreSQL running. 
-Navigate to the backend and run the seeder script to populate the curriculum and a mock student:
-```bash
-cd learning-platform-backend
-npm run seed
+## Prerequisites
+
+- Node, PostgreSQL, and (optional for AI features) a DeepSeek API key and a
+  Qdrant instance. Without AI keys the app still runs on database-backed fallbacks.
+
+## Getting started
+
+The easiest way to run both apps together is the helper script from the repo
+root:
+
+```powershell
+.\start-dev.ps1
 ```
 
-### 2. Run the Backend
+This starts the backend on `http://localhost:4000` and the frontend on
+`http://localhost:3000` (override with `-FrontendPort` / `-BackendPort`).
+
+### Manual
+
+Backend:
+
 ```bash
 cd learning-platform-backend
-npm run start:dev
+cp .env.example .env            # set DATABASE_URL, DEEPSEEK_API_KEY, QDRANT_*
+npm install
+npm run migration:run
+npm run seed:diagnostic
+npm run seed:adaptive
+npm run start:dev               # http://localhost:4000
 ```
-The API will be available at `http://localhost:4000`.
 
-### 3. Run the Frontend
+Frontend:
+
 ```bash
 cd learning-platform-frontend
-npm run dev
+cp .env.example .env.local      # set NEXT_PUBLIC_API_URL=http://localhost:4000
+npm install
+npm run dev                     # http://localhost:3000
 ```
-The Web App will be available at `http://localhost:3000`.
 
-## Architectural Principles
-This codebase strictly adheres to modular architecture, robust error handling, and separation of concerns. Please refer to `AGENTS.md` for specific AI agent coding guidelines for this repository.
+The backend `FRONTEND_ORIGIN` must include the frontend origin.
+
+## Conventions (see `AGENTS.md`)
+
+Modular NestJS modules; strict TypeScript (no `any`); `synchronize: false` with
+TypeORM migrations; secrets only via env + `ConfigService`; LLM/vector DB isolated
+in `AgentService`; tests and module-level READMEs alongside every feature;
+responsive, professional UI with no hardcoded mock data in components.
+
+## Tests
+
+- Backend: `npm test` (Jest).
+- Frontend: `npm test` (Vitest).
+
+## Production
+
+Terminate TLS at the app or a trusted proxy and run with `NODE_ENV=production`
+(session cookies then use `Secure`). Never run destructive seeds against
+production data (`ALLOW_DESTRUCTIVE_SEED=true` gates them).

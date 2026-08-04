@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   ArrowRight,
   Atom,
@@ -14,15 +14,19 @@ import {
   TrendingUp,
   Trophy,
   Zap,
-} from 'lucide-react';
-import { apiFetch } from '@/lib/api';
-import { learningUrl } from '@/lib/learning';
-import SubjectCourseExplorer from '@/components/journey/SubjectCourseExplorer';
-import { useAuth } from '@/context/AuthContext';
-import { useJourney, type JourneyNode, type Subtopic } from '@/context/JourneyContext';
-import type { GrowthPayload } from '@/lib/growth-types';
+} from "lucide-react";
+import { apiFetch } from "@/lib/api";
+import { learningUrl } from "@/lib/learning";
+import SubjectCourseExplorer from "@/components/journey/SubjectCourseExplorer";
+import { useAuth } from "@/context/AuthContext";
+import {
+  useJourney,
+  type JourneyNode,
+  type Subtopic,
+} from "@/context/JourneyContext";
+import type { GrowthPayload } from "@/lib/growth-types";
 
-type NodeState = 'completed' | 'current' | 'available' | 'locked';
+type NodeState = "completed" | "current" | "available" | "locked";
 
 interface PathNode {
   key: string;
@@ -49,55 +53,72 @@ const ROW_GAP = 178;
 const TOP_PAD = 88;
 
 const STAGES = [
-  { short: 'Basics', title: 'Getting the essentials down', blurb: 'locking in the core facts' },
-  { short: 'Ideas', title: 'Understanding the ideas', blurb: 'seeing how it all fits together' },
-  { short: 'Problem-solving', title: 'Solving real problems', blurb: 'putting what you know to work' },
-  { short: 'Mastery', title: 'Thinking it all through', blurb: 'reasoning like a pro' },
+  {
+    short: "Basics",
+    title: "Getting the essentials down",
+    blurb: "locking in the core facts",
+  },
+  {
+    short: "Ideas",
+    title: "Understanding the ideas",
+    blurb: "seeing how it all fits together",
+  },
+  {
+    short: "Problem-solving",
+    title: "Solving real problems",
+    blurb: "putting what you know to work",
+  },
+  {
+    short: "Mastery",
+    title: "Thinking it all through",
+    blurb: "reasoning like a pro",
+  },
 ];
 
 const BLOOM_INDEX: Record<string, number> = {
   Recall: 0,
   Comprehension: 1,
   Application: 2,
-  'Higher-Order': 3,
+  "Higher-Order": 3,
 };
 
-const MARKER_COLORS = ['#3f6f57', '#5b7a99', '#b07a5a', '#7a6aa3', '#c99a2e'];
+const MARKER_COLORS = ["#3f6f57", "#5b7a99", "#b07a5a", "#7a6aa3", "#c99a2e"];
 
 function resolveState(sub: Subtopic, chapter: JourneyNode): NodeState {
-  if (sub.state === 'completed' || chapter.state === 'completed') return 'completed';
-  if (chapter.state === 'locked' || sub.state === 'locked') return 'locked';
-  return 'available';
+  if (sub.state === "completed" || chapter.state === "completed")
+    return "completed";
+  if (chapter.state === "locked" || sub.state === "locked") return "locked";
+  return "available";
 }
 
 function clampPct(value: number | null | undefined, fallback: number) {
-  if (typeof value !== 'number' || Number.isNaN(value)) return fallback;
+  if (typeof value !== "number" || Number.isNaN(value)) return fallback;
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 function subjectVisual(subject: string) {
   const normalized = subject.toLowerCase();
-  if (normalized.includes('chem')) {
+  if (normalized.includes("chem")) {
     return {
       icon: FlaskConical,
-      tint: 'bg-orange-50 text-orange-600',
-      accent: 'bg-orange-500',
-      badge: 'text-orange-700',
+      tint: "bg-orange-50 text-orange-600",
+      accent: "bg-orange-500",
+      badge: "text-orange-700",
     };
   }
-  if (normalized.includes('math')) {
+  if (normalized.includes("math")) {
     return {
       icon: Calculator,
-      tint: 'bg-blue-50 text-blue-600',
-      accent: 'bg-blue-500',
-      badge: 'text-blue-700',
+      tint: "bg-blue-50 text-blue-600",
+      accent: "bg-blue-500",
+      badge: "text-blue-700",
     };
   }
   return {
     icon: Atom,
-    tint: 'bg-primary-tint text-primary',
-    accent: 'bg-primary',
-    badge: 'text-primary',
+    tint: "bg-primary-tint text-primary",
+    accent: "bg-primary",
+    badge: "text-primary",
   };
 }
 
@@ -132,7 +153,7 @@ export default function JourneyMap() {
 
   const loadGrowth = useCallback(async () => {
     try {
-      setGrowth(await apiFetch<GrowthPayload>('/api/learning/growth'));
+      setGrowth(await apiFetch<GrowthPayload>("/api/learning/growth"));
     } catch {
       setGrowth(null);
     }
@@ -144,7 +165,10 @@ export default function JourneyMap() {
   }, [loadGrowth]);
 
   const subjects = useMemo(
-    () => Array.from(new Set(journeyNodes.map((node) => node.subject))).filter(Boolean),
+    () =>
+      Array.from(new Set(journeyNodes.map((node) => node.subject))).filter(
+        Boolean,
+      ),
     [journeyNodes],
   );
   const activeSubject = subject;
@@ -171,30 +195,47 @@ export default function JourneyMap() {
               }))
             : [
                 {
-                  state: chapter.state === 'active' ? ('available' as const) : chapter.state,
+                  state:
+                    chapter.state === "active"
+                      ? ("available" as const)
+                      : chapter.state,
                   score: chapter.score ?? null,
                 },
               ],
         );
-        const completed = topics.filter((topic) => topic.state === 'completed').length;
-        const current = topics.filter((topic) => topic.state === 'available').length;
+        const completed = topics.filter(
+          (topic) => topic.state === "completed",
+        ).length;
+        const current = topics.filter(
+          (topic) => topic.state === "available",
+        ).length;
         const average = topics.length
           ? Math.round(
               topics.reduce(
                 (total, topic) =>
-                  total + clampPct(topic.score, topic.state === 'completed' ? 100 : 0),
+                  total +
+                  clampPct(topic.score, topic.state === "completed" ? 100 : 0),
                 0,
               ) / topics.length,
             )
           : 0;
-        return { name, total: topics.length, completed, current, average, chapters: chapters.length };
+        return {
+          name,
+          total: topics.length,
+          completed,
+          current,
+          average,
+          chapters: chapters.length,
+        };
       }),
     [journeyNodes, subjects],
   );
 
   const nodes = useMemo<PathNode[]>(() => {
     if (!activeSubject) return [];
-    const chapters = journeyNodes.filter((node) => node.subject === activeSubject);
+    const chapters = journeyNodes.filter(
+      (node) => node.subject === activeSubject,
+    );
     const out: PathNode[] = [];
     let index = 0;
     for (const chapter of chapters) {
@@ -210,14 +251,16 @@ export default function JourneyMap() {
           chapter: chapter.name,
           subject: chapter.subject,
           state,
-          progress: clampPct(sub.score, state === 'completed' ? 100 : 0),
+          progress: clampPct(sub.score, state === "completed" ? 100 : 0),
           firstInChapter: subIdx === 0,
         });
         index += 1;
       });
     }
-    const currentIdx = out.findIndex((node) => node.state !== 'completed' && node.state !== 'locked');
-    if (currentIdx >= 0) out[currentIdx].state = 'current';
+    const currentIdx = out.findIndex(
+      (node) => node.state !== "completed" && node.state !== "locked",
+    );
+    if (currentIdx >= 0) out[currentIdx].state = "current";
     return out;
   }, [activeSubject, journeyNodes]);
 
@@ -233,7 +276,8 @@ export default function JourneyMap() {
       rowNodes.forEach((node, column) => {
         const cy = TOP_PAD + NODE_R + row * ROW_GAP;
         laidNodes.push({ ...node, cx: xs[column], cy, row });
-        if (node.firstInChapter) posts.push({ name: node.chapter, cx: xs[column], cy });
+        if (node.firstInChapter)
+          posts.push({ name: node.chapter, cx: xs[column], cy });
       });
     }
     const lastRow = rowCount - 1;
@@ -244,14 +288,19 @@ export default function JourneyMap() {
     };
   }, [nodes]);
 
-  const current = nodes.find((node) => node.state === 'current') ?? null;
-  const completedCount = nodes.filter((node) => node.state === 'completed').length;
+  const current = nodes.find((node) => node.state === "current") ?? null;
+  const completedCount = nodes.filter(
+    (node) => node.state === "completed",
+  ).length;
   const mastered = nodes.length > 0 && completedCount === nodes.length;
   const score = growth?.overall.score ?? 0;
   const onTrack = growth?.overall.positiveStreak ?? 0;
   const stageIndex =
     growth && growth.topics.length > 0
-      ? growth.topics.reduce((max, topic) => Math.max(max, BLOOM_INDEX[topic.bloomLevel] ?? 0), 0)
+      ? growth.topics.reduce(
+          (max, topic) => Math.max(max, BLOOM_INDEX[topic.bloomLevel] ?? 0),
+          0,
+        )
       : 0;
   const stage = STAGES[stageIndex];
   const summitY = trackHeight - 78;
@@ -259,7 +308,10 @@ export default function JourneyMap() {
   const nodeHref = (node: PathNode) =>
     learningUrl(
       { subject: node.subject, chapter: node.chapter, topic: node.name },
-      { tab: 'practice', placement: node.state === 'available' ? 'ask' : undefined },
+      {
+        tab: "practice",
+        placement: node.state === "available" ? "ask" : undefined,
+      },
     );
 
   if (journeyLoading) {
@@ -282,7 +334,12 @@ export default function JourneyMap() {
     );
   }
 
-  const segments: { key: string; d: string; reached: boolean; order: number }[] = [];
+  const segments: {
+    key: string;
+    d: string;
+    reached: boolean;
+    order: number;
+  }[] = [];
   for (let index = 1; index < laid.length; index += 1) {
     const prev = laid[index - 1];
     const node = laid[index];
@@ -301,14 +358,14 @@ export default function JourneyMap() {
     segments.push({
       key: node.key,
       d,
-      reached: node.state === 'completed' || node.state === 'current',
+      reached: node.state === "completed" || node.state === "current",
       order: index,
     });
   }
   if (laid.length > 0) {
     const last = laid[laid.length - 1];
     segments.push({
-      key: 'summit',
+      key: "summit",
       d: `M ${last.cx} ${last.cy} C ${last.cx} ${last.cy + ROW_GAP * 0.42}, ${CX} ${
         summitY - ROW_GAP * 0.42
       }, ${CX} ${summitY}`,
@@ -322,7 +379,7 @@ export default function JourneyMap() {
       <header className="animate-rise">
         <p className="text-[13px] font-medium text-ink-mute">Your journey</p>
         <h1 className="mt-1 font-heading text-[1.9rem] font-semibold tracking-tight text-ink">
-          Keep climbing, {user?.name?.split(' ')[0] || 'learner'}.
+          Keep climbing, {user?.name?.split(" ")[0] || "learner"}.
         </h1>
       </header>
 
@@ -333,8 +390,12 @@ export default function JourneyMap() {
             aria-label="Subject learning map"
           >
             <div className="mb-3 px-1">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">MPC map</p>
-              <p className="mt-1 text-xs text-ink-mute">Choose a course to open its full route.</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
+                MPC map
+              </p>
+              <p className="mt-1 text-xs text-ink-mute">
+                Choose a course to open its full route.
+              </p>
             </div>
             <div className="grid gap-2.5">
               {subjectSummaries.map((summary, index) => {
@@ -349,13 +410,15 @@ export default function JourneyMap() {
                     aria-pressed={selected}
                     className={`animate-rise group relative overflow-hidden rounded-2xl border p-4 text-left transition-[border-color,background-color,transform,box-shadow] duration-300 hover:-translate-y-0.5 ${
                       selected
-                        ? 'border-primary/35 bg-primary-tint shadow-[0_12px_24px_rgba(20,20,30,0.07)]'
-                        : 'border-hairline bg-white hover:border-primary/25 hover:shadow-[0_12px_24px_rgba(20,20,30,0.055)]'
+                        ? "border-primary/35 bg-primary-tint shadow-[0_12px_24px_rgba(20,20,30,0.07)]"
+                        : "border-hairline bg-white hover:border-primary/25 hover:shadow-[0_12px_24px_rgba(20,20,30,0.055)]"
                     }`}
                     style={{ animationDelay: `${40 + index * 55}ms` }}
                   >
                     <span className="flex items-center gap-3">
-                      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${visual.tint}`}>
+                      <span
+                        className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${visual.tint}`}
+                      >
                         <Icon className="h-5 w-5" />
                       </span>
                       <span className="min-w-0 flex-1">
@@ -366,7 +429,9 @@ export default function JourneyMap() {
                           {summary.chapters} chapters, {summary.total} topics
                         </span>
                       </span>
-                      <span className={`rounded-full bg-white px-2 py-1 text-[10px] font-bold ${visual.badge}`}>
+                      <span
+                        className={`rounded-full bg-white px-2 py-1 text-[10px] font-bold ${visual.badge}`}
+                      >
                         {summary.average}%
                       </span>
                     </span>
@@ -400,17 +465,23 @@ export default function JourneyMap() {
         <main className="min-w-0 space-y-5 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto lg:pr-2 lg:custom-scrollbar">
           <section
             className="overflow-hidden rounded-[1.75rem] bg-ink p-6 text-white animate-rise elevate sm:p-7"
-            style={{ animationDelay: '80ms' }}
+            style={{ animationDelay: "80ms" }}
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-[12px] font-medium text-white/55">
-                  {current ? "Where you're headed next" : 'Course direction'}
+                  {current ? "Where you're headed next" : "Course direction"}
                 </p>
                 <h2 className="mt-1 truncate font-heading text-2xl font-semibold">
-                  {current ? current.name : activeSubject ?? 'Open your MPC map'}
+                  {current
+                    ? current.name
+                    : (activeSubject ?? "Open your MPC map")}
                 </h2>
-                {current ? <p className="mt-1 text-[13px] text-white/60">in {current.chapter}</p> : null}
+                {current ? (
+                  <p className="mt-1 text-[13px] text-white/60">
+                    in {current.chapter}
+                  </p>
+                ) : null}
               </div>
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary text-white animate-bob">
                 <Star className="h-6 w-6 fill-white" aria-hidden="true" />
@@ -418,8 +489,8 @@ export default function JourneyMap() {
             </div>
             <p className="mt-4 text-[13.5px] leading-6 text-white/75">
               {current
-                ? `${completedCount} step${completedCount === 1 ? '' : 's'} cleared in this course. The next action is ready from your saved learning state.`
-                : 'Your subject cards are live from the learning catalog. Selecting one reveals the route and opens the course map.'}
+                ? `${completedCount} step${completedCount === 1 ? "" : "s"} cleared in this course. The next action is ready from your saved learning state.`
+                : "Your subject cards are live from the learning catalog. Selecting one reveals the route and opens the course map."}
             </p>
             {current ? (
               <Link
@@ -443,31 +514,51 @@ export default function JourneyMap() {
           </section>
 
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            <StatChip icon={<Zap className="h-4 w-4" />} label="XP earned" value={user?.xp ?? 0} />
-            <StatChip icon={<TrendingUp className="h-4 w-4" />} label="Competency" value={score} />
-            <StatChip icon={<Flame className="h-4 w-4" />} label="On track" value={onTrack} />
-            <StatChip icon={<Trophy className="h-4 w-4" />} label="Steps cleared" value={completedCount} />
+            <StatChip
+              icon={<Zap className="h-4 w-4" />}
+              label="XP earned"
+              value={user?.xp ?? 0}
+            />
+            <StatChip
+              icon={<TrendingUp className="h-4 w-4" />}
+              label="Competency"
+              value={score}
+            />
+            <StatChip
+              icon={<Flame className="h-4 w-4" />}
+              label="On track"
+              value={onTrack}
+            />
+            <StatChip
+              icon={<Trophy className="h-4 w-4" />}
+              label="Steps cleared"
+              value={completedCount}
+            />
           </div>
 
           <section
             className="rounded-2xl bg-surface p-5 hairline elevate-sm animate-rise"
-            style={{ animationDelay: '120ms' }}
+            style={{ animationDelay: "120ms" }}
           >
             <div className="flex items-baseline justify-between gap-3">
-              <p className="text-[13px] font-medium text-ink-mute">How you&apos;re thinking</p>
-              <p className="text-[12px] font-medium text-primary">{stage.short}</p>
+              <p className="text-[13px] font-medium text-ink-mute">
+                How you&apos;re thinking
+              </p>
+              <p className="text-[12px] font-medium text-primary">
+                {stage.short}
+              </p>
             </div>
             <div className="mt-3 flex gap-1.5">
               {STAGES.map((item, index) => (
                 <div key={item.short} className="flex-1">
                   <div
                     className={`h-1.5 rounded-full transition-colors duration-500 ${
-                      index <= stageIndex ? 'bg-primary' : 'bg-black/[0.08]'
+                      index <= stageIndex ? "bg-primary" : "bg-black/[0.08]"
                     }`}
                   />
                   <p
                     className={`mt-1.5 truncate text-[10px] font-medium ${
-                      index === stageIndex ? 'text-ink' : 'text-ink-mute'
+                      index === stageIndex ? "text-ink" : "text-ink-mute"
                     }`}
                   >
                     {item.short}
@@ -475,9 +566,12 @@ export default function JourneyMap() {
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-[15px] font-semibold text-ink">{stage.title}</p>
+            <p className="mt-3 text-[15px] font-semibold text-ink">
+              {stage.title}
+            </p>
             <p className="mt-0.5 text-[13px] leading-5 text-ink-soft">
-              Right now you&apos;re {stage.blurb}, and every round nudges you further.
+              Right now you&apos;re {stage.blurb}, and every round nudges you
+              further.
             </p>
           </section>
 
@@ -488,7 +582,9 @@ export default function JourneyMap() {
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
                     Visual route
                   </p>
-                  <h2 className="mt-1 font-heading text-lg font-semibold text-ink">Your topic trail</h2>
+                  <h2 className="mt-1 font-heading text-lg font-semibold text-ink">
+                    Your topic trail
+                  </h2>
                 </div>
                 <button
                   type="button"
@@ -504,7 +600,10 @@ export default function JourneyMap() {
                   No published route is available for this course yet.
                 </p>
               ) : (
-                <div className="relative mx-auto mt-6" style={{ width: TRACK_W, height: trackHeight }}>
+                <div
+                  className="relative mx-auto mt-6"
+                  style={{ width: TRACK_W, height: trackHeight }}
+                >
                   <svg
                     className="absolute inset-0"
                     width={TRACK_W}
@@ -525,7 +624,8 @@ export default function JourneyMap() {
                           style={{
                             strokeDasharray: 1,
                             strokeDashoffset: 1,
-                            animation: 'draw-path 0.7s var(--ease-out-soft) forwards',
+                            animation:
+                              "draw-path 0.7s var(--ease-out-soft) forwards",
                             animationDelay: `${120 + seg.order * 80}ms`,
                           }}
                         />
@@ -546,16 +646,23 @@ export default function JourneyMap() {
                     <div
                       key={`${post.name}-${index}`}
                       className="animate-fade absolute z-10"
-                      style={{ left: post.cx, top: post.cy - 76, transform: 'translateX(-50%)' }}
+                      style={{
+                        left: post.cx,
+                        top: post.cy - 76,
+                        transform: "translateX(-50%)",
+                      }}
                     >
                       <div
                         className="animate-blob px-4 py-2 text-white shadow-[0_10px_22px_rgba(20,20,30,0.16)]"
                         style={{
-                          background: MARKER_COLORS[index % MARKER_COLORS.length],
+                          background:
+                            MARKER_COLORS[index % MARKER_COLORS.length],
                           animationDelay: `${index * -1700}ms`,
                         }}
                       >
-                        <span className="whitespace-nowrap text-[12px] font-semibold">{post.name}</span>
+                        <span className="whitespace-nowrap text-[12px] font-semibold">
+                          {post.name}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -564,17 +671,27 @@ export default function JourneyMap() {
                     <div
                       key={node.key}
                       className="absolute z-20"
-                      style={{ left: node.cx, top: node.cy, transform: 'translate(-50%, -50%)' }}
+                      style={{
+                        left: node.cx,
+                        top: node.cy,
+                        transform: "translate(-50%, -50%)",
+                      }}
                     >
-                      {node.state === 'current' && !node.firstInChapter ? (
+                      {node.state === "current" && !node.firstInChapter ? (
                         <span className="absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_6px_16px_rgba(63,111,87,0.35)]">
                           You&apos;re here
                         </span>
                       ) : null}
-                      <NodeMarker node={node} href={nodeHref(node)} order={index} />
+                      <NodeMarker
+                        node={node}
+                        href={nodeHref(node)}
+                        order={index}
+                      />
                       <span
                         className={`absolute left-1/2 top-full mt-2 w-24 -translate-x-1/2 text-center text-[11px] font-medium leading-tight ${
-                          node.state === 'locked' ? 'text-ink-mute' : 'text-ink-soft'
+                          node.state === "locked"
+                            ? "text-ink-mute"
+                            : "text-ink-soft"
                         }`}
                       >
                         {node.name}
@@ -588,18 +705,27 @@ export default function JourneyMap() {
                   >
                     <span
                       className={`animate-pop grid h-16 w-16 place-items-center rounded-full transition-transform duration-200 hover:scale-105 ${
-                        mastered ? 'text-white shadow-[0_10px_28px_rgba(201,160,60,0.4)]' : 'bg-surface hairline'
+                        mastered
+                          ? "text-white shadow-[0_10px_28px_rgba(201,160,60,0.4)]"
+                          : "bg-surface hairline"
                       }`}
-                      style={mastered ? { background: 'linear-gradient(145deg,#e7c65b,#c99a2e)' } : undefined}
+                      style={
+                        mastered
+                          ? {
+                              background:
+                                "linear-gradient(145deg,#e7c65b,#c99a2e)",
+                            }
+                          : undefined
+                      }
                     >
                       <Trophy
                         className="h-7 w-7"
                         aria-hidden="true"
-                        style={mastered ? undefined : { color: '#c9b878' }}
+                        style={mastered ? undefined : { color: "#c9b878" }}
                       />
                     </span>
                     <span className="mt-2 text-[12px] font-medium text-ink-soft">
-                      {mastered ? 'Subject mastered' : 'Summit awaits'}
+                      {mastered ? "Subject mastered" : "Summit awaits"}
                     </span>
                   </div>
                 </div>
@@ -629,21 +755,23 @@ function NodeMarker({
   const delay = { animationDelay: `${order * 60}ms` } as const;
 
   const bodyClass =
-    node.state === 'completed'
-      ? 'bg-primary text-white'
-      : node.state === 'current'
-        ? 'bg-primary text-white'
-        : node.state === 'available'
-          ? 'bg-surface text-ink'
-          : 'bg-canvas text-ink-mute';
+    node.state === "completed"
+      ? "bg-primary text-white"
+      : node.state === "current"
+        ? "bg-primary text-white"
+        : node.state === "available"
+          ? "bg-surface text-ink"
+          : "bg-canvas text-ink-mute";
 
   const center =
-    node.state === 'completed' ? (
+    node.state === "completed" ? (
       <Check className="h-6 w-6" strokeWidth={3} aria-hidden="true" />
-    ) : node.state === 'locked' ? (
+    ) : node.state === "locked" ? (
       <Lock className="h-5 w-5" aria-hidden="true" />
     ) : pct > 0 ? (
-      <span className="font-heading text-[13px] font-semibold leading-none">{pct}%</span>
+      <span className="font-heading text-[13px] font-semibold leading-none">
+        {pct}%
+      </span>
     ) : (
       <Star className="h-6 w-6" aria-hidden="true" />
     );
@@ -651,7 +779,7 @@ function NodeMarker({
   const marker = (
     <span
       className={`animate-pop relative grid place-items-center transition-transform duration-200 hover:scale-110 ${
-        node.state === 'current' ? 'scale-110' : ''
+        node.state === "current" ? "scale-110" : ""
       }`}
       style={{ width: SIZE, height: SIZE, ...delay }}
     >
@@ -662,8 +790,14 @@ function NodeMarker({
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         fill="none"
       >
-        <circle cx={SIZE / 2} cy={SIZE / 2} r={R} stroke="#ececf0" strokeWidth={4} />
-        {node.state !== 'locked' && pct > 0 ? (
+        <circle
+          cx={SIZE / 2}
+          cy={SIZE / 2}
+          r={R}
+          stroke="#ececf0"
+          strokeWidth={4}
+        />
+        {node.state !== "locked" && pct > 0 ? (
           <circle
             cx={SIZE / 2}
             cy={SIZE / 2}
@@ -673,17 +807,19 @@ function NodeMarker({
             strokeLinecap="round"
             strokeDasharray={circ}
             strokeDashoffset={dashoffset}
-            style={{ transition: 'stroke-dashoffset 900ms var(--ease-out-soft)' }}
+            style={{
+              transition: "stroke-dashoffset 900ms var(--ease-out-soft)",
+            }}
           />
         ) : null}
       </svg>
       <span
         className={`grid place-items-center rounded-full ${bodyClass} ${
-          node.state === 'current'
-            ? 'shadow-[0_10px_24px_rgba(63,111,87,0.4)]'
-            : node.state === 'completed'
-              ? 'shadow-[0_6px_16px_rgba(63,111,87,0.26)]'
-              : 'hairline'
+          node.state === "current"
+            ? "shadow-[0_10px_24px_rgba(63,111,87,0.4)]"
+            : node.state === "completed"
+              ? "shadow-[0_6px_16px_rgba(63,111,87,0.26)]"
+              : "hairline"
         }`}
         style={{ width: SIZE - 16, height: SIZE - 16 }}
       >
@@ -692,7 +828,7 @@ function NodeMarker({
     </span>
   );
 
-  if (node.state === 'locked') return marker;
+  if (node.state === "locked") return marker;
   return (
     <Link href={href} aria-label={`${node.name} - ${pct}% complete`}>
       {marker}

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import type { PerformanceRow } from '@/lib/diagnostic-types';
+import type { PerformanceRow } from "@/lib/diagnostic-types";
 
 const statusStyles = {
-  strong: 'bg-emerald-100 text-emerald-800',
-  average: 'bg-amber-100 text-amber-800',
-  weak: 'bg-rose-100 text-rose-800',
+  strong: "bg-emerald-100 text-emerald-800",
+  average: "bg-amber-100 text-amber-800",
+  weak: "bg-rose-100 text-rose-800",
 };
 
 export default function PerformanceBars({
@@ -26,10 +26,20 @@ export default function PerformanceBars({
           <div key={row.label}>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm">
               <p className="font-semibold text-[#1a1a1f]">{row.label}</p>
-              <span className={`rounded-full px-2.5 py-1 text-xs font-bold capitalize ${statusStyles[row.status]}`}>{row.status} · {row.correct}/{row.total}</span>
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-bold capitalize ${statusStyles[row.status]}`}
+              >
+                {row.status} · {row.correct}/{row.total}
+              </span>
             </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-[#edf0f1]" aria-label={`${row.label}: ${row.score}%`}>
-              <div className={`h-full rounded-full ${row.status === 'strong' ? 'bg-emerald-500' : row.status === 'average' ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${row.score}%` }} />
+            <div
+              className="h-2.5 overflow-hidden rounded-full bg-[#edf0f1]"
+              aria-label={`${row.label}: ${row.score}%`}
+            >
+              <div
+                className={`h-full rounded-full ${row.status === "strong" ? "bg-emerald-500" : row.status === "average" ? "bg-amber-500" : "bg-rose-500"}`}
+                style={{ width: `${row.score}%` }}
+              />
             </div>
           </div>
         ))}

@@ -11,7 +11,8 @@ These components power the student-facing learning workspace and never ship mock
 - `PracticeWorkspace` — the adaptive round: question card, optimistic answer selection, round progress, and the completion summary, with the tutor board beside it.
 - `FlashcardDeck` — the recall run, opened as a full-surface dialog over the workspace.
 - `StudyAssistant` — the linked tutor board, used inline as a panel or as a floating helper.
-- `StudyMarkdown` — the single renderer for study prose (flashcards, tutor replies, question explanations), with GFM and KaTeX support and no raw HTML.
+- `StudyMarkdown` — the single renderer for study prose (flashcards, tutor replies, question explanations), with GFM and KaTeX support and no raw HTML. `normalizeMathDelimiters` rewrites raw LaTeX delimiters `\(...\)` and `\[...\]` to the dollar form `remark-math` understands, and repairs the common `\text(enc)` mistake, so model-emitted equations render even when the model ignores the dollar-delimiter instruction. Question stems and answer options render through `StudyMarkdown`, so JEE equations display.
+ormalizeMathDelimiters rewrites raw LaTeX \\(...\\) / \\[...\\] delimiters to the dollar form emark-math understands and repairs the common \\text(enc) mistake, so model-emitted equations render even when the model ignores the $...$ instruction. Question stems and answer options render through StudyMarkdown, so JEE equations display.
 - `LearningOverview` and `LearningHistoryPanel` summarize saved progress, mastered topics, and next-step suggestions from `/api/learning/dashboard`.
 
 Overview and practice both stay mounted while hidden, so switching tabs is instant and an in-flight round is never thrown away by navigation.
@@ -20,9 +21,9 @@ Overview and practice both stay mounted while hidden, so switching tabs is insta
 
 - The learner never picks a raw entry level. The session is API-owned and the calculated placement is shown in learner-friendly language.
 - Two attempts per question. A first miss triggers a Socratic hint and the answer stays hidden; the option already tried is struck through so the retry is a real second choice.
-- Selecting an option updates immediately and shows an inline pending state; answers are graded server-side only.
+- Selecting an option updates immediately and shows an inline pending state; answers are graded server-side only. A ruled-out (wrong) option is shown in red with an X marker.
 - Options can be answered with the `1`–`4` keys.
-- The round summary reports the transition (advance, reinforce, rebuild, prerequisite route, or mastery), how many questions were cleared, and how many were first-attempt wins. A failed "continue" surfaces inline rather than silently doing nothing.
+- Rounds auto-advance: when a round completes, an inline RoundOutcome banner shows the transition (advance, reinforce, rebuild, prerequisite route, or mastery) and starts the next round after a short beat - no required click. Only terminal states (mastery, prerequisite route) stop for an explicit choice. A persistent "Stop" control is always available. A failed "continue" surfaces inline rather than silently doing nothing.
 
 ## Flashcards
 

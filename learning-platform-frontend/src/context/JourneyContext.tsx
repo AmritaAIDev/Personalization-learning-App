@@ -1,24 +1,31 @@
-'use client';
+"use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import { apiFetch, LEARNING_DATA_UPDATED_EVENT } from '@/lib/api';
-import { useAuth } from '@/context/AuthContext';
-import type { AuthenticatedUser } from '@/lib/diagnostic-types';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { apiFetch, LEARNING_DATA_UPDATED_EVENT } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import type { AuthenticatedUser } from "@/lib/diagnostic-types";
 
 export interface Subtopic {
   id?: string;
   name: string;
   score: number | null;
-  state?: 'locked' | 'active' | 'completed';
-  nodeType?: 'history' | 'prerequisite' | 'next-step' | 'recommended';
-  prerequisites?: { id: string, name: string, score: number }[];
+  state?: "locked" | "active" | "completed";
+  nodeType?: "history" | "prerequisite" | "next-step" | "recommended";
+  prerequisites?: { id: string; name: string; score: number }[];
 }
 
 export interface JourneyNode {
   id: string;
   name: string;
   subject: string;
-  state: 'locked' | 'active' | 'completed';
+  state: "locked" | "active" | "completed";
   score?: number | null;
   subtopics?: Subtopic[];
 }
@@ -39,27 +46,30 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
   const [journeyLoading, setJourneyLoading] = useState(false);
   const { user, loading: authLoading } = useAuth();
 
-  const fetchJourney = useCallback(async (force = false) => {
-    if (authLoading) return;
-    if (!user) {
-      setJourneyNodes([]);
-      setJourneyLoading(false);
-      return;
-    }
-    setJourneyLoading(true);
-    try {
-      const journeyData = await apiFetch<JourneyNode[]>(
-        '/api/sessions/journey',
-        force ? {} : { memoryCacheTtlMs: 45_000 },
-      );
-      setJourneyNodes(Array.isArray(journeyData) ? journeyData : []);
-    } catch (error) {
-      console.error('Failed to fetch the learner journey.', error);
-      setJourneyNodes([]);
-    } finally {
-      setJourneyLoading(false);
-    }
-  }, [authLoading, user]);
+  const fetchJourney = useCallback(
+    async (force = false) => {
+      if (authLoading) return;
+      if (!user) {
+        setJourneyNodes([]);
+        setJourneyLoading(false);
+        return;
+      }
+      setJourneyLoading(true);
+      try {
+        const journeyData = await apiFetch<JourneyNode[]>(
+          "/api/sessions/journey",
+          force ? {} : { memoryCacheTtlMs: 45_000 },
+        );
+        setJourneyNodes(Array.isArray(journeyData) ? journeyData : []);
+      } catch (error) {
+        console.error("Failed to fetch the learner journey.", error);
+        setJourneyNodes([]);
+      } finally {
+        setJourneyLoading(false);
+      }
+    },
+    [authLoading, user],
+  );
 
   useEffect(() => {
     const loadJourney = async () => {
@@ -70,12 +80,26 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const refreshOnLearningMutation = () => void fetchJourney(true);
-    window.addEventListener(LEARNING_DATA_UPDATED_EVENT, refreshOnLearningMutation);
-    return () => window.removeEventListener(LEARNING_DATA_UPDATED_EVENT, refreshOnLearningMutation);
+    window.addEventListener(
+      LEARNING_DATA_UPDATED_EVENT,
+      refreshOnLearningMutation,
+    );
+    return () =>
+      window.removeEventListener(
+        LEARNING_DATA_UPDATED_EVENT,
+        refreshOnLearningMutation,
+      );
   }, [fetchJourney]);
 
   return (
-    <JourneyContext.Provider value={{ journeyNodes: user ? journeyNodes : [], user, loading: authLoading || journeyLoading, refreshJourney: () => fetchJourney(true) }}>
+    <JourneyContext.Provider
+      value={{
+        journeyNodes: user ? journeyNodes : [],
+        user,
+        loading: authLoading || journeyLoading,
+        refreshJourney: () => fetchJourney(true),
+      }}
+    >
       {children}
     </JourneyContext.Provider>
   );
@@ -84,7 +108,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
 export function useJourney() {
   const context = useContext(JourneyContext);
   if (context === undefined) {
-    throw new Error('useJourney must be used within a JourneyProvider');
+    throw new Error("useJourney must be used within a JourneyProvider");
   }
   return context;
 }

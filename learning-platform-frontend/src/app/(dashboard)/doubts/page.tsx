@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
@@ -11,28 +11,29 @@ import {
   MessageSquareText,
   Send,
   Sparkles,
-} from 'lucide-react';
-import PageHero from '@/components/product/PageHero';
-import { ApiError, apiFetch } from '@/lib/api';
+} from "lucide-react";
+import PageHero from "@/components/product/PageHero";
+import StudyMarkdown from "@/components/learning/StudyMarkdown";
+import { ApiError, apiFetch } from "@/lib/api";
 import type {
   CreateDoubtPayload,
   DoubtCard,
   DoubtsResponse,
-} from '@/lib/doubts-types';
+} from "@/lib/doubts-types";
 
 const emptyForm: CreateDoubtPayload = {
-  subject: '',
-  chapter: '',
-  topic: '',
-  message: '',
+  subject: "",
+  chapter: "",
+  topic: "",
+  message: "",
 };
 
 function formatTime(value: string) {
-  return new Intl.DateTimeFormat('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
   }).format(new Date(value));
 }
 
@@ -56,15 +57,15 @@ function DoubtsSkeleton() {
 }
 
 function DoubtHistoryCard({ doubt }: { doubt: DoubtCard }) {
-  const answered = doubt.status === 'ANSWERED';
+  const answered = doubt.status === "ANSWERED";
   return (
     <article className="rounded-2xl border border-hairline bg-canvas p-4 transition hover:border-primary/25 hover:shadow-[0_14px_30px_rgba(20,20,30,0.07)]">
       <div className="flex flex-wrap items-center gap-2">
         <span
           className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] ${
             answered
-              ? 'bg-emerald-50 text-emerald-700'
-              : 'bg-amber-50 text-amber-700'
+              ? "bg-emerald-50 text-emerald-700"
+              : "bg-amber-50 text-amber-700"
           }`}
         >
           {answered ? (
@@ -72,7 +73,7 @@ function DoubtHistoryCard({ doubt }: { doubt: DoubtCard }) {
           ) : (
             <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />
           )}
-          {answered ? 'Answered' : 'Open'}
+          {answered ? "Answered" : "Open"}
         </span>
         <span className="text-xs font-semibold text-ink-mute">
           {formatTime(doubt.createdAt)}
@@ -85,16 +86,18 @@ function DoubtHistoryCard({ doubt }: { doubt: DoubtCard }) {
         {doubt.message}
       </h3>
       {doubt.assistantResponse ? (
-        <div className="mt-4 rounded-2xl border border-hairline bg-white p-4 text-sm leading-6 text-ink-soft">
-          {doubt.assistantResponse.split('\n').map((line) => (
-            <p key={line} className="mb-2 last:mb-0">
-              {line.replace(/^#+\s*/, '')}
-            </p>
-          ))}
-        </div>
+        <StudyMarkdown className="mt-4 rounded-2xl border border-hairline bg-white p-4 text-sm leading-6 text-ink-soft">
+          {doubt.assistantResponse}
+        </StudyMarkdown>
       ) : (
-        <p className="mt-4 rounded-2xl border border-dashed border-hairline bg-white p-4 text-sm leading-6 text-ink-mute">
-          Saved to your doubt history. The tutor response will appear here when the AI service is available.
+        <p className="mt-4 flex items-center gap-2 rounded-2xl border border-dashed border-hairline bg-white p-4 text-sm leading-6 text-ink-mute">
+          <Loader2
+            className="h-4 w-4 animate-spin text-primary"
+            aria-hidden="true"
+          />
+          {answered
+            ? ""
+            : "The tutor is writing its answer — it will appear here shortly."}
         </p>
       )}
     </article>
@@ -108,10 +111,12 @@ export default function DoubtsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [pendingDoubtId, setPendingDoubtId] = useState<string | null>(null);
+  const pollRef = useRef<number | null>(null);
 
   async function loadDoubts() {
     setError(null);
-    const data = await apiFetch<DoubtsResponse>('/api/doubts');
+    const data = await apiFetch<DoubtsResponse>("/api/doubts");
     setDoubts(data);
   }
 
@@ -121,14 +126,14 @@ export default function DoubtsPage() {
     async function load() {
       setLoading(true);
       try {
-        const data = await apiFetch<DoubtsResponse>('/api/doubts');
+        const data = await apiFetch<DoubtsResponse>("/api/doubts");
         if (!cancelled) setDoubts(data);
       } catch (caught) {
         if (!cancelled) {
           setError(
             caught instanceof ApiError
               ? caught.message
-              : 'Unable to load doubts right now.',
+              : "Unable to load doubts right now.",
           );
         }
       } finally {
@@ -143,24 +148,59 @@ export default function DoubtsPage() {
     };
   }, []);
 
+  // Poll for the background tutor response until the saved doubt is answered
+  // (or we give up after ~2 minutes). The backend resolves the doubt out-of-band.
+  useEffect(() => {
+    if (!pendingDoubtId) return;
+    const targetId = pendingDoubtId;
+    let attempts = 0;
+    const stop = () => {
+      if (pollRef.current) window.clearTimeout(pollRef.current);
+      pollRef.current = null;
+    };
+    const tick = async () => {
+      attempts += 1;
+      try {
+        const data = await apiFetch<DoubtsResponse>("/api/doubts");
+        setDoubts(data);
+        const resolved = data.doubts.find((d) => d.id === targetId);
+        if (resolved && resolved.status === "ANSWERED") {
+          setPendingDoubtId(null);
+          setSuccess("Tutor answered your doubt.");
+          return;
+        }
+      } catch {
+        // ignore transient poll errors; retry
+      }
+      if (attempts >= 40) {
+        setPendingDoubtId(null);
+        setSuccess("Still thinking — refresh later to see the answer.");
+        return;
+      }
+      pollRef.current = window.setTimeout(tick, 3000);
+    };
+    pollRef.current = window.setTimeout(tick, 3000);
+    return stop;
+  }, [pendingDoubtId]);
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
     setSuccess(null);
     try {
-      await apiFetch<DoubtCard>('/api/doubts', {
-        method: 'POST',
+      const created = await apiFetch<DoubtCard>("/api/doubts", {
+        method: "POST",
         body: JSON.stringify(form),
       });
       setForm(emptyForm);
-      setSuccess('Doubt saved. Tutor response is stored when available.');
+      setSuccess("Doubt saved — the tutor is writing its answer…");
+      setPendingDoubtId(created.id);
       await loadDoubts();
     } catch (caught) {
       setError(
         caught instanceof ApiError
           ? caught.message
-          : 'Unable to save this doubt right now.',
+          : "Unable to save this doubt right now.",
       );
     } finally {
       setSubmitting(false);
@@ -212,14 +252,16 @@ export default function DoubtsPage() {
                     Save the exact confusion
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-ink-soft">
-                    Add the topic and your doubt. If the tutor is available, the answer is stored immediately; if not, your doubt still stays saved.
+                    Add the topic and your doubt. If the tutor is available, the
+                    answer is stored immediately; if not, your doubt still stays
+                    saved.
                   </p>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <div className="grid gap-3 sm:grid-cols-3">
-                  {(['subject', 'chapter', 'topic'] as const).map((field) => (
+                  {(["subject", "chapter", "topic"] as const).map((field) => (
                     <label key={field} className="block">
                       <span className="text-xs font-bold uppercase tracking-[0.14em] text-ink-mute">
                         {field}
@@ -233,11 +275,11 @@ export default function DoubtsPage() {
                           }))
                         }
                         placeholder={
-                          field === 'subject'
-                            ? 'Physics'
-                            : field === 'chapter'
-                              ? 'Electrostatics'
-                              : 'Gauss Law'
+                          field === "subject"
+                            ? "Physics"
+                            : field === "chapter"
+                              ? "Electrostatics"
+                              : "Gauss Law"
                         }
                         className="mt-2 min-h-11 w-full rounded-xl border border-hairline bg-canvas px-3 text-sm font-semibold text-ink outline-none transition focus:border-primary/45 focus:bg-white"
                       />
@@ -264,13 +306,19 @@ export default function DoubtsPage() {
 
                 {error ? (
                   <div className="flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <AlertCircle
+                      className="mt-0.5 h-4 w-4 shrink-0"
+                      aria-hidden="true"
+                    />
                     {error}
                   </div>
                 ) : null}
                 {success ? (
                   <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <CheckCircle2
+                      className="mt-0.5 h-4 w-4 shrink-0"
+                      aria-hidden="true"
+                    />
                     {success}
                   </div>
                 ) : null}
@@ -281,11 +329,14 @@ export default function DoubtsPage() {
                   className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-55"
                 >
                   {submitting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
                   ) : (
                     <Send className="h-4 w-4" aria-hidden="true" />
                   )}
-                  {submitting ? 'Saving doubt' : 'Ask tutor'}
+                  {submitting ? "Saving doubt" : "Ask tutor"}
                 </button>
               </form>
             </section>
@@ -307,7 +358,9 @@ export default function DoubtsPage() {
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-3">
                   <div className="rounded-2xl bg-white/8 p-4">
-                    <p className="text-2xl font-semibold">{doubts?.summary.open ?? 0}</p>
+                    <p className="text-2xl font-semibold">
+                      {doubts?.summary.open ?? 0}
+                    </p>
                     <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-white/55">
                       Open
                     </p>
@@ -335,7 +388,8 @@ export default function DoubtsPage() {
                   </div>
                 ) : (
                   <div className="mt-4 rounded-2xl border border-dashed border-hairline bg-canvas p-5 text-sm leading-6 text-ink-mute">
-                    No doubt history yet. Ask your first doubt and it will be saved here from the backend.
+                    No doubt history yet. Ask your first doubt and it will be
+                    saved here from the backend.
                   </div>
                 )}
               </section>

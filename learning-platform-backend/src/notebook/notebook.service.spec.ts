@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { NotebookService } from './notebook.service';
 import { PracticeAttemptStatus } from '../practice/practice.types';
 
@@ -32,6 +33,69 @@ function makeQueryBuilder<T>(rows: T[]): QueryBuilderMock<T> {
   return builder;
 }
 
+function makeConceptSummaryRepository(
+  existing: {
+    sourceHash: string;
+    conceptLabel: string;
+    misconceptionSummary: string;
+  } | null = null,
+) {
+  return {
+    findOne: jest.fn().mockResolvedValue(
+      existing
+        ? {
+            id: 'cached-1',
+            userId: 'user-1',
+            subject: 'Physics',
+            chapter: 'Electrostatics',
+            topic: 'Gauss Law',
+            ...existing,
+          }
+        : null,
+    ),
+    create: jest.fn((entity: Record<string, unknown>) => entity),
+    save: jest.fn().mockResolvedValue(undefined),
+  } as never;
+}
+
+function makeConceptService(
+  label = 'Flux vs enclosed charge',
+  summary = 'You keep treating outside charge as contributing to flux.',
+) {
+  return {
+    summariseGroup: jest.fn().mockResolvedValue({
+      conceptLabel: label,
+      misconceptionSummary: summary,
+      source: 'LLM' as const,
+    }),
+  };
+}
+
+function practiceAnswer(
+  id: string,
+  topic: string,
+  occurredAt: string,
+  misconception = 'Gap',
+) {
+  return {
+    id,
+    selectedOption: 'A',
+    updatedAt: new Date(occurredAt),
+    question: {
+      id: `q-${id}`,
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic,
+      question_text: `${topic} question`,
+      correct_answer: 'B',
+      solution: 'Solution',
+      common_errors: [misconception],
+      concept_tags: ['flux'],
+      difficulty: 'Easy',
+      bloom_level: 'Remember',
+    },
+  };
+}
 describe('NotebookService', () => {
   it('builds mistake cards from submitted practice answers and adaptive answers', async () => {
     const practiceAnswer = {
@@ -78,6 +142,8 @@ describe('NotebookService', () => {
     const service = new NotebookService(
       { createQueryBuilder: jest.fn(() => practiceQueryBuilder) } as never,
       { createQueryBuilder: jest.fn(() => adaptiveQueryBuilder) } as never,
+      makeConceptSummaryRepository(),
+      makeConceptService() as never,
     );
 
     const result = await service.getMistakes('user-1');
@@ -132,6 +198,8 @@ describe('NotebookService', () => {
         createQueryBuilder: jest.fn(() => makeQueryBuilder([older, latest])),
       } as never,
       { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
+      makeConceptSummaryRepository(),
+      makeConceptService() as never,
     );
 
     const result = await service.getMistakes('user-1');
@@ -142,4 +210,121 @@ describe('NotebookService', () => {
       selectedOption: 'C',
     });
   });
+
+  it('clubs mistakes into concept groups by topic and enriches via the LLM', async () => {
+    const practiceQb = makeQueryBuilder([
+      practiceAnswer(
+        'p1',
+        'Gauss Law',
+        '2026-07-20T10:00:00.000Z',
+        'Flux depends on outside charge.',
+      ),
+      practiceAnswer(
+        'p2',
+        'Gauss Law',
+        '2026-07-22T10:00:00.000Z',
+        'Confusing field with flux.',
+      ),
+    ]);
+    const adaptiveQb = makeQueryBuilder([
+      {
+        id: 'a1',
+        selectedOption: 'A',
+        createdAt: new Date('2026-07-21T10:00:00.000Z'),
+        sessionItem: {
+          question: null,
+          generatedQuestion: {
+            id: 'gq-1',
+            subject: 'Physics',
+            chapter: 'Electrostatics',
+            topic: 'Capacitance',
+            questionText: 'Capacitor question',
+            correctAnswer: 'B',
+            solution: 'Solution',
+            commonErrors: ['Misreading plate area.'],
+            conceptTags: ['capacitance'],
+            difficulty: 'Medium',
+            bloomLevel: 'Apply',
+          },
+        },
+      },
+    ]);
+    const conceptService = makeConceptService(
+      'Gauss Law — flux vs enclosed charge',
+      'You repeatedly treat outside charge as if it contributes to flux.',
+    );
+    const service = new NotebookService(
+      { createQueryBuilder: jest.fn(() => practiceQb) } as never,
+      { createQueryBuilder: jest.fn(() => adaptiveQb) } as never,
+      makeConceptSummaryRepository(),
+      conceptService as never,
+    );
+
+    const result = await service.getConceptGroups('user-1');
+
+    expect(result.groupCount).toBe(2);
+    // Groups are sorted by mistake count descending, so Gauss Law (2) is first.
+    expect(result.groups[0]).toMatchObject({
+      topic: 'Gauss Law',
+      mistakeCount: 2,
+      summarySource: 'LLM',
+      conceptLabel: 'Gauss Law — flux vs enclosed charge',
+    });
+    expect(result.groups[0].cards).toHaveLength(2);
+    expect(result.groups[1]).toMatchObject({
+      topic: 'Capacitance',
+      mistakeCount: 1,
+      // A singleton never calls the model — deterministic fallback.
+      summarySource: 'FALLBACK',
+      conceptLabel: 'Capacitance',
+    });
+    expect(conceptService.summariseGroup).toHaveBeenCalledTimes(1);
+  });
+
+  it('reuses a cached summary when the constituent misconceptions have not changed', async () => {
+    const practiceQb = makeQueryBuilder([
+      practiceAnswer(
+        'p1',
+        'Gauss Law',
+        '2026-07-20T10:00:00.000Z',
+        'Flux depends on outside charge.',
+      ),
+      practiceAnswer(
+        'p2',
+        'Gauss Law',
+        '2026-07-22T10:00:00.000Z',
+        'Confusing field with flux.',
+      ),
+    ]);
+    const cachedHash = createHashFor([
+      'q-p1:Flux depends on outside charge.',
+      'q-p2:Confusing field with flux.',
+    ]);
+    const conceptService = makeConceptService();
+    const summaryRepo = makeConceptSummaryRepository({
+      sourceHash: cachedHash,
+      conceptLabel: 'Cached label',
+      misconceptionSummary: 'Cached summary',
+    });
+    const service = new NotebookService(
+      { createQueryBuilder: jest.fn(() => practiceQb) } as never,
+      { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
+      summaryRepo,
+      conceptService as never,
+    );
+
+    const result = await service.getConceptGroups('user-1');
+
+    expect(result.groups[0].summarySource).toBe('CACHE');
+    expect(result.groups[0].conceptLabel).toBe('Cached label');
+    // The model is never called when the cache is still valid.
+    expect(conceptService.summariseGroup).not.toHaveBeenCalled();
+  });
 });
+
+function createHashFor(signatures: string[]): string {
+  return createHash('sha256')
+    .update(signatures.sort().join('|'))
+    .digest('hex')
+    .slice(0, 40);
+}

@@ -1,18 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { createHash } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { LearningAnswer } from '../adaptive/learning-answer.entity';
 import { GeneratedLearningQuestion } from '../adaptive/generated-learning-question.entity';
 import { PracticeAnswer } from '../practice/practice-answer.entity';
 import { PracticeAttemptStatus } from '../practice/practice.types';
 import { Question } from '../question.entity';
+import { NotebookConceptService } from './notebook-concept.service';
+import { NotebookConceptSummary } from './notebook-concept-summary.entity';
 import type {
+  NotebookConceptGroup,
+  NotebookConceptsResponse,
   NotebookMistakeCard,
   NotebookMistakesResponse,
   NotebookMistakeSource,
 } from './notebook.types';
 
 const DEFAULT_LIMIT = 24;
+const CONCEPT_GROUP_LIMIT = 100;
 
 type QuestionLike = {
   id: string;
@@ -31,37 +37,23 @@ type QuestionLike = {
 
 @Injectable()
 export class NotebookService {
+  private readonly logger = new Logger(NotebookService.name);
+
   constructor(
     @InjectRepository(PracticeAnswer)
     private readonly practiceAnswerRepository: Repository<PracticeAnswer>,
     @InjectRepository(LearningAnswer)
     private readonly learningAnswerRepository: Repository<LearningAnswer>,
+    @InjectRepository(NotebookConceptSummary)
+    private readonly conceptSummaryRepository: Repository<NotebookConceptSummary>,
+    private readonly conceptService: NotebookConceptService,
   ) {}
 
   async getMistakes(
     userId: string,
     limit = DEFAULT_LIMIT,
   ): Promise<NotebookMistakesResponse> {
-    const [practiceAnswers, adaptiveAnswers] = await Promise.all([
-      this.getPracticeMistakes(userId, limit),
-      this.getAdaptiveMistakes(userId, limit),
-    ]);
-
-    const practiceCards = practiceAnswers.map((answer) =>
-      this.toPracticeCard(answer),
-    );
-    const adaptiveCards = adaptiveAnswers
-      .map((answer) => this.toAdaptiveCard(answer))
-      .filter((card): card is NotebookMistakeCard => card !== null);
-
-    const cards = this.dedupeLatest([...practiceCards, ...adaptiveCards])
-      .sort(
-        (left, right) =>
-          new Date(right.occurredAt).getTime() -
-          new Date(left.occurredAt).getTime(),
-      )
-      .slice(0, limit);
-
+    const cards = await this.buildCards(userId, limit);
     return {
       cards,
       total: cards.length,
@@ -73,6 +65,219 @@ export class NotebookService {
         weakTopics: this.getWeakTopics(cards),
       },
     };
+  }
+
+  /**
+   * Concept-level notebook: every wrong answer is clubbed by topic, and each
+   * group carries an LLM-synthesised recurring-gap summary when one is useful.
+   * Summaries are cached per (user, topic) and invalidated by a hash of the
+   * constituent misconceptions, so the model is only called when the set of
+   * mistakes in a topic actually changes.
+   */
+  async getConceptGroups(userId: string): Promise<NotebookConceptsResponse> {
+    const cards = await this.buildCards(userId, CONCEPT_GROUP_LIMIT);
+    const groups = this.groupByTopic(cards);
+    const enriched = await Promise.all(
+      groups.map((group) => this.enrichGroup(userId, group)),
+    );
+    enriched.sort((left, right) => right.mistakeCount - left.mistakeCount);
+    return {
+      groups: enriched,
+      total: cards.length,
+      groupCount: enriched.length,
+      summary: {
+        practiceMistakes: cards.filter((card) => card.source === 'PRACTICE')
+          .length,
+        adaptiveMistakes: cards.filter((card) => card.source === 'ADAPTIVE')
+          .length,
+      },
+    };
+  }
+
+  private async buildCards(
+    userId: string,
+    limit: number,
+  ): Promise<NotebookMistakeCard[]> {
+    const [practiceAnswers, adaptiveAnswers] = await Promise.all([
+      this.getPracticeMistakes(userId, limit),
+      this.getAdaptiveMistakes(userId, limit),
+    ]);
+    const practiceCards = practiceAnswers.map((answer) =>
+      this.toPracticeCard(answer),
+    );
+    const adaptiveCards = adaptiveAnswers
+      .map((answer) => this.toAdaptiveCard(answer))
+      .filter((card): card is NotebookMistakeCard => card !== null);
+    return this.dedupeLatest([...practiceCards, ...adaptiveCards])
+      .sort(
+        (left, right) =>
+          new Date(right.occurredAt).getTime() -
+          new Date(left.occurredAt).getTime(),
+      )
+      .slice(0, limit);
+  }
+
+  private groupByTopic(
+    cards: NotebookMistakeCard[],
+  ): Omit<
+    NotebookConceptGroup,
+    'conceptLabel' | 'misconceptionSummary' | 'summarySource'
+  >[] {
+    const buckets = new Map<string, NotebookMistakeCard[]>();
+    for (const card of cards) {
+      const key = `${card.subject}|${card.topic}`;
+      const list = buckets.get(key);
+      if (list) list.push(card);
+      else buckets.set(key, [card]);
+    }
+    return Array.from(buckets.entries()).map(([key, groupCards]) => {
+      const first = groupCards[0];
+      const bloomLevels = Array.from(
+        new Set(groupCards.map((card) => card.bloomLevel)),
+      );
+      const difficulties = Array.from(
+        new Set(groupCards.map((card) => card.difficulty)),
+      );
+      const conceptTags = Array.from(
+        new Set(groupCards.flatMap((card) => card.conceptTags)),
+      ).slice(0, 6);
+      const dueCount = groupCards.filter(
+        (card) => card.reviewState === 'DUE',
+      ).length;
+      const lastOccurredAt = groupCards
+        .map((card) => new Date(card.occurredAt).getTime())
+        .reduce((max, value) => Math.max(max, value), 0);
+      return {
+        id: key,
+        subject: first.subject,
+        chapter: first.chapter,
+        topic: first.topic,
+        mistakeCount: groupCards.length,
+        dueCount,
+        lastOccurredAt: new Date(lastOccurredAt).toISOString(),
+        bloomLevels,
+        difficulties,
+        conceptTags,
+        cards: groupCards,
+        practiceSimilar: {
+          subject: first.subject,
+          chapter: first.chapter,
+          topic: first.topic,
+        },
+      };
+    });
+  }
+
+  private async enrichGroup(
+    userId: string,
+    group: Omit<
+      NotebookConceptGroup,
+      'conceptLabel' | 'misconceptionSummary' | 'summarySource'
+    >,
+  ): Promise<NotebookConceptGroup> {
+    // Singletons are not worth a model call: use a deterministic label/summary
+    // directly. The concept service still has its own fallback as a safety net.
+    if (group.cards.length < 2) {
+      const fallback = this.buildFallback(group);
+      return {
+        ...group,
+        conceptLabel: fallback.conceptLabel,
+        misconceptionSummary: fallback.misconceptionSummary,
+        summarySource: 'FALLBACK',
+      };
+    }
+    const sourceHash = this.hashGroup(group.cards);
+    const cached = await this.conceptSummaryRepository.findOne({
+      where: {
+        userId,
+        subject: group.subject,
+        topic: group.topic,
+      },
+    });
+    if (cached && cached.sourceHash === sourceHash) {
+      return {
+        ...group,
+        conceptLabel: cached.conceptLabel,
+        misconceptionSummary: cached.misconceptionSummary,
+        summarySource: 'CACHE',
+      };
+    }
+    const result = await this.conceptService.summariseGroup({
+      topic: group.topic,
+      chapter: group.chapter,
+      subject: group.subject,
+      cards: group.cards,
+    });
+    // Persist (or refresh) the cache so subsequent loads skip the model call.
+    await this.persistSummary(userId, group, sourceHash, result);
+    return {
+      ...group,
+      conceptLabel: result.conceptLabel,
+      misconceptionSummary: result.misconceptionSummary,
+      summarySource: result.source,
+    };
+  }
+
+  private buildFallback(group: {
+    topic: string;
+    cards: NotebookMistakeCard[];
+  }): { conceptLabel: string; misconceptionSummary: string } {
+    const first = group.cards[0]?.misconception?.trim();
+    const summary =
+      first && first.length > 0
+        ? first
+        : `Review the core idea behind ${group.topic} and compare your reasoning with the worked solution.`;
+    return { conceptLabel: group.topic, misconceptionSummary: summary };
+  }
+
+  private async persistSummary(
+    userId: string,
+    group: Omit<
+      NotebookConceptGroup,
+      'conceptLabel' | 'misconceptionSummary' | 'summarySource'
+    >,
+    sourceHash: string,
+    result: {
+      conceptLabel: string;
+      misconceptionSummary: string;
+      source: 'LLM' | 'FALLBACK';
+    },
+  ): Promise<void> {
+    try {
+      const existing = await this.conceptSummaryRepository.findOne({
+        where: { userId, subject: group.subject, topic: group.topic },
+      });
+      const row = this.conceptSummaryRepository.create({
+        id: existing?.id,
+        userId,
+        subject: group.subject,
+        chapter: group.chapter,
+        topic: group.topic,
+        conceptLabel: result.conceptLabel,
+        misconceptionSummary: result.misconceptionSummary,
+        sourceHash,
+        summarySource: result.source,
+      });
+      if (existing) {
+        row.createdAt = existing.createdAt;
+        await this.conceptSummaryRepository.save(row);
+      } else {
+        await this.conceptSummaryRepository.save(row);
+      }
+    } catch (error) {
+      // A cache write failure must never break the notebook view.
+      this.logger.warn(
+        `Could not persist concept summary for ${group.topic}: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  private hashGroup(cards: NotebookMistakeCard[]): string {
+    const signature = cards
+      .map((card) => `${card.questionId}:${card.misconception}`)
+      .sort()
+      .join('|');
+    return createHash('sha256').update(signature).digest('hex').slice(0, 40);
   }
 
   private getPracticeMistakes(userId: string, limit: number) {

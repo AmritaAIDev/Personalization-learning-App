@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { Compass, Layers3, Target } from 'lucide-react';
-import type { LearningTab } from '@/lib/learning-types';
+import { Compass, Layers3, Target } from "lucide-react";
+import type { LearningTab } from "@/lib/learning-types";
 
 const TABS: Array<{
   value: LearningTab;
@@ -10,21 +10,21 @@ const TABS: Array<{
   Icon: typeof Compass;
 }> = [
   {
-    value: 'overview',
-    label: 'Overview',
-    hint: 'Mastery, history, and concept map',
+    value: "overview",
+    label: "Overview",
+    hint: "Mastery, history, and concept map",
     Icon: Compass,
   },
   {
-    value: 'practice',
-    label: 'Practice',
-    hint: 'Adaptive rounds with the linked tutor',
+    value: "practice",
+    label: "Practice",
+    hint: "Adaptive rounds with the linked tutor",
     Icon: Target,
   },
   {
-    value: 'flashcards',
-    label: 'Flashcards',
-    hint: 'Spaced recall for this topic',
+    value: "flashcards",
+    label: "Flashcards",
+    hint: "Spaced recall for this topic",
     Icon: Layers3,
   },
 ];
@@ -58,8 +58,8 @@ export default function LearningTabs({
             onClick={() => onChange(value)}
             className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition sm:flex-none sm:px-4 ${
               isActive
-                ? 'bg-primary text-white shadow-[0_8px_18px_rgba(20,20,30,0.16)]'
-                : 'text-ink-soft hover:bg-canvas hover:text-ink'
+                ? "bg-primary text-white shadow-[0_8px_18px_rgba(20,20,30,0.16)]"
+                : "text-ink-soft hover:bg-canvas hover:text-ink"
             }`}
           >
             <Icon className="h-4 w-4" aria-hidden="true" />

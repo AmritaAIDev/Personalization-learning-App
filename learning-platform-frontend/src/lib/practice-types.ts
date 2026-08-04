@@ -23,7 +23,7 @@ export interface PracticeQuestion {
   position: number;
 }
 
-export type PracticeStatus = 'IN_PROGRESS' | 'SUBMITTED';
+export type PracticeStatus = "IN_PROGRESS" | "SUBMITTED";
 
 export interface PracticeAttemptPayload {
   attempt: {
@@ -47,7 +47,7 @@ export interface PracticePerformanceRow {
   correct: number;
   total: number;
   score: number;
-  status: 'strong' | 'average' | 'weak';
+  status: "strong" | "average" | "weak";
 }
 
 export interface PracticeAnalysis {
@@ -55,7 +55,7 @@ export interface PracticeAnalysis {
   correct: number;
   incorrect: number;
   scorePercent: number;
-  grade: 'Excellent' | 'Good' | 'Average' | 'Needs work';
+  grade: "Excellent" | "Good" | "Average" | "Needs work";
   difficultyPerformance: PracticePerformanceRow[];
   bloomPerformance: PracticePerformanceRow[];
   weakConcepts: string[];

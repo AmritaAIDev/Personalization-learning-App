@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { ArrowRight, Compass, SearchX } from 'lucide-react';
-import AdaptiveStudySession from '@/components/learning/AdaptiveStudySession';
-import TopicPlacementGate from '@/components/learning/TopicPlacementGate';
-import TopicSearch from '@/components/search/TopicSearch';
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { ArrowRight, Compass, SearchX } from "lucide-react";
+import AdaptiveStudySession from "@/components/learning/AdaptiveStudySession";
+import TopicPlacementGate from "@/components/learning/TopicPlacementGate";
+import TopicSearch from "@/components/search/TopicSearch";
 import {
   learningScopeFromSearchParams,
   learningTabFromSearchParams,
-} from '@/lib/learning';
+} from "@/lib/learning";
 
 export default function LearnPage() {
   const searchParams = useSearchParams();
@@ -31,8 +31,9 @@ export default function LearnPage() {
                 Find a topic to open its learning cockpit.
               </h1>
               <p className="mt-4 max-w-lg text-sm leading-6 text-ink-soft">
-                Search a concept, chapter, or weak topic. The system opens the topic workspace and
-                places the student automatically from backend evidence.
+                Search a concept, chapter, or weak topic. The system opens the
+                topic workspace and places the student automatically from
+                backend evidence.
               </p>
               <Link
                 href="/"
@@ -51,8 +52,13 @@ export default function LearnPage() {
       </div>
     );
   }
-  if (searchParams.get('placement') === 'ask') {
-    return <TopicPlacementGate scope={scope} tab={learningTabFromSearchParams(searchParams)} />;
+  if (searchParams.get("placement") === "ask") {
+    return (
+      <TopicPlacementGate
+        scope={scope}
+        tab={learningTabFromSearchParams(searchParams)}
+      />
+    );
   }
   // Keying by scope gives every topic a clean workspace: an in-flight round,
   // tutor thread, and card queue never leak across topics.

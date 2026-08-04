@@ -34,3 +34,42 @@ export interface NotebookMistakesResponse {
     weakTopics: string[];
   };
 }
+
+/**
+ * Concept-level view of the notebook: individual mistakes are clubbed by topic
+ * and, where useful, an LLM synthesises the recurring conceptual gap into a
+ * single sentence. The member cards remain attached for drill-down.
+ */
+export type NotebookConceptSummarySource = 'LLM' | 'CACHE' | 'FALLBACK';
+
+export interface NotebookConceptGroup {
+  id: string;
+  subject: string;
+  chapter: string;
+  topic: string;
+  conceptLabel: string;
+  misconceptionSummary: string;
+  mistakeCount: number;
+  dueCount: number;
+  lastOccurredAt: string;
+  bloomLevels: string[];
+  difficulties: string[];
+  conceptTags: string[];
+  cards: NotebookMistakeCard[];
+  practiceSimilar: {
+    subject: string;
+    chapter: string;
+    topic: string;
+  };
+  summarySource: NotebookConceptSummarySource;
+}
+
+export interface NotebookConceptsResponse {
+  groups: NotebookConceptGroup[];
+  total: number;
+  groupCount: number;
+  summary: {
+    practiceMistakes: number;
+    adaptiveMistakes: number;
+  };
+}

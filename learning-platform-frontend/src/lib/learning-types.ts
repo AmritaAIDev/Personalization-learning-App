@@ -4,29 +4,22 @@ export type LearningScope = {
   topic: string;
 };
 
-export type LearningTab = 'overview' | 'flashcards' | 'practice';
+export type LearningTab = "overview" | "flashcards" | "practice";
 
 export type LearningCoordinate = {
   level: number;
-  bloomLevel: 'Recall' | 'Comprehension' | 'Application' | 'Higher-Order';
-  difficulty: 'Easy' | 'Medium' | 'Hard';
+  bloomLevel: "Recall" | "Comprehension" | "Application" | "Higher-Order";
+  difficulty: "Easy" | "Medium" | "Hard";
   label: string;
 };
 
 export type LearningTopicStatus =
-  | 'ACTIVE'
-  | 'MASTERED'
-  | 'PAUSED_FOR_PREREQUISITE';
+  "ACTIVE" | "MASTERED" | "PAUSED_FOR_PREREQUISITE";
 
-export type LearningSessionStatus = 'ACTIVE' | 'COMPLETED' | 'ROUTED';
+export type LearningSessionStatus = "ACTIVE" | "COMPLETED" | "ROUTED";
 
 export type LearningSessionTransition =
-  | 'NONE'
-  | 'ADVANCED'
-  | 'REINFORCE'
-  | 'DEMOTED'
-  | 'PREREQUISITE'
-  | 'MASTERED';
+  "NONE" | "ADVANCED" | "REINFORCE" | "DEMOTED" | "PREREQUISITE" | "MASTERED";
 
 export type LearningState = LearningScope & {
   id: string;
@@ -44,13 +37,13 @@ export type LearningState = LearningScope & {
 
 export type LearningPlacement = {
   level: number;
-  confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+  confidence: "LOW" | "MEDIUM" | "HIGH";
   reason:
-    | 'RESUME_TOPIC'
-    | 'CHAPTER_EVIDENCE'
-    | 'SUBJECT_EVIDENCE'
-    | 'PREREQUISITE_EVIDENCE'
-    | 'BASELINE';
+    | "RESUME_TOPIC"
+    | "CHAPTER_EVIDENCE"
+    | "SUBJECT_EVIDENCE"
+    | "PREREQUISITE_EVIDENCE"
+    | "BASELINE";
   stageLabel: string;
   summary: string;
   nextFocus: string;
@@ -58,8 +51,8 @@ export type LearningPlacement = {
 
 export type TutorMessage = {
   id: string;
-  role: 'USER' | 'ASSISTANT';
-  messageType: 'GENERAL' | 'SOCRATIC_HINT' | 'ANSWER_EXPLANATION';
+  role: "USER" | "ASSISTANT";
+  messageType: "GENERAL" | "SOCRATIC_HINT" | "ANSWER_EXPLANATION";
   content: string;
   relatedSessionItemId: string | null;
   createdAt: string;
@@ -94,7 +87,7 @@ export type LearningSessionPayload = {
   progress: Array<{
     id: string;
     sequence: number;
-    status: 'CURRENT' | 'PENDING' | 'RESOLVED';
+    status: "CURRENT" | "PENDING" | "RESOLVED";
     attemptCount: number;
   }>;
 };
@@ -102,20 +95,20 @@ export type LearningSessionPayload = {
 export type LearningAnswerPayload = LearningSessionPayload & {
   feedback: {
     kind:
-      | 'CORRECT'
-      | 'SOCRATIC_HINT'
-      | 'DEMOTED'
-      | 'ROUTED'
-      | 'ADVANCED'
-      | 'MASTERED'
-      | 'REINFORCE';
+      | "CORRECT"
+      | "SOCRATIC_HINT"
+      | "DEMOTED"
+      | "ROUTED"
+      | "ADVANCED"
+      | "MASTERED"
+      | "REINFORCE";
     assistantMessage: TutorMessage | null;
     tutorPending: boolean;
     route: LearningScope | null;
   };
 };
 
-export type FlashcardRating = 'AGAIN' | 'HARD' | 'GOOD' | 'EASY';
+export type FlashcardRating = "AGAIN" | "HARD" | "GOOD" | "EASY";
 
 export type FlashcardReviewState = {
   lastRating: FlashcardRating;
@@ -147,8 +140,10 @@ export type LearningDashboardPayload = {
     transition: LearningSessionTransition;
     completedAt: string | null;
   }>;
-  suggestions: Array<LearningScope & {
-    questionCount: number;
-    reason: string;
-  }>;
+  suggestions: Array<
+    LearningScope & {
+      questionCount: number;
+      reason: string;
+    }
+  >;
 };

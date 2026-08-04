@@ -35,6 +35,7 @@ import { TutorConversation } from './adaptive/tutor-conversation.entity';
 import { TutorMessage } from './adaptive/tutor-message.entity';
 import { NotebookModule } from './notebook/notebook.module';
 import { Doubt } from './doubts/doubt.entity';
+import { NotebookConceptSummary } from './notebook/notebook-concept-summary.entity';
 import { DoubtsModule } from './doubts/doubts.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 
@@ -80,6 +81,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
             TutorConversation,
             TutorMessage,
             Doubt,
+            NotebookConceptSummary,
           ],
           migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
           synchronize: false,

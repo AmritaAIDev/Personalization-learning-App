@@ -1,7 +1,7 @@
 # Practice session components
 
 `PracticeSession` runs a learner practice attempt against the authenticated API.
-It receives no answer key or explanation. The server owns selection validation,
+It receives no answer key or explanation. Question stems and answer options render through the shared StudyMarkdown (KaTeX), so equations display. The header is compact (title + countdown + slim progress). The server owns selection validation,
 scoring, the final result, and review data. `PracticeReview` is intentionally
 separate so explanations are requested only after a submitted attempt.
 

@@ -56,14 +56,31 @@ export class DoubtsService {
       answeredAt: null,
     });
 
+    // The tutor response is generated out-of-band so the create call returns
+    // immediately; the frontend polls until the doubt flips to ANSWERED.
     const saved = await this.doubtsRepository.save(doubt);
-    const tutorResponse = await this.tryGenerateTutorResponse(saved);
-    if (!tutorResponse) return this.toCard(saved);
+    void this.resolveDoubtInBackground(saved.id);
+    return this.toCard(saved);
+  }
 
-    saved.assistantResponse = tutorResponse;
-    saved.status = DoubtStatus.ANSWERED;
-    saved.answeredAt = new Date();
-    return this.toCard(await this.doubtsRepository.save(saved));
+  private async resolveDoubtInBackground(doubtId: string): Promise<void> {
+    try {
+      const doubt = await this.doubtsRepository.findOne({
+        where: { id: doubtId },
+      });
+      if (!doubt || doubt.status !== DoubtStatus.OPEN) return;
+      const tutorResponse = await this.tryGenerateTutorResponse(doubt);
+      if (!tutorResponse) return;
+      doubt.assistantResponse = tutorResponse;
+      doubt.status = DoubtStatus.ANSWERED;
+      doubt.answeredAt = new Date();
+      await this.doubtsRepository.save(doubt);
+    } catch (error) {
+      this.logger.warn(
+        `Background tutor response failed for doubt ${doubtId}.`,
+        error as Error,
+      );
+    }
   }
 
   private async tryGenerateTutorResponse(doubt: Doubt): Promise<string | null> {

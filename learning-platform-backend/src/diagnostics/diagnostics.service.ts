@@ -25,6 +25,8 @@ import {
   DiagnosticAnalysis,
   DiagnosticAttemptMode,
   DiagnosticAttemptStatus,
+  DiagnosticReviewItem,
+  DiagnosticReviewPayload,
   DIAGNOSTIC_DURATION_MINUTES,
   DIAGNOSTIC_QUESTION_COUNT,
   DIAGNOSTIC_QUESTIONS_PER_DIFFICULTY,
@@ -102,7 +104,12 @@ export class DiagnosticsService {
       await this.finalizeAttempt(activeAttempt, true);
     }
 
-    const questions = await this.getQuestionSet(user.id, subject, chapter, topic);
+    const questions = await this.getQuestionSet(
+      user.id,
+      subject,
+      chapter,
+      topic,
+    );
     const startedAt = new Date();
     const expiresAt = new Date(
       startedAt.getTime() + DIAGNOSTIC_DURATION_MINUTES * 60 * 1000,
@@ -230,6 +237,65 @@ export class DiagnosticsService {
     return { data: this.toAnalysisPayload(attempt) };
   }
 
+  async getReview(
+    userId: string,
+    attemptId: string,
+  ): Promise<{ data: DiagnosticReviewPayload }> {
+    const attempt = await this.getOwnedAttempt(userId, attemptId, true);
+    if (!attempt.analysis) {
+      throw new ConflictException(
+        'Submit the diagnostic before viewing its review.',
+      );
+    }
+    const questions = await this.questionsRepository.find({
+      where: { id: In(attempt.questionIds) },
+    });
+    const questionById = new Map(
+      questions.map((question) => [question.id, question]),
+    );
+    const answers = new Map(
+      (attempt.answers ?? []).map((answer) => [
+        answer.questionId,
+        answer.selectedOption,
+      ]),
+    );
+    const review: DiagnosticReviewItem[] = attempt.questionIds.map(
+      (questionId, index) => {
+        const question = questionById.get(questionId);
+        if (!question) {
+          throw new ServiceUnavailableException(
+            'A diagnostic question is no longer available.',
+          );
+        }
+        const selectedOption = answers.get(questionId) ?? null;
+        const isCorrect = selectedOption === question.correct_answer;
+        return {
+          position: index + 1,
+          questionId: question.question_id,
+          topic: question.topic,
+          difficulty: question.difficulty,
+          bloomLevel: question.bloom_level,
+          marks: question.marks,
+          questionText: question.question_text,
+          options: question.options,
+          selectedOption,
+          correctOption: question.correct_answer,
+          isCorrect,
+          solution: question.solution,
+        };
+      },
+    );
+    return {
+      data: {
+        attempt: {
+          id: attempt.id,
+          status: attempt.status,
+          submittedAt: attempt.submittedAt?.toISOString() ?? null,
+        },
+        questions: review,
+      },
+    };
+  }
   async getRecommendations(userId: string, attemptId: string) {
     const attempt = await this.getOwnedAttempt(userId, attemptId, false);
     if (!attempt.analysis) {
@@ -391,7 +457,9 @@ export class DiagnosticsService {
     const bank = await this.questionsRepository.find({
       where: {
         subject,
-        ...(chapter ? { chapter } : { chapter: In([...ELECTROSTATICS_CHAPTERS]) }),
+        ...(chapter
+          ? { chapter }
+          : { chapter: In([...ELECTROSTATICS_CHAPTERS]) }),
         ...(topic ? { topic } : {}),
         status: QuestionPublicationStatus.PUBLISHED,
       },
@@ -421,7 +489,9 @@ export class DiagnosticsService {
     const recentlyUsed = new Set(
       recentAttempts.flatMap((attempt) => attempt.questionIds),
     );
-    const unseenBank = bank.filter((question) => !recentlyUsed.has(question.id));
+    const unseenBank = bank.filter(
+      (question) => !recentlyUsed.has(question.id),
+    );
     const selectionBank = this.hasBalancedDifficultyCoverage(unseenBank)
       ? unseenBank
       : bank;
@@ -460,10 +530,10 @@ export class DiagnosticsService {
       let bestScore = Number.POSITIVE_INFINITY;
       for (let index = 0; index < pool.length; index += 1) {
         const candidate = pool[index];
-          const score =
-            (bloomUsage.get(candidate.bloom_level) ?? 0) * 10 +
-            (chapterUsage.get(candidate.chapter) ?? 0) * 3 -
-            Math.min(candidate.quality_score ?? 0, 100) / 1000;
+        const score =
+          (bloomUsage.get(candidate.bloom_level) ?? 0) * 10 +
+          (chapterUsage.get(candidate.chapter) ?? 0) * 3 -
+          Math.min(candidate.quality_score ?? 0, 100) / 1000;
         if (score < bestScore) {
           bestScore = score;
           bestIndex = index;
@@ -564,16 +634,18 @@ export class DiagnosticsService {
     });
     if (existing?.totalAnswered) return;
     const level = this.placementLevel(attempt.analysis.scorePercent);
-    const state = existing ?? this.topicStatesRepository.create({
-      userId: attempt.userId,
-      subject: attempt.subject,
-      chapter: attempt.chapter,
-      topic: attempt.topic,
-      streakCounter: 0,
-      totalAnswered: 0,
-      totalCorrect: 0,
-      masteredAt: null,
-    });
+    const state =
+      existing ??
+      this.topicStatesRepository.create({
+        userId: attempt.userId,
+        subject: attempt.subject,
+        chapter: attempt.chapter,
+        topic: attempt.topic,
+        streakCounter: 0,
+        totalAnswered: 0,
+        totalCorrect: 0,
+        masteredAt: null,
+      });
     state.currentLevel = level;
     state.status = LearningTopicStatus.ACTIVE;
     state.lastActivityAt = new Date();
@@ -614,7 +686,19 @@ export class DiagnosticsService {
       blooms.set(bloomKey, bloom);
     }
 
-    const scorePercent = Math.round((correctCount / questions.length) * 100);
+    // Mark-weighted score: harder/higher-mark questions contribute more, so a
+    // raw correct count no longer flattens a 1-mark and a 5-mark question.
+    const totalMarks = questions.reduce(
+      (sum, question) => sum + (question.marks ?? 1),
+      0,
+    );
+    const earnedMarks = questions.reduce((sum, question) => {
+      const correct =
+        answers.get(question.id)?.selectedOption === question.correct_answer;
+      return sum + (correct ? (question.marks ?? 1) : 0);
+    }, 0);
+    const scorePercent =
+      totalMarks > 0 ? Math.round((earnedMarks / totalMarks) * 100) : 0;
     const makePerformance = (
       label: string,
       values: { correct: number; total: number },
@@ -652,7 +736,9 @@ export class DiagnosticsService {
       topicPerformance,
       bloomPerformance,
       weakTopics: topicPerformance
-        .filter((performance) => performance.score < 50)
+        .filter(
+          (performance) => performance.total >= 2 && performance.score < 50,
+        )
         .map((performance) => performance.label),
       calculatedAt: new Date().toISOString(),
     };

@@ -1,64 +1,66 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 import {
   describeRoundOutcome,
   learningTabFromSearchParams,
   learningUrl,
-} from './learning';
+} from "./learning";
 
-describe('learning helpers', () => {
-  it('builds a learning url with an optional workspace tab', () => {
+describe("learning helpers", () => {
+  it("builds a learning url with an optional workspace tab", () => {
     expect(
       learningUrl(
         {
-          subject: 'Physics',
-          chapter: 'Electrostatics',
-          topic: 'Electric Field',
+          subject: "Physics",
+          chapter: "Electrostatics",
+          topic: "Electric Field",
         },
-        { tab: 'practice' },
+        { tab: "practice" },
       ),
     ).toBe(
-      '/learn?subject=Physics&chapter=Electrostatics&topic=Electric+Field&tab=practice',
+      "/learn?subject=Physics&chapter=Electrostatics&topic=Electric+Field&tab=practice",
     );
   });
 
-  it('keeps an invalid tab query at the overview baseline', () => {
-    const bad = new URLSearchParams('tab=matrix');
-    const good = new URLSearchParams('tab=flashcards');
-    const legacy = new URLSearchParams('tab=review');
-    expect(learningTabFromSearchParams(bad as never)).toBe('overview');
-    expect(learningTabFromSearchParams(good as never)).toBe('flashcards');
-    expect(learningTabFromSearchParams(legacy as never)).toBe('flashcards');
+  it("keeps an invalid tab query at the overview baseline", () => {
+    const bad = new URLSearchParams("tab=matrix");
+    const good = new URLSearchParams("tab=flashcards");
+    const legacy = new URLSearchParams("tab=review");
+    expect(learningTabFromSearchParams(bad as never)).toBe("overview");
+    expect(learningTabFromSearchParams(good as never)).toBe("flashcards");
+    expect(learningTabFromSearchParams(legacy as never)).toBe("flashcards");
   });
 });
 
-describe('round outcome copy', () => {
-  it('celebrates mastery and points at durable review', () => {
-    const outcome = describeRoundOutcome('MASTERED');
-    expect(outcome.tone).toBe('mastered');
+describe("round outcome copy", () => {
+  it("celebrates mastery and points at durable review", () => {
+    const outcome = describeRoundOutcome("MASTERED");
+    expect(outcome.tone).toBe("mastered");
     expect(outcome.continueLabel).toMatch(/flashcards/i);
   });
 
-  it('frames a demotion as rebuilding rather than failure', () => {
-    const outcome = describeRoundOutcome('DEMOTED');
-    expect(outcome.tone).toBe('rebuild');
+  it("frames a demotion as rebuilding rather than failure", () => {
+    const outcome = describeRoundOutcome("DEMOTED");
+    expect(outcome.tone).toBe("rebuild");
     expect(outcome.title).not.toMatch(/fail/i);
   });
 
-  it('gives every transition a distinct, actionable label', () => {
+  it("gives every transition a distinct, actionable label", () => {
     const transitions = [
-      'NONE',
-      'ADVANCED',
-      'REINFORCE',
-      'DEMOTED',
-      'PREREQUISITE',
-      'MASTERED',
+      "NONE",
+      "ADVANCED",
+      "REINFORCE",
+      "DEMOTED",
+      "PREREQUISITE",
+      "MASTERED",
     ] as const;
     const titles = transitions.map(
       (transition) => describeRoundOutcome(transition).title,
     );
     expect(new Set(titles).size).toBe(transitions.length);
     for (const transition of transitions) {
-      expect(describeRoundOutcome(transition).continueLabel.length).toBeGreaterThan(0);
+      expect(
+        describeRoundOutcome(transition).continueLabel.length,
+      ).toBeGreaterThan(0);
     }
   });
 });

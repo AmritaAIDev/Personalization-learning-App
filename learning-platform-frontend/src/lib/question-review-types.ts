@@ -1,5 +1,5 @@
-export type QuestionReviewStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-export type QuestionSource = 'CURATED' | 'AI_GENERATED';
+export type QuestionReviewStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+export type QuestionSource = "CURATED" | "AI_GENERATED";
 
 /** Full question content is returned only by the admin-only review API. */
 export interface AdminQuestionRecord {

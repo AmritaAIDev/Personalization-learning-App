@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { ArrowRight, Layers3, SearchCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, Layers3, SearchCheck, Sparkles } from "lucide-react";
 import type {
   LearningDashboardPayload,
   LearningScope,
   LearningState,
-} from '@/lib/learning-types';
-import SubtopicExplorer from './SubtopicExplorer';
+} from "@/lib/learning-types";
+import SubtopicExplorer from "./SubtopicExplorer";
 
 function formatTransitionLabel(value: string): string {
   return value
     .toLowerCase()
-    .replace(/_/g, ' ')
+    .replace(/_/g, " ")
     .replace(/^\w/, (letter) => letter.toUpperCase());
 }
 
@@ -44,13 +44,13 @@ export default function TopicOverview({
       ? Math.round((topicState.totalCorrect / topicState.totalAnswered) * 100)
       : null;
   const status =
-    topicState?.status === 'MASTERED'
-      ? 'Mastered'
-      : topicState?.status === 'PAUSED_FOR_PREREQUISITE'
-        ? 'Foundation needed'
+    topicState?.status === "MASTERED"
+      ? "Mastered"
+      : topicState?.status === "PAUSED_FOR_PREREQUISITE"
+        ? "Foundation needed"
         : topicState
-          ? 'In progress'
-          : 'Ready to place';
+          ? "In progress"
+          : "Ready to place";
   const coordinate = topicState?.currentCoordinate;
 
   return (
@@ -65,11 +65,13 @@ export default function TopicOverview({
                   Current learning route
                 </p>
                 <h2 className="mt-2 font-heading text-2xl font-bold tracking-tight text-ink">
-                  {topicState ? topicState.stageLabel : 'Start placement through practice'}
+                  {topicState
+                    ? topicState.stageLabel
+                    : "Start placement through practice"}
                 </h2>
                 <p className="mt-2 max-w-md text-sm leading-6 text-ink-soft">
                   {topicState?.nextFocus ??
-                    'One short round places you automatically from your own answers.'}
+                    "One short round places you automatically from your own answers."}
                 </p>
               </div>
               <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
@@ -78,7 +80,7 @@ export default function TopicOverview({
                   onClick={onOpenPractice}
                   className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20,20,30,0.18)] transition hover:-translate-y-0.5 hover:bg-primary-strong"
                 >
-                  {topicState ? 'Continue practice' : 'Start practice'}
+                  {topicState ? "Continue practice" : "Start practice"}
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </button>
                 <button
@@ -121,7 +123,7 @@ export default function TopicOverview({
                 Accuracy
               </dt>
               <dd className="mt-1 font-heading text-xl font-bold text-ink">
-                {accuracy === null ? '—' : `${accuracy}%`}
+                {accuracy === null ? "—" : `${accuracy}%`}
               </dd>
             </div>
             <div className="px-5 py-4 sm:px-6">
@@ -130,7 +132,9 @@ export default function TopicOverview({
               </dt>
               <dd className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-bold text-ink">
                 <span>
-                  {coordinate ? `Level ${topicState?.currentLevel}` : 'Not placed'}
+                  {coordinate
+                    ? `Level ${topicState?.currentLevel}`
+                    : "Not placed"}
                 </span>
                 <span className="text-ink-mute">
                   {coordinate

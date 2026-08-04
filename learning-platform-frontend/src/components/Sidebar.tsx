@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Atom,
   Compass,
@@ -18,11 +18,11 @@ import {
   Timer,
   UserRound,
   type LucideIcon,
-} from 'lucide-react';
-import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import type { UserRole } from '@/lib/diagnostic-types';
-import WorkspaceSelector from '@/components/WorkspaceSelector';
+} from "lucide-react";
+import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import type { UserRole } from "@/lib/diagnostic-types";
+import WorkspaceSelector from "@/components/WorkspaceSelector";
 
 const navigation: Array<{
   label: string;
@@ -30,20 +30,32 @@ const navigation: Array<{
   icon: LucideIcon;
   roles?: readonly UserRole[];
 }> = [
-  { label: 'Dashboard', href: '/', icon: Home },
-  { label: 'Journey', href: '/journey', icon: Map },
-  { label: 'Learn', href: '/learn', icon: Compass },
-  { label: 'Practice', href: '/practice', icon: SquarePen },
-  { label: 'Tests', href: '/tests', icon: Timer },
-  { label: 'Notebook', href: '/notebook', icon: NotebookTabs },
-  { label: 'Doubts', href: '/doubts', icon: HelpCircle },
-  { label: 'Content', href: '/content', icon: PenLine, roles: ['admin'] },
+  { label: "Dashboard", href: "/", icon: Home },
+  { label: "Journey", href: "/journey", icon: Map },
+  { label: "Learn", href: "/learn", icon: Compass },
+  { label: "Practice", href: "/practice", icon: SquarePen },
+  { label: "Tests", href: "/tests", icon: Timer },
+  { label: "Notebook", href: "/notebook", icon: NotebookTabs },
+  { label: "Doubts", href: "/doubts", icon: HelpCircle },
+  { label: "Content", href: "/content", icon: PenLine, roles: ["admin"] },
 ];
 
-const workspaceLabels = new Set(['Learn', 'Practice', 'Tests', 'Notebook', 'Doubts']);
-const overviewLabels = new Set(['Dashboard', 'Journey']);
-const planningLabels = new Set(['Content']);
-const mobileLabels = new Set(['Dashboard', 'Journey', 'Learn', 'Practice', 'Tests']);
+const workspaceLabels = new Set([
+  "Learn",
+  "Practice",
+  "Tests",
+  "Notebook",
+  "Doubts",
+]);
+const overviewLabels = new Set(["Dashboard", "Journey"]);
+const planningLabels = new Set(["Content"]);
+const mobileLabels = new Set([
+  "Dashboard",
+  "Journey",
+  "Learn",
+  "Practice",
+  "Tests",
+]);
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -53,31 +65,44 @@ export default function Sidebar() {
   const [error, setError] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // Focus mode: on a study surface the Overview entries (Dashboard/Journey) are
+  // hidden so the rail stays learning-only. The logo still links home as the escape hatch.
+  const isStudySurface =
+    pathname.startsWith("/learn") ||
+    pathname.startsWith("/practice") ||
+    pathname.startsWith("/tests");
+
   const handleLogout = async () => {
     setError(null);
     setIsSigningOut(true);
     try {
       await logout();
-      router.replace('/login');
+      router.replace("/login");
       router.refresh();
     } catch {
-      setError('Could not sign out. Please try again.');
+      setError("Could not sign out. Please try again.");
       setIsSigningOut(false);
     }
   };
 
   return (
-    <aside className={`fixed inset-x-0 bottom-0 z-40 flex h-[calc(4.5rem+env(safe-area-inset-bottom))] w-full items-center border-t border-hairline bg-surface/90 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl transition-[width,padding] duration-300 md:sticky md:top-0 md:h-screen md:w-[76px] md:shrink-0 md:flex-col md:border-r md:border-t-0 md:bg-surface md:px-3 md:py-6 md:backdrop-blur-none lg:overflow-y-auto lg:py-5 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden ${isCollapsed ? 'lg:w-[76px] lg:px-3' : 'lg:w-[272px] lg:px-4'}`}>
+    <aside
+      className={`fixed inset-x-0 bottom-0 z-40 flex h-[calc(4.5rem+env(safe-area-inset-bottom))] w-full items-center border-t border-hairline bg-surface/90 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl transition-[width,padding] duration-300 md:sticky md:top-0 md:h-screen md:w-[76px] md:shrink-0 md:flex-col md:border-r md:border-t-0 md:bg-surface md:px-3 md:py-6 md:backdrop-blur-none lg:overflow-y-auto lg:py-5 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden ${isCollapsed ? "lg:w-[76px] lg:px-3" : "lg:w-[272px] lg:px-4"}`}
+    >
       <Link
         href="/"
-        className={`mb-5 hidden shrink-0 items-center gap-2.5 md:flex md:justify-center ${isCollapsed ? 'lg:justify-center' : 'lg:justify-start lg:px-2'}`}
+        className={`mb-5 hidden shrink-0 items-center gap-2.5 md:flex md:justify-center ${isCollapsed ? "lg:justify-center" : "lg:justify-start lg:px-2"}`}
         aria-label="JEE AI Competency Engine dashboard"
       >
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-white">
           <Atom className="h-5 w-5" aria-hidden="true" />
         </span>
-        <span className={`hidden leading-none ${isCollapsed ? '' : 'lg:block'}`}>
-          <span className="block text-[15px] font-semibold tracking-tight text-ink">JEE AI</span>
+        <span
+          className={`hidden leading-none ${isCollapsed ? "" : "lg:block"}`}
+        >
+          <span className="block text-[15px] font-semibold tracking-tight text-ink">
+            JEE AI
+          </span>
         </span>
       </Link>
 
@@ -85,10 +110,14 @@ export default function Sidebar() {
         type="button"
         onClick={() => setIsCollapsed((value) => !value)}
         className="mb-4 hidden h-8 w-full items-center justify-center rounded-lg text-ink-mute transition hover:bg-canvas hover:text-ink lg:flex"
-        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
-        {isCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+        {isCollapsed ? (
+          <PanelLeftOpen className="h-4 w-4" />
+        ) : (
+          <PanelLeftClose className="h-4 w-4" />
+        )}
       </button>
 
       <nav
@@ -99,23 +128,28 @@ export default function Sidebar() {
           .filter(
             (item) =>
               mobileLabels.has(item.label) &&
-              (!item.roles || item.roles.includes(user?.role ?? 'student')),
+              (!isStudySurface || !overviewLabels.has(item.label)) &&
+              (!item.roles || item.roles.includes(user?.role ?? "student")),
           )
           .map(({ label, href, icon: Icon }) => {
-            const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
+            const active =
+              href === "/" ? pathname === "/" : pathname.startsWith(href);
             const workspaceItem = workspaceLabels.has(label);
             return (
               <Link
                 key={href}
                 href={href}
                 title={label}
-                className={`group flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 text-[10px] font-semibold transition-all duration-200 md:h-10 md:flex-row md:justify-center md:gap-3 md:px-2 md:text-[13.5px] lg:justify-start lg:px-3 ${workspaceItem ? 'lg:hidden' : ''} ${
+                className={`group flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 text-[10px] font-semibold transition-all duration-200 md:h-10 md:flex-row md:justify-center md:gap-3 md:px-2 md:text-[13.5px] lg:justify-start lg:px-3 ${workspaceItem ? "lg:hidden" : ""} ${
                   active
-                    ? 'text-primary md:bg-primary-tint'
-                    : 'text-ink-mute hover:text-ink md:hover:bg-canvas'
+                    ? "text-primary md:bg-primary-tint"
+                    : "text-ink-mute hover:text-ink md:hover:bg-canvas"
                 }`}
               >
-                <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                <Icon
+                  className="h-[18px] w-[18px] shrink-0"
+                  aria-hidden="true"
+                />
                 <span className="truncate md:hidden lg:block">{label}</span>
               </Link>
             );
@@ -123,25 +157,31 @@ export default function Sidebar() {
       </nav>
 
       <div className="hidden w-full lg:block">
-        <SidebarSection
-          title="Overview"
-          items={navigation.filter((item) => overviewLabels.has(item.label))}
-          pathname={pathname}
-          collapsed={isCollapsed}
-        />
-        <div className="my-3 border-t border-hairline" />
+        {isStudySurface ? null : (
+          <>
+            <SidebarSection
+              title="Overview"
+              items={navigation.filter((item) =>
+                overviewLabels.has(item.label),
+              )}
+              pathname={pathname}
+              collapsed={isCollapsed}
+            />
+            <div className="my-3 border-t border-hairline" />
+          </>
+        )}
         <WorkspaceSelector compact={isCollapsed} />
         {navigation.some(
           (item) =>
             planningLabels.has(item.label) &&
-            (!item.roles || item.roles.includes(user?.role ?? 'student')),
+            (!item.roles || item.roles.includes(user?.role ?? "student")),
         ) ? (
           <SidebarSection
             title="Admin"
             items={navigation.filter(
               (item) =>
                 planningLabels.has(item.label) &&
-                (!item.roles || item.roles.includes(user?.role ?? 'student')),
+                (!item.roles || item.roles.includes(user?.role ?? "student")),
             )}
             pathname={pathname}
             collapsed={isCollapsed}
@@ -157,29 +197,40 @@ export default function Sidebar() {
         )}
         <Link
           href="/profile"
-          className={`mb-1 flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-canvas md:justify-center ${isCollapsed ? 'lg:justify-center' : 'lg:justify-start'}`}
+          className={`mb-1 flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-canvas md:justify-center ${isCollapsed ? "lg:justify-center" : "lg:justify-start"}`}
           title="Profile"
         >
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-canvas text-sm font-semibold text-ink-soft ring-1 ring-hairline">
-            {user?.name?.charAt(0).toUpperCase() ?? <UserRound className="h-4 w-4" />}
+            {user?.name?.charAt(0).toUpperCase() ?? (
+              <UserRound className="h-4 w-4" />
+            )}
           </span>
-          <span className={`hidden min-w-0 ${isCollapsed ? '' : 'lg:block'}`}>
-            <span className="block truncate text-[13.5px] font-semibold text-ink">{user?.name}</span>
-            <span className="block truncate text-xs text-ink-mute">Level {user?.level}</span>
+          <span className={`hidden min-w-0 ${isCollapsed ? "" : "lg:block"}`}>
+            <span className="block truncate text-[13.5px] font-semibold text-ink">
+              {user?.name}
+            </span>
+            <span className="block truncate text-xs text-ink-mute">
+              Level {user?.level}
+            </span>
           </span>
         </Link>
         <button
           type="button"
           onClick={() => void handleLogout()}
           disabled={isSigningOut}
-          className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[13.5px] font-medium text-ink-mute transition-colors hover:bg-canvas hover:text-ink disabled:cursor-not-allowed disabled:opacity-60 md:justify-center ${isCollapsed ? 'lg:justify-center' : 'lg:justify-start'}`}
+          className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[13.5px] font-medium text-ink-mute transition-colors hover:bg-canvas hover:text-ink disabled:cursor-not-allowed disabled:opacity-60 md:justify-center ${isCollapsed ? "lg:justify-center" : "lg:justify-start"}`}
         >
           {isSigningOut ? (
-            <LoaderCircle className="h-[18px] w-[18px] animate-spin" aria-hidden="true" />
+            <LoaderCircle
+              className="h-[18px] w-[18px] animate-spin"
+              aria-hidden="true"
+            />
           ) : (
             <LogOut className="h-[18px] w-[18px]" aria-hidden="true" />
           )}
-          <span className={`hidden ${isCollapsed ? '' : 'lg:block'}`}>Sign out</span>
+          <span className={`hidden ${isCollapsed ? "" : "lg:block"}`}>
+            Sign out
+          </span>
         </button>
       </div>
     </aside>
@@ -199,23 +250,37 @@ function SidebarSection({
 }) {
   return (
     <section>
-      {title ? <p className={collapsed ? 'sr-only' : 'mb-1 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-ink-mute'}>{title}</p> : null}
-      <nav className="space-y-0.5" aria-label={title || 'Additional navigation'}>
+      {title ? (
+        <p
+          className={
+            collapsed
+              ? "sr-only"
+              : "mb-1 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-ink-mute"
+          }
+        >
+          {title}
+        </p>
+      ) : null}
+      <nav
+        className="space-y-0.5"
+        aria-label={title || "Additional navigation"}
+      >
         {items.map(({ label, href, icon: Icon }) => {
-          const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
+          const active =
+            href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
               title={collapsed ? label : undefined}
-              className={`flex h-9 items-center gap-3 rounded-xl text-[13px] font-semibold transition-all duration-200 ${collapsed ? 'justify-center px-0' : 'px-3'} ${
+              className={`flex h-9 items-center gap-3 rounded-xl text-[13px] font-semibold transition-all duration-200 ${collapsed ? "justify-center px-0" : "px-3"} ${
                 active
-                  ? 'bg-primary-tint text-primary shadow-[0_6px_16px_rgba(20,20,30,0.035)]'
-                  : 'text-ink-soft hover:bg-canvas hover:text-ink'
+                  ? "bg-primary-tint text-primary shadow-[0_6px_16px_rgba(20,20,30,0.035)]"
+                  : "text-ink-soft hover:bg-canvas hover:text-ink"
               }`}
             >
               <Icon className="h-[17px] w-[17px] shrink-0" aria-hidden="true" />
-              <span className={collapsed ? 'sr-only' : ''}>{label}</span>
+              <span className={collapsed ? "sr-only" : ""}>{label}</span>
             </Link>
           );
         })}

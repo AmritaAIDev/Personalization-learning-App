@@ -26,14 +26,18 @@ function makeDoubt(overrides: Partial<Doubt> = {}): Doubt {
 }
 
 describe('DoubtsService', () => {
-  it('saves a doubt and stores the tutor response when AI succeeds', async () => {
+  it('saves a doubt open immediately and resolves the tutor response in the background', async () => {
     const created = makeDoubt();
+    const saved: Doubt[] = [];
     const repository = {
       create: jest.fn(() => created),
-      save: jest
-        .fn()
-        .mockImplementation((doubt: Doubt) => Promise.resolve({ ...doubt })),
+      save: jest.fn().mockImplementation((doubt: Doubt) => {
+        const resolved = { ...doubt };
+        saved.push(resolved);
+        return Promise.resolve(resolved);
+      }),
       find: jest.fn(),
+      findOne: jest.fn().mockResolvedValue(created),
     };
     const agentService = {
       generateTutorResponse: jest
@@ -52,6 +56,7 @@ describe('DoubtsService', () => {
       message: ' Why is symmetry needed? ',
     });
 
+    // The create call returns immediately with the doubt still open.
     expect(repository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         subject: 'Physics',
@@ -60,16 +65,21 @@ describe('DoubtsService', () => {
         message: 'Why is symmetry needed?',
       }),
     );
+    expect(result).toMatchObject({
+      status: DoubtStatus.OPEN,
+      assistantResponse: null,
+    });
+
+    // Let the fire-and-forget background resolution complete.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(agentService.generateTutorResponse).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: TutorMessageType.GENERAL,
         answerRevealed: false,
       }),
     );
-    expect(result).toMatchObject({
-      status: DoubtStatus.ANSWERED,
-      assistantResponse: '### Hint\nUse symmetry.',
-    });
+    // The second save flips the doubt to ANSWERED with the tutor response.
+    expect(saved.some((d) => d.status === DoubtStatus.ANSWERED)).toBe(true);
   });
 
   it('keeps a saved doubt open when tutor generation is unavailable', async () => {
@@ -78,6 +88,7 @@ describe('DoubtsService', () => {
       create: jest.fn(() => created),
       save: jest.fn().mockResolvedValue(created),
       find: jest.fn(),
+      findOne: jest.fn().mockResolvedValue(created),
     };
     const agentService = {
       generateTutorResponse: jest

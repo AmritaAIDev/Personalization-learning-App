@@ -1,4 +1,4 @@
-export type UserRole = 'student' | 'admin';
+export type UserRole = "student" | "admin";
 
 export interface AuthenticatedUser {
   id: string;
@@ -10,7 +10,7 @@ export interface AuthenticatedUser {
   streak: number;
 }
 
-export type DiagnosticStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED';
+export type DiagnosticStatus = "IN_PROGRESS" | "SUBMITTED" | "EXPIRED";
 
 export interface DiagnosticQuestion {
   id: string;
@@ -48,7 +48,7 @@ export interface PerformanceRow {
   correct: number;
   total: number;
   score: number;
-  status: 'strong' | 'average' | 'weak';
+  status: "strong" | "average" | "weak";
 }
 
 export interface DiagnosticAnalysis {
@@ -56,7 +56,7 @@ export interface DiagnosticAnalysis {
   correct: number;
   incorrect: number;
   scorePercent: number;
-  grade: 'Excellent' | 'Good' | 'Average' | 'Needs work';
+  grade: "Excellent" | "Good" | "Average" | "Needs work";
   topicPerformance: PerformanceRow[];
   bloomPerformance: PerformanceRow[];
   weakTopics: string[];
@@ -105,7 +105,7 @@ export interface DashboardPayload {
   recentAttempts: HistoryItem[];
 }
 
-export type LearningResourceType = 'VIDEO' | 'NOTES' | 'PRACTICE' | 'FORMULA';
+export type LearningResourceType = "VIDEO" | "NOTES" | "PRACTICE" | "FORMULA";
 
 export interface LearningResource {
   id: string;
@@ -126,4 +126,28 @@ export interface RecommendationsPayload {
     resources: LearningResource[];
   }>;
   generalResources: LearningResource[];
+}
+
+export interface DiagnosticReviewItem {
+  position: number;
+  questionId: string;
+  topic: string;
+  difficulty: string;
+  bloomLevel: string;
+  marks: number;
+  questionText: string;
+  options: string[];
+  selectedOption: string | null;
+  correctOption: string;
+  isCorrect: boolean;
+  solution: string;
+}
+
+export interface DiagnosticReviewPayload {
+  attempt: {
+    id: string;
+    status: DiagnosticStatus;
+    submittedAt: string | null;
+  };
+  questions: DiagnosticReviewItem[];
 }

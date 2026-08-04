@@ -32,7 +32,9 @@ export class SessionsService {
         .select('question.subject', 'subject')
         .addSelect('question.chapter', 'chapter')
         .addSelect('question.topic', 'topic')
-        .where('question.status = :status', { status: QuestionPublicationStatus.PUBLISHED })
+        .where('question.status = :status', {
+          status: QuestionPublicationStatus.PUBLISHED,
+        })
         .groupBy('question.subject')
         .addGroupBy('question.chapter')
         .addGroupBy('question.topic')
@@ -65,7 +67,9 @@ export class SessionsService {
         states: [],
       };
       current.states.push(
-        statesByScope.get(`${entry.subject}\u0000${entry.chapter}\u0000${entry.topic}`) ??
+        statesByScope.get(
+          `${entry.subject}\u0000${entry.chapter}\u0000${entry.topic}`,
+        ) ??
           Object.assign(new LearningTopicState(), {
             subject: entry.subject,
             chapter: entry.chapter,

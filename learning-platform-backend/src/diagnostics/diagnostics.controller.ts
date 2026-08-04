@@ -80,6 +80,14 @@ export class DiagnosticsController {
     return this.diagnosticsService.submitAttempt(user.id, attemptId);
   }
 
+  @Get(':attemptId/review')
+  getReview(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('attemptId', ParseUUIDPipe) attemptId: string,
+  ) {
+    return this.diagnosticsService.getReview(user.id, attemptId);
+  }
+
   @Get(':attemptId/analysis')
   getAnalysis(
     @CurrentUser() user: AuthenticatedUser,

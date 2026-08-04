@@ -1,4 +1,4 @@
-export type DoubtStatus = 'OPEN' | 'ANSWERED';
+export type DoubtStatus = "OPEN" | "ANSWERED";
 
 export type DoubtCard = {
   id: string;

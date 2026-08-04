@@ -1,23 +1,23 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useEffect, useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowRight, LoaderCircle } from 'lucide-react';
-import AuthFrame from '@/components/auth/AuthFrame';
-import { useAuth } from '@/context/AuthContext';
+import Link from "next/link";
+import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, LoaderCircle } from "lucide-react";
+import AuthFrame from "@/components/auth/AuthFrame";
+import { useAuth } from "@/context/AuthContext";
 
 export default function SignupPage() {
   const router = useRouter();
   const { register, loading, user } = useAuth();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) router.replace('/');
+    if (!loading && user) router.replace("/");
   }, [loading, router, user]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -26,10 +26,14 @@ export default function SignupPage() {
     setSubmitting(true);
     try {
       await register(name, email, password);
-      router.replace('/');
+      router.replace("/");
       router.refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Unable to create your account.');
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Unable to create your account.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -41,13 +45,21 @@ export default function SignupPage() {
       subtitle="Start with reviewed questions and a secure baseline for Class XII Electrostatics."
     >
       {error && (
-        <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700" role="alert">
+        <div
+          className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
+          role="alert"
+        >
           {error}
         </div>
       )}
-      <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
+      <form
+        className="space-y-4"
+        onSubmit={(event) => void handleSubmit(event)}
+      >
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-ink">Full name</span>
+          <span className="mb-2 block text-sm font-medium text-ink">
+            Full name
+          </span>
           <input
             required
             minLength={2}
@@ -60,7 +72,9 @@ export default function SignupPage() {
           />
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-ink">Email address</span>
+          <span className="mb-2 block text-sm font-medium text-ink">
+            Email address
+          </span>
           <input
             required
             type="email"
@@ -72,7 +86,9 @@ export default function SignupPage() {
           />
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-ink">Password</span>
+          <span className="mb-2 block text-sm font-medium text-ink">
+            Password
+          </span>
           <input
             required
             type="password"
@@ -84,19 +100,33 @@ export default function SignupPage() {
             placeholder="At least 12 characters"
             className="w-full rounded-xl border border-hairline bg-canvas px-4 py-3 text-[15px] text-ink transition duration-200 placeholder:text-ink-mute focus:border-primary/40 focus:bg-surface"
           />
-          <span className="mt-2 block text-xs leading-5 text-ink-mute">Use at least 12 characters with uppercase, lowercase, and a number.</span>
+          <span className="mt-2 block text-xs leading-5 text-ink-mute">
+            Use at least 12 characters with uppercase, lowercase, and a number.
+          </span>
         </label>
         <button
           type="submit"
           disabled={submitting}
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-[15px] font-semibold text-white transition duration-200 hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {submitting ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" /> : <>Create account <ArrowRight className="h-4 w-4" aria-hidden="true" /></>}
+          {submitting ? (
+            <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" />
+          ) : (
+            <>
+              Create account{" "}
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </>
+          )}
         </button>
       </form>
       <p className="mt-8 text-center text-sm text-ink-soft">
-        Already have an account?{' '}
-        <Link href="/login" className="font-semibold text-primary transition hover:text-primary-strong">Sign in</Link>
+        Already have an account?{" "}
+        <Link
+          href="/login"
+          className="font-semibold text-primary transition hover:text-primary-strong"
+        >
+          Sign in
+        </Link>
       </p>
     </AuthFrame>
   );

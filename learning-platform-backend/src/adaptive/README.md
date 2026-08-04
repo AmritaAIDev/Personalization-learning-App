@@ -9,7 +9,7 @@ New topics begin at Level 1 unless the student completes a topic-scoped placemen
 
 ## Mastery matrix
 
-There are 12 coordinates: Recall, Comprehension, Application, and Higher-Order, each practised at Easy, Medium, and Hard. A coordinate is cleared only after a five-answer correct streak. A first miss resets the streak and opens a Socratic hint without sending the key to the browser. A second miss reveals a structured explanation, then demotes one coordinate; the floor can route to a graph prerequisite when one exists.
+There are 12 coordinates: Recall, Comprehension, Application, and Higher-Order, each practised at Easy, Medium, and Hard. A coordinate is cleared when a round is resolved with **>=80% first-try accuracy** (4 of 5 answered correctly on the first attempt). This replaces the earlier perfect-streak gate, so a single recovered miss no longer voids the whole round. A first miss resets the streak and opens a Socratic hint without sending the key to the browser. A second miss reveals a structured explanation, then demotes one coordinate; the floor can route to a graph prerequisite when one exists.
 
 ## Data and AI lifecycle
 

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -11,19 +11,22 @@ import {
   Layers3,
   LoaderCircle,
   MessagesSquare,
+  XCircle,
   RefreshCw,
-  Sparkles,
+  Square,
   Target,
   Trophy,
-} from 'lucide-react';
-import { describeRoundOutcome, learningUrl } from '@/lib/learning';
+} from "lucide-react";
+import { describeRoundOutcome, learningUrl } from "@/lib/learning";
 import type {
   LearningAnswerPayload,
   LearningSessionPayload,
-} from '@/lib/learning-types';
-import StudyAssistant from './StudyAssistant';
+  LearningSessionTransition,
+} from "@/lib/learning-types";
+import StudyAssistant from "./StudyAssistant";
+import StudyMarkdown from "./StudyMarkdown";
 
-type Feedback = LearningAnswerPayload['feedback'] | null;
+type Feedback = LearningAnswerPayload["feedback"] | null;
 
 export type PracticeWorkspaceProps = {
   payload: LearningSessionPayload | null;
@@ -38,7 +41,7 @@ export type PracticeWorkspaceProps = {
   onOpenFlashcards: () => void;
 };
 
-const OPTION_KEYS = ['1', '2', '3', '4', '5', '6'];
+const OPTION_KEYS = ["1", "2", "3", "4", "5", "6"];
 
 export default function PracticeWorkspace({
   payload,
@@ -52,20 +55,25 @@ export default function PracticeWorkspace({
   onStop,
   onOpenFlashcards,
 }: PracticeWorkspaceProps) {
+  const [tutorPrompt, setTutorPrompt] = useState<{
+    prompt: string;
+    nonce: number;
+  } | null>(null);
+
   if (!payload && loading) return <StartingSkeleton />;
   if (!payload) {
     return <StartPanel error={error} loading={loading} onStart={onStart} />;
   }
 
-  const complete = payload.session.status !== 'ACTIVE';
+  const complete = payload.session.status !== "ACTIVE";
   return (
-    <div className="space-y-4 xl:flex xl:h-full xl:flex-col xl:overflow-hidden">
-      <RoundHeader payload={payload} onOpenFlashcards={onOpenFlashcards} />
+    <div className="space-y-3 xl:flex xl:h-full xl:flex-col xl:overflow-hidden">
+      {!complete ? <RoundProgress payload={payload} onStop={onStop} /> : null}
 
-      <div className="grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.9fr)] xl:items-stretch">
-        <section className="flex min-h-[32rem] flex-col rounded-[1.5rem] border border-hairline bg-surface p-4 shadow-[0_16px_40px_rgba(20,20,30,0.05)] sm:p-5 xl:min-h-0">
+      <div className="grid gap-3 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_minmax(15rem,0.5fr)] xl:items-stretch">
+        <section className="flex min-h-[26rem] flex-col rounded-[1.25rem] border border-hairline bg-surface p-3 shadow-[0_12px_30px_rgba(20,20,30,0.045)] sm:p-4 xl:min-h-0">
           {complete ? (
-            <RoundSummary
+            <RoundOutcome
               payload={payload}
               feedback={feedback}
               loading={loading}
@@ -78,24 +86,28 @@ export default function PracticeWorkspace({
             // Keyed by attempt so the optimistic selection resets cleanly when
             // the question — or the retry after a hint — changes.
             <ActiveQuestion
-              key={`${payload.currentItem?.id ?? 'none'}-${payload.currentItem?.attemptCount ?? 0}`}
+              key={`${payload.currentItem?.id ?? "none"}-${payload.currentItem?.attemptCount ?? 0}`}
               payload={payload}
               feedback={feedback}
               answering={answering}
               error={error}
               onAnswer={onAnswer}
+              onTutorPrompt={(prompt) =>
+                setTutorPrompt({ prompt, nonce: Date.now() })
+              }
             />
           )}
         </section>
 
-        <div className="min-h-[32rem] xl:min-h-0">
+        <div className="min-h-[26rem] xl:min-h-0">
           <StudyAssistant
             key={payload.session.id}
             sessionId={payload.session.id}
             autoOpenMessage={feedback?.assistantMessage ?? null}
+            externalPrompt={tutorPrompt}
             refreshWhen={feedback?.tutorPending ?? false}
             variant="panel"
-            title="Linked tutor"
+            title="AI Tutor"
           />
         </div>
       </div>
@@ -103,93 +115,69 @@ export default function PracticeWorkspace({
   );
 }
 
-function RoundHeader({
+function RoundProgress({
   payload,
-  onOpenFlashcards,
+  onStop,
 }: {
   payload: LearningSessionPayload;
-  onOpenFlashcards: () => void;
+  onStop: () => void;
 }) {
-  const complete = payload.session.status !== 'ACTIVE';
+  const complete = payload.session.status !== "ACTIVE";
   const answered = payload.progress.filter(
-    (item) => item.status === 'RESOLVED',
+    (item) => item.status === "RESOLVED",
   ).length;
-  const progressPercent = complete
+  const total = payload.session.totalQuestions;
+  const percent = complete
     ? 100
-    : Math.round((answered / Math.max(1, payload.session.totalQuestions)) * 100);
-
+    : Math.round((answered / Math.max(1, total)) * 100);
+  const current = complete
+    ? total
+    : Math.min(payload.session.currentSequence, total);
   return (
-    <section className="rounded-[1.35rem] border border-hairline bg-surface px-4 py-3 shadow-[0_12px_28px_rgba(20,20,30,0.045)]">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-ink-mute">Adaptive signal</p>
-          <p className="mt-1 truncate text-sm font-bold text-ink">
-            {payload.placement.stageLabel} · {payload.session.coordinate.label} ·{' '}
-            {payload.session.coordinate.bloomLevel}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-          <span className="rounded-full bg-ink px-3 py-2 text-white">
-            {complete
-              ? 'Round complete'
-              : `Question ${Math.min(payload.session.currentSequence, payload.session.totalQuestions)}/${payload.session.totalQuestions}`}
-          </span>
-          <button
-            type="button"
-            onClick={onOpenFlashcards}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-primary/20 bg-primary-tint px-3 text-primary transition hover:bg-primary hover:text-white"
-          >
-            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Flashcards
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center gap-3">
+    <div className="mb-3 flex items-center gap-3 text-xs font-semibold text-ink-mute">
+      <span className="shrink-0 text-ink-soft">
+        Question {current}/{total}
+      </span>
+      <div
+        className="h-1.5 flex-1 overflow-hidden rounded-full bg-canvas"
+        role="progressbar"
+        aria-valuenow={percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Round progress"
+      >
         <div
-          className="h-2 flex-1 overflow-hidden rounded-full bg-canvas"
-          role="progressbar"
-          aria-valuenow={progressPercent}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="Round progress"
-        >
-          <div
-            className="h-full rounded-full bg-primary transition-all duration-500"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-        <div className="flex shrink-0 gap-1" aria-hidden="true">
-          {payload.progress.map((item) => (
-            <span
-              key={item.id}
-              title={`Question ${item.sequence}`}
-              className={`h-2 w-2 rounded-full transition ${
-                item.status === 'RESOLVED'
-                  ? 'bg-primary'
-                  : item.status === 'CURRENT'
-                    ? 'bg-ink'
-                    : 'bg-hairline'
-              }`}
-            />
-          ))}
-        </div>
+          className="h-full rounded-full bg-primary transition-all duration-500"
+          style={{ width: `${percent}%` }}
+        />
       </div>
-    </section>
+      <span className="shrink-0 tabular-nums">{percent}%</span>
+      <button
+        type="button"
+        onClick={onStop}
+        className="ml-1 inline-flex min-h-7 shrink-0 items-center gap-1 rounded-lg border border-hairline px-2 text-[11px] font-bold text-ink-soft transition hover:bg-canvas"
+        title="Stop practice"
+      >
+        <Square className="h-3 w-3" aria-hidden="true" />
+        Stop
+      </button>
+    </div>
   );
 }
-
 function ActiveQuestion({
   payload,
   feedback,
   answering,
   error,
   onAnswer,
+  onTutorPrompt,
 }: {
   payload: LearningSessionPayload;
   feedback: Feedback;
   answering: boolean;
   error: string | null;
   onAnswer: (option: string) => void;
+  onTutorPrompt: (prompt: string) => void;
 }) {
   const current = payload.currentItem;
   const [pendingOption, setPendingOption] = useState<string | null>(null);
@@ -200,10 +188,20 @@ function ActiveQuestion({
       const target = event.target as HTMLElement | null;
       if (
         target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
           target.isContentEditable)
       ) {
+        return;
+      }
+      if (event.key === "h" || event.key === "H") {
+        event.preventDefault();
+        onTutorPrompt("Give me a hint without revealing the answer.");
+        return;
+      }
+      if (event.key === "e" || event.key === "E") {
+        event.preventDefault();
+        onTutorPrompt("Explain this in simpler steps.");
         return;
       }
       const index = OPTION_KEYS.indexOf(event.key);
@@ -214,9 +212,9 @@ function ActiveQuestion({
       setPendingOption(option);
       onAnswer(option);
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [answering, current, onAnswer]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [answering, current, onAnswer, onTutorPrompt]);
 
   if (!current) return null;
 
@@ -228,32 +226,31 @@ function ActiveQuestion({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-2 text-[11px] font-bold">
-          <span className="rounded-full bg-primary-tint px-2.5 py-1 text-primary">
-            {current.difficulty}
-          </span>
-          <span className="rounded-full bg-canvas px-2.5 py-1 text-ink-soft">
-            {current.bloomLevel}
-          </span>
-        </div>
+      <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] font-bold">
+        <span className="rounded-full bg-primary-tint px-2 py-0.5 text-primary">
+          {current.difficulty}
+        </span>
+        <span className="px-0.5 text-ink-mute">{"\u00B7"}</span>
+        <span className="rounded-full bg-canvas px-2 py-0.5 text-ink-soft">
+          {current.bloomLevel}
+        </span>
         {current.requiresRetry ? (
-          <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">
-            Second attempt · one option ruled out
+          <span className="ml-auto rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
+            Second attempt
           </span>
         ) : (
-          <span className="text-xs font-medium text-ink-mute">
+          <span className="ml-auto text-[11px] font-medium text-ink-mute">
             Two attempts per question
           </span>
         )}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto rounded-[1.35rem] border border-hairline bg-canvas p-3 sm:p-4">
-        <h2 className="font-heading text-lg font-bold leading-7 text-ink sm:text-xl sm:leading-8">
+        <StudyMarkdown className="font-heading text-lg font-bold leading-7 text-ink sm:text-xl sm:leading-8">
           {current.questionText}
-        </h2>
+        </StudyMarkdown>
         <div
-          className="mt-4 space-y-2.5"
+          className="mt-3 space-y-2"
           role="radiogroup"
           aria-label="Answer options"
         >
@@ -268,26 +265,33 @@ function ActiveQuestion({
                 aria-checked={pendingOption === option}
                 disabled={answering || ruledOut}
                 onClick={() => select(option)}
-                className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm font-medium transition ${
+                className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition ${
                   ruledOut
-                    ? 'border-hairline bg-surface text-ink-mute line-through opacity-60'
+                    ? "border-rose-200 bg-rose-50 text-rose-700 line-through opacity-75"
                     : pendingOption === option
-                      ? 'border-primary bg-primary-tint text-primary-strong ring-1 ring-primary'
-                      : 'border-hairline bg-surface text-ink hover:border-primary/45 hover:bg-primary-tint/40'
+                      ? "border-primary bg-primary-tint text-primary-strong ring-1 ring-primary"
+                      : "border-hairline bg-surface text-ink hover:border-primary/45 hover:bg-primary-tint/40"
                 } disabled:cursor-not-allowed`}
               >
                 <span
                   className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[11px] font-bold ${
                     pendingOption === option
-                      ? 'bg-primary text-white'
-                      : 'bg-canvas text-ink-mute'
+                      ? "bg-primary text-white"
+                      : "bg-canvas text-ink-mute"
                   }`}
                   aria-hidden="true"
                 >
                   {index + 1}
                 </span>
-                <span className="flex-1">{option}</span>
-                {isPending ? (
+                <StudyMarkdown className="flex-1 min-w-0 text-sm font-medium">
+                  {option}
+                </StudyMarkdown>
+                {ruledOut ? (
+                  <XCircle
+                    className="h-4 w-4 shrink-0 text-rose-500"
+                    aria-hidden="true"
+                  />
+                ) : isPending ? (
                   <LoaderCircle
                     className="h-4 w-4 shrink-0 animate-spin text-primary"
                     aria-hidden="true"
@@ -298,7 +302,7 @@ function ActiveQuestion({
           })}
         </div>
         <p className="mt-3 hidden text-[11px] font-semibold text-ink-mute sm:block">
-          Press 1–{current.options.length} to answer.
+          Press 1–{current.options.length} to answer · H hint · E explain
         </p>
       </div>
 
@@ -320,7 +324,10 @@ function ActiveQuestion({
             className="flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
             role="alert"
           >
-            <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <CircleAlert
+              className="mt-0.5 h-4 w-4 shrink-0"
+              aria-hidden="true"
+            />
             {error}
           </p>
         ) : null}
@@ -329,12 +336,8 @@ function ActiveQuestion({
   );
 }
 
-function AnswerFeedback({
-  feedback,
-}: {
-  feedback: NonNullable<Feedback>;
-}) {
-  if (feedback.kind === 'CORRECT') {
+function AnswerFeedback({ feedback }: { feedback: NonNullable<Feedback> }) {
+  if (feedback.kind === "CORRECT") {
     return (
       <p
         className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-sm font-semibold text-emerald-800"
@@ -345,13 +348,16 @@ function AnswerFeedback({
       </p>
     );
   }
-  if (feedback.kind === 'SOCRATIC_HINT') {
+  if (feedback.kind === "SOCRATIC_HINT") {
     return (
       <div
         className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-900"
         role="status"
       >
-        <MessagesSquare className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+        <MessagesSquare
+          className="mt-0.5 h-5 w-5 shrink-0"
+          aria-hidden="true"
+        />
         <div>
           <p className="font-bold">Not quite — a hint is on its way.</p>
           <p className="mt-1 leading-6">
@@ -365,7 +371,22 @@ function AnswerFeedback({
   return null;
 }
 
-function RoundSummary({
+/**
+ * Continuous practice: when a round completes the outcome is shown inline and,
+ * for transitions that lead straight into another round (advance / reinforce /
+ * rebuild), the next round is started automatically after a short beat. Only
+ * terminal states (topic mastered, or a reroute to a prerequisite topic) stop
+ * for an explicit choice. The engine still gets a clean round boundary to do
+ * its competency math; the learner never has to click "continue".
+ */
+const CONTINUABLE_TRANSITIONS = new Set<LearningSessionTransition>([
+  "ADVANCED",
+  "REINFORCE",
+  "DEMOTED",
+  "NONE",
+]);
+
+function RoundOutcome({
   payload,
   feedback,
   loading,
@@ -382,64 +403,61 @@ function RoundSummary({
   onStop: () => void;
   onOpenFlashcards: () => void;
 }) {
-  const outcome = describeRoundOutcome(payload.session.transition);
-  const answered = payload.progress.filter(
-    (item) => item.status === 'RESOLVED',
-  ).length;
-  const firstTry = payload.progress.filter(
-    (item) => item.status === 'RESOLVED' && item.attemptCount <= 1,
-  ).length;
+  const transition = payload.session.transition;
+  const routed = Boolean(feedback?.route);
+  const mastered = transition === "MASTERED";
+  const continuable =
+    !routed && !mastered && CONTINUABLE_TRANSITIONS.has(transition);
+  const outcome = describeRoundOutcome(transition);
+  const advancedRef = useRef(false);
+
+  useEffect(() => {
+    if (!continuable || loading || advancedRef.current) return;
+    advancedRef.current = true;
+    const timer = window.setTimeout(() => onContinue(), 2000);
+    return () => window.clearTimeout(timer);
+  }, [continuable, loading, onContinue]);
+
+  const tone = outcome.tone;
+  const Icon = mastered
+    ? Trophy
+    : transition === "ADVANCED"
+      ? BadgeCheck
+      : BookMarked;
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center text-center">
+    <div className="animate-fade flex flex-1 flex-col items-center justify-center px-4 text-center">
       <span
-        className={`grid h-14 w-14 place-items-center rounded-2xl ${
-          outcome.tone === 'mastered'
-            ? 'bg-emerald-100 text-emerald-700'
-            : outcome.tone === 'rebuild'
-              ? 'bg-amber-100 text-amber-800'
-              : 'bg-primary-tint text-primary'
+        className={`grid h-12 w-12 place-items-center rounded-2xl ${
+          tone === "mastered"
+            ? "bg-emerald-100 text-emerald-700"
+            : tone === "rebuild"
+              ? "bg-amber-100 text-amber-800"
+              : "bg-primary-tint text-primary"
         }`}
       >
-        {outcome.tone === 'mastered' ? (
-          <Trophy className="h-7 w-7" aria-hidden="true" />
-        ) : payload.session.transition === 'ADVANCED' ? (
-          <BadgeCheck className="h-7 w-7" aria-hidden="true" />
-        ) : (
-          <BookMarked className="h-7 w-7" aria-hidden="true" />
-        )}
+        <Icon className="h-6 w-6" aria-hidden="true" />
       </span>
-      <p className="mt-6 text-xs font-medium text-ink-mute">Adaptive checkpoint</p>
-      <h3 className="mt-2 font-heading text-3xl font-bold tracking-tight text-ink">
+      <h3 className="mt-3 font-heading text-xl font-bold tracking-tight text-ink sm:text-2xl">
         {outcome.title}
       </h3>
-      <p className="mt-3 max-w-xl text-sm leading-6 text-ink-soft">
+      <p className="mt-2 max-w-md text-sm leading-6 text-ink-soft">
         {outcome.detail}
       </p>
 
-      <dl className="mt-6 grid w-full max-w-sm grid-cols-2 gap-2">
-        <div className="rounded-2xl bg-canvas px-3 py-3">
-          <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-mute">
-            Questions cleared
-          </dt>
-          <dd className="mt-1 font-heading text-xl font-bold text-ink">
-            {answered}/{payload.session.totalQuestions}
-          </dd>
-        </div>
-        <div className="rounded-2xl bg-canvas px-3 py-3">
-          <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-mute">
-            First-attempt wins
-          </dt>
-          <dd className="mt-1 font-heading text-xl font-bold text-ink">
-            {firstTry}
-          </dd>
-        </div>
-      </dl>
+      {continuable ? (
+        <p className="mt-4 flex items-center gap-2 text-xs font-semibold text-ink-mute">
+          <LoaderCircle
+            className="h-3.5 w-3.5 animate-spin text-primary"
+            aria-hidden="true"
+          />
+          {loading ? "Preparing the next round…" : "Continuing automatically…"}
+        </p>
+      ) : null}
 
-      {/* A failed "continue" must be visible here, not only on the start panel. */}
       {error ? (
         <p
-          className="mt-6 flex max-w-xl items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-left text-sm font-medium text-rose-700"
+          className="mt-4 flex max-w-md items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-left text-sm font-medium text-rose-700"
           role="alert"
         >
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -447,42 +465,38 @@ function RoundSummary({
         </p>
       ) : null}
 
-      <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-        {feedback?.route ? (
+      <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+        {routed && feedback?.route ? (
           <Link
-            href={learningUrl(feedback.route, { tab: 'practice' })}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20,20,30,0.22)] transition hover:bg-primary-strong"
+            href={learningUrl(feedback.route, { tab: "practice" })}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white transition hover:bg-primary-strong"
           >
             Start {feedback.route.topic}
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
-        ) : payload.session.transition === 'MASTERED' ? (
+        ) : mastered ? (
           <button
             type="button"
             onClick={onOpenFlashcards}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20,20,30,0.22)] transition hover:bg-primary-strong"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white transition hover:bg-primary-strong"
           >
             <Layers3 className="h-4 w-4" aria-hidden="true" />
             {outcome.continueLabel}
           </button>
-        ) : (
+        ) : continuable && error ? (
           <button
             type="button"
             onClick={onContinue}
             disabled={loading}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20,20,30,0.22)] transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
-            ) : null}
-            {loading ? 'Preparing next set' : outcome.continueLabel}
-            {loading ? null : <ArrowRight className="h-4 w-4" aria-hidden="true" />}
+            {loading ? "Preparing…" : "Try again"}
           </button>
-        )}
+        ) : null}
         <button
           type="button"
           onClick={onStop}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-hairline px-5 py-2.5 text-sm font-bold text-ink-soft transition hover:bg-canvas"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-hairline px-4 py-2 text-sm font-bold text-ink-soft transition hover:bg-canvas"
         >
           Stop for now
         </button>
@@ -490,7 +504,6 @@ function RoundSummary({
     </div>
   );
 }
-
 function StartPanel({
   error,
   loading,
@@ -512,23 +525,29 @@ function StartPanel({
             Start the adaptive round
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-            A short database-backed set opens with the live tutor beside it. Each
-            question allows two attempts: a miss brings a hint first, never the
-            answer. When the set completes, the next one is already prepared.
+            A short database-backed set opens with the live tutor beside it.
+            Each question allows two attempts: a miss brings a hint first, never
+            the answer. When the set completes, the next one is already
+            prepared.
           </p>
           {error ? (
             <p
               className="mt-5 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
               role="alert"
             >
-              <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <CircleAlert
+                className="mt-0.5 h-4 w-4 shrink-0"
+                aria-hidden="true"
+              />
               {error}
             </p>
           ) : null}
         </div>
         <div className="rounded-[1.35rem] border border-hairline bg-canvas p-4">
           <ol className="grid gap-2 text-sm font-semibold text-ink-soft">
-            <li className="rounded-xl bg-surface px-3 py-3">1. Auto placement</li>
+            <li className="rounded-xl bg-surface px-3 py-3">
+              1. Auto placement
+            </li>
             <li className="rounded-xl bg-surface px-3 py-3">
               2. Answer with tutor support
             </li>
@@ -546,7 +565,10 @@ function StartPanel({
             className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20,20,30,0.22)] transition hover:-translate-y-0.5 hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? (
-              <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" />
+              <LoaderCircle
+                className="h-5 w-5 animate-spin"
+                aria-hidden="true"
+              />
             ) : null}
             Start adaptive practice
           </button>
@@ -562,7 +584,10 @@ function StartingSkeleton() {
       <div className="grid gap-6 lg:grid-cols-[1fr_0.85fr] lg:items-center">
         <div>
           <p className="flex items-center gap-2 text-xs font-medium text-ink-mute">
-            <RefreshCw className="h-4 w-4 animate-spin text-primary" aria-hidden="true" />
+            <RefreshCw
+              className="h-4 w-4 animate-spin text-primary"
+              aria-hidden="true"
+            />
             Preparing practice studio
           </p>
           <h2 className="mt-2 font-heading text-3xl font-bold tracking-tight text-ink">

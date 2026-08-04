@@ -119,7 +119,7 @@ describe('DiagnosticsService', () => {
       incorrect: 1,
       scorePercent: 50,
       grade: 'Average',
-      weakTopics: ['Electric Field'],
+      weakTopics: [],
     });
     expect(attempt.status).toBe(DiagnosticAttemptStatus.SUBMITTED);
   });
@@ -141,18 +141,32 @@ describe('DiagnosticsService', () => {
       Array.from({ length: 10 }, (_, index) => ({
         id: `${difficulty}-${index}`,
         difficulty,
-        bloom_level: ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate'][index % 5],
-        chapter: index % 2 ? 'Electric Charges and Fields' : 'Electrostatic Potential and Capacitance',
+        bloom_level: ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate'][
+          index % 5
+        ],
+        chapter:
+          index % 2
+            ? 'Electric Charges and Fields'
+            : 'Electrostatic Potential and Capacitance',
         quality_score: 90,
       })),
     );
-    const recentlyUsed = bank.filter((question) => Number(question.id.split('-').at(-1)) < 5);
+    const recentlyUsed = bank.filter(
+      (question) => Number(question.id.split('-').at(-1)) < 5,
+    );
     questionsRepository.find.mockResolvedValue(bank);
-    attemptsRepository.find.mockResolvedValue([{ questionIds: recentlyUsed.map((question) => question.id) }]);
+    attemptsRepository.find.mockResolvedValue([
+      { questionIds: recentlyUsed.map((question) => question.id) },
+    ]);
 
-    const selected = await (service as unknown as {
-      getQuestionSet: (userId: string, subject: string) => Promise<Array<{ id: string }>>;
-    }).getQuestionSet('student-1', 'Physics');
+    const selected = await (
+      service as unknown as {
+        getQuestionSet: (
+          userId: string,
+          subject: string,
+        ) => Promise<Array<{ id: string }>>;
+      }
+    ).getQuestionSet('student-1', 'Physics');
 
     expect(selected).toHaveLength(15);
     expect(selected.map((question) => question.id)).not.toEqual(

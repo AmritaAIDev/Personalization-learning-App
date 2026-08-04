@@ -1,6 +1,6 @@
-import React from 'react';
-import Sidebar from '@/components/Sidebar';
-import DashboardAccess from '@/components/DashboardAccess';
+import React from "react";
+import Sidebar from "@/components/Sidebar";
+import DashboardAccess from "@/components/DashboardAccess";
 
 export default function DashboardLayout({
   children,
@@ -11,7 +11,9 @@ export default function DashboardLayout({
     <DashboardAccess>
       <div className="flex min-h-screen bg-canvas font-sans">
         <Sidebar />
-        <main className="min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">{children}</main>
+        <main className="min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
+          {children}
+        </main>
       </div>
     </DashboardAccess>
   );

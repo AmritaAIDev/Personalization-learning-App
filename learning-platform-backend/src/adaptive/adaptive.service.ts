@@ -712,9 +712,19 @@ export class AdaptiveService {
       item.resolvedAt = new Date();
       session.currentSequence += 1;
       if (session.currentSequence > session.totalQuestions) {
+        const roundItems = await items.find({
+          where: { sessionId: session.id },
+          relations: { answers: true },
+        });
+        const firstTryCorrect = roundItems.filter(
+          (roundItem) =>
+            (roundItem.answers?.length ?? 0) <= 1 &&
+            roundItem.resolvedAt !== null,
+        ).length;
         const completion = resolveCoordinateCompletion(
           state.currentLevel,
-          state.streakCounter,
+          firstTryCorrect,
+          session.totalQuestions,
         );
         state.streakCounter = 0;
         session.status = LearningSessionStatus.COMPLETED;

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, CircleAlert, Compass } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
-import { learningUrl } from '@/lib/learning';
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, CircleAlert } from "lucide-react";
+import { apiFetch } from "@/lib/api";
+import { learningUrl } from "@/lib/learning";
 import type {
   LearningAnswerPayload,
   LearningDashboardPayload,
@@ -13,11 +13,11 @@ import type {
   LearningSessionPayload,
   LearningState,
   LearningTab,
-} from '@/lib/learning-types';
-import FlashcardDeck from './FlashcardDeck';
-import LearningTabs from './LearningTabs';
-import PracticeWorkspace from './PracticeWorkspace';
-import TopicOverview from './TopicOverview';
+} from "@/lib/learning-types";
+import FlashcardDeck from "./FlashcardDeck";
+import LearningTabs from "./LearningTabs";
+import PracticeWorkspace from "./PracticeWorkspace";
+import TopicOverview from "./TopicOverview";
 
 function getTopicState(
   dashboard: LearningDashboardPayload | null,
@@ -37,7 +37,10 @@ function getTopicState(
 
 function DashboardSkeleton() {
   return (
-    <div className="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]" aria-label="Loading topic dashboard">
+    <div
+      className="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]"
+      aria-label="Loading topic dashboard"
+    >
       <div className="rounded-[1.5rem] border border-hairline bg-surface p-5">
         <div className="h-3 w-28 rounded-full skeleton" />
         <div className="mt-5 h-8 w-64 rounded-full skeleton" />
@@ -72,18 +75,20 @@ export default function AdaptiveStudySession({
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<LearningTab>(initialTab);
   const [payload, setPayload] = useState<LearningSessionPayload | null>(null);
-  const [feedback, setFeedback] = useState<LearningAnswerPayload['feedback'] | null>(
-    null,
-  );
+  const [feedback, setFeedback] = useState<
+    LearningAnswerPayload["feedback"] | null
+  >(null);
   const [loading, setLoading] = useState(false);
   const [answering, setAnswering] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dashboard, setDashboard] = useState<LearningDashboardPayload | null>(null);
+  const [dashboard, setDashboard] = useState<LearningDashboardPayload | null>(
+    null,
+  );
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   /** Tab to return to when the flashcard deck closes. */
   const returnTabRef = useRef<LearningTab>(
-    initialTab === 'flashcards' ? 'practice' : initialTab,
+    initialTab === "flashcards" ? "practice" : initialTab,
   );
 
   /**
@@ -93,7 +98,7 @@ export default function AdaptiveStudySession({
    */
   const refreshDashboard = useCallback(
     () =>
-      apiFetch<LearningDashboardPayload>('/api/learning/dashboard')
+      apiFetch<LearningDashboardPayload>("/api/learning/dashboard")
         .then((next) => {
           setDashboard(next);
           setDashboardError(null);
@@ -102,7 +107,7 @@ export default function AdaptiveStudySession({
           setDashboardError(
             reason instanceof Error
               ? reason.message
-              : 'The topic dashboard could not be loaded.',
+              : "The topic dashboard could not be loaded.",
           );
         })
         .finally(() => setDashboardLoading(false)),
@@ -124,7 +129,7 @@ export default function AdaptiveStudySession({
   /** Tab changes are reflected in the URL so a workspace view stays shareable. */
   const selectTab = useCallback(
     (tab: LearningTab) => {
-      if (tab !== 'flashcards') returnTabRef.current = tab;
+      if (tab !== "flashcards") returnTabRef.current = tab;
       setActiveTab(tab);
       router.replace(learningUrl(scope, { tab }), { scroll: false });
     },
@@ -135,10 +140,13 @@ export default function AdaptiveStudySession({
     setLoading(true);
     setError(null);
     try {
-      const next = await apiFetch<LearningSessionPayload>('/api/learning/sessions', {
-        method: 'POST',
-        body: JSON.stringify(scope),
-      });
+      const next = await apiFetch<LearningSessionPayload>(
+        "/api/learning/sessions",
+        {
+          method: "POST",
+          body: JSON.stringify(scope),
+        },
+      );
       setPayload(next);
       setFeedback(null);
       void refreshDashboard();
@@ -146,7 +154,7 @@ export default function AdaptiveStudySession({
       setError(
         reason instanceof Error
           ? reason.message
-          : 'The learning journey could not be opened.',
+          : "The learning journey could not be opened.",
       );
     } finally {
       setLoading(false);
@@ -161,14 +169,16 @@ export default function AdaptiveStudySession({
       try {
         const next = await apiFetch<LearningAnswerPayload>(
           `/api/learning/sessions/${payload.session.id}/items/${payload.currentItem.id}/answer`,
-          { method: 'POST', body: JSON.stringify({ selectedOption }) },
+          { method: "POST", body: JSON.stringify({ selectedOption }) },
         );
         setPayload(next);
         setFeedback(next.feedback);
-        if (next.session.status !== 'ACTIVE') void refreshDashboard();
+        if (next.session.status !== "ACTIVE") void refreshDashboard();
       } catch (reason) {
         setError(
-          reason instanceof Error ? reason.message : 'Your answer could not be checked.',
+          reason instanceof Error
+            ? reason.message
+            : "Your answer could not be checked.",
         );
       } finally {
         setAnswering(false);
@@ -179,7 +189,7 @@ export default function AdaptiveStudySession({
 
   // A correct answer confirmation is a moment, not a permanent banner.
   useEffect(() => {
-    if (feedback?.kind !== 'CORRECT') return;
+    if (feedback?.kind !== "CORRECT") return;
     const timeout = window.setTimeout(() => setFeedback(null), 2_600);
     return () => window.clearTimeout(timeout);
   }, [feedback]);
@@ -188,52 +198,40 @@ export default function AdaptiveStudySession({
     setPayload(null);
     setFeedback(null);
     setError(null);
-    selectTab('overview');
+    selectTab("overview");
   };
 
   const topicState = getTopicState(dashboard, scope);
-  const isStudySurface = activeTab !== 'overview';
+  const isStudySurface = activeTab !== "overview";
 
   return (
     <div
       className={`mx-auto max-w-7xl p-4 sm:p-8 lg:p-10 ${
-        isStudySurface ? 'xl:h-[100dvh] xl:overflow-hidden xl:p-6' : ''
+        isStudySurface ? "xl:h-[100dvh] xl:overflow-hidden xl:p-6" : ""
       }`}
     >
-      <header className="rounded-[1.75rem] border border-hairline bg-surface p-4 shadow-[0_16px_40px_rgba(20,20,30,0.055)] sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <Link
-              href="/"
-              className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-hairline px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-primary/30 hover:bg-primary-tint/40 hover:text-primary"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              Search
-            </Link>
-            <div className="min-w-0">
-              <p className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-mute">
-                <Compass className="h-3.5 w-3.5" aria-hidden="true" />
-                Topic workspace
-              </p>
-              <h1 className="mt-1 truncate font-heading text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-                {scope.topic}
-              </h1>
-              <div className="mt-1.5 flex flex-wrap gap-2">
-                <span className="rounded-full bg-canvas px-2.5 py-1 text-[11px] font-semibold text-ink-soft">
-                  {scope.chapter}
-                </span>
-                <span className="rounded-full bg-primary-tint px-2.5 py-1 text-[11px] font-semibold text-primary">
-                  {topicState?.stageLabel ?? 'Placement pending'}
-                </span>
-              </div>
-            </div>
+      <header className="rounded-2xl border border-hairline bg-surface px-3 py-2.5 shadow-[0_8px_22px_rgba(20,20,30,0.04)] sm:px-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/"
+            className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-xl border border-hairline px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-primary/30 hover:bg-primary-tint/40 hover:text-primary"
+            title="Back to search"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            <span className="truncate font-heading text-sm font-bold text-ink">
+              {scope.topic}
+            </span>
+          </Link>
+          <span className="rounded-full bg-primary-tint px-2.5 py-1 text-[11px] font-semibold text-primary">
+            {topicState?.stageLabel ?? "Placement pending"}
+          </span>
+          <div className="ml-auto">
+            <LearningTabs activeTab={activeTab} onChange={selectTab} />
           </div>
-
-          <LearningTabs activeTab={activeTab} onChange={selectTab} />
         </div>
       </header>
 
-      {dashboardError && activeTab === 'overview' ? (
+      {dashboardError && activeTab === "overview" ? (
         <p
           className="mt-5 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
           role="alert"
@@ -248,7 +246,7 @@ export default function AdaptiveStudySession({
         returning to it is instant — the inactive panel is hidden, not unmounted.
       */}
       <div className="mt-5">
-        <div className={activeTab === 'overview' ? 'animate-fade' : 'hidden'}>
+        <div className={activeTab === "overview" ? "animate-fade" : "hidden"}>
           {dashboardLoading ? (
             <DashboardSkeleton />
           ) : (
@@ -256,12 +254,12 @@ export default function AdaptiveStudySession({
               scope={scope}
               topicState={topicState}
               dashboard={dashboard}
-              onOpenPractice={() => selectTab('practice')}
-              onOpenFlashcards={() => selectTab('flashcards')}
+              onOpenPractice={() => selectTab("practice")}
+              onOpenFlashcards={() => selectTab("flashcards")}
             />
           )}
         </div>
-        <div className={isStudySurface ? 'animate-fade' : 'hidden'}>
+        <div className={isStudySurface ? "animate-fade" : "hidden"}>
           <PracticeWorkspace
             payload={payload}
             feedback={feedback}
@@ -272,12 +270,12 @@ export default function AdaptiveStudySession({
             onAnswer={(selectedOption) => void answer(selectedOption)}
             onContinue={() => void start()}
             onStop={stopPractice}
-            onOpenFlashcards={() => selectTab('flashcards')}
+            onOpenFlashcards={() => selectTab("flashcards")}
           />
         </div>
       </div>
 
-      {activeTab === 'flashcards' ? (
+      {activeTab === "flashcards" ? (
         <FlashcardDeck
           scope={scope}
           onClose={() => selectTab(returnTabRef.current)}

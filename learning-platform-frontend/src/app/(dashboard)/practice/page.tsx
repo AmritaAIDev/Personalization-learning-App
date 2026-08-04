@@ -1,16 +1,11 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import {
-  ArrowRight,
-  Search,
-  ShieldCheck,
-  Timer,
-} from 'lucide-react';
-import PracticeSession from '@/components/practice/PracticeSession';
-import TopicSearch from '@/components/search/TopicSearch';
-import { practiceScopeFromSearchParams } from '@/lib/practice';
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { ArrowRight, Search, ShieldCheck, Timer } from "lucide-react";
+import PracticeSession from "@/components/practice/PracticeSession";
+import TopicSearch from "@/components/search/TopicSearch";
+import { practiceScopeFromSearchParams } from "@/lib/practice";
 
 export default function PracticePage() {
   const searchParams = useSearchParams();
@@ -32,15 +27,18 @@ export default function PracticePage() {
                 Start a reviewed practice set from a verified topic.
               </h1>
               <p className="mt-4 max-w-xl text-sm leading-6 text-ink-soft">
-                Search chooses the topic. The backend decides whether enough reviewed questions
-                exist and creates a secure practice attempt from database content only.
+                Search chooses the topic. The backend decides whether enough
+                reviewed questions exist and creates a secure practice attempt
+                from database content only.
               </p>
             </div>
 
             <div className="rounded-[1.5rem] border border-hairline bg-canvas p-4 sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-ink">Find practice topic</p>
+                  <p className="text-sm font-semibold text-ink">
+                    Find practice topic
+                  </p>
                   <p className="mt-1 text-xs leading-5 text-ink-mute">
                     Result counts come from the question catalog API.
                   </p>
@@ -66,9 +64,9 @@ export default function PracticePage() {
                   No answer keys before submission.
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-white/70">
-                  This area is for exam-style practice. Answers autosave, but scoring,
-                  solutions, weak concepts, and review appear only after the backend submits the
-                  attempt.
+                  This area is for exam-style practice. Answers autosave, but
+                  scoring, solutions, weak concepts, and review appear only
+                  after the backend submits the attempt.
                 </p>
               </div>
             </div>
@@ -82,8 +80,9 @@ export default function PracticePage() {
               Use Learn for adaptive tutoring.
             </h2>
             <p className="mt-3 text-sm leading-6 text-ink-soft">
-              Practice here measures. Learn teaches. If the student needs hints, wrong-answer
-              explanations, and level movement, open the topic workspace.
+              Practice here measures. Learn teaches. If the student needs hints,
+              wrong-answer explanations, and level movement, open the topic
+              workspace.
             </p>
             <Link
               href="/learn"

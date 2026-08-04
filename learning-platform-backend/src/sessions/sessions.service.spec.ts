@@ -22,7 +22,10 @@ describe('SessionsService', () => {
     })),
   };
 
-  const service = new SessionsService(statesRepository, questionsRepository as never);
+  const service = new SessionsService(
+    statesRepository,
+    questionsRepository as never,
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -53,8 +56,16 @@ describe('SessionsService', () => {
       },
     ] as LearningTopicState[]);
     getRawMany.mockResolvedValue([
-      { subject: 'Physics', chapter: 'Electric Charges and Fields', topic: 'Gauss Law' },
-      { subject: 'Physics', chapter: 'Electric Charges and Fields', topic: 'Electric charge & field' },
+      {
+        subject: 'Physics',
+        chapter: 'Electric Charges and Fields',
+        topic: 'Gauss Law',
+      },
+      {
+        subject: 'Physics',
+        chapter: 'Electric Charges and Fields',
+        topic: 'Electric charge & field',
+      },
     ]);
 
     await expect(service.getJourneyForUser('student-1')).resolves.toEqual([

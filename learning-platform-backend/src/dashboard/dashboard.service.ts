@@ -133,7 +133,11 @@ export class DashboardService {
     const subjects = new Map<string, DashboardSubjectCoverage>();
     for (const catalogTopic of catalog) {
       const progress = progressByTopic.get(
-        this.scopeKey(catalogTopic.subject, catalogTopic.chapter, catalogTopic.topic),
+        this.scopeKey(
+          catalogTopic.subject,
+          catalogTopic.chapter,
+          catalogTopic.topic,
+        ),
       );
       const status = this.toCoverageStatus(progress?.status);
       const subject = subjects.get(catalogTopic.subject) ?? {
@@ -162,13 +166,19 @@ export class DashboardService {
     return Array.from(subjects.values()).map((subject) => ({
       ...subject,
       topics: subject.topics.sort((left, right) => {
-        const priority = this.coveragePriority(left.status) - this.coveragePriority(right.status);
-        return priority !== 0 ? priority : (left.score ?? 101) - (right.score ?? 101);
+        const priority =
+          this.coveragePriority(left.status) -
+          this.coveragePriority(right.status);
+        return priority !== 0
+          ? priority
+          : (left.score ?? 101) - (right.score ?? 101);
       }),
     }));
   }
 
-  private toCoverageStatus(status: string | undefined): DashboardTopicProgressStatus {
+  private toCoverageStatus(
+    status: string | undefined,
+  ): DashboardTopicProgressStatus {
     if (status === LearningTopicStatus.MASTERED) return 'MASTERED';
     if (status === LearningTopicStatus.PAUSED_FOR_PREREQUISITE) return 'PAUSED';
     if (status === LearningTopicStatus.ACTIVE) return 'ACTIVE';

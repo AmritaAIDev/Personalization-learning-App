@@ -1,35 +1,39 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
   CircleAlert,
-  ClipboardCheck,
   Flag,
   LoaderCircle,
   RefreshCw,
   Send,
   Timer,
-} from 'lucide-react';
-import { apiFetch } from '@/lib/api';
-import { formatDuration } from '@/lib/format';
+} from "lucide-react";
+import { apiFetch } from "@/lib/api";
+import StudyMarkdown from "@/components/learning/StudyMarkdown";
+import { formatDuration } from "@/lib/format";
 import {
   elapsedPracticeSeconds,
   nextUnansweredIndex,
   summarizePracticeProgress,
   type PracticeScope,
-} from '@/lib/practice';
+} from "@/lib/practice";
 import {
   PracticeAnswerQueue,
   type PracticeSyncState,
-} from '@/lib/practice-sync';
-import type { PracticeAttemptPayload } from '@/lib/practice-types';
-import { useBodyScrollLock } from '@/lib/use-body-scroll-lock';
+} from "@/lib/practice-sync";
+import type { PracticeAttemptPayload } from "@/lib/practice-types";
+import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
 
-const IDLE_SYNC: PracticeSyncState = { pending: 0, saving: false, failed: false };
+const IDLE_SYNC: PracticeSyncState = {
+  pending: 0,
+  saving: false,
+  failed: false,
+};
 
 /**
  * Exam-style practice runner.
@@ -60,18 +64,24 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
   const createOrResume = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await apiFetch<PracticeAttemptPayload>('/api/practice/sessions', {
-        method: 'POST',
-        body: JSON.stringify(scope),
-      });
-      if (data.attempt.status === 'SUBMITTED') {
+      const data = await apiFetch<PracticeAttemptPayload>(
+        "/api/practice/sessions",
+        {
+          method: "POST",
+          body: JSON.stringify(scope),
+        },
+      );
+      if (data.attempt.status === "SUBMITTED") {
         router.replace(`/practice/${data.attempt.id}/review`);
         return;
       }
       setPayload(data);
       setAnswers(
         Object.fromEntries(
-          data.answers.map((answer) => [answer.questionId, answer.selectedOption]),
+          data.answers.map((answer) => [
+            answer.questionId,
+            answer.selectedOption,
+          ]),
         ),
       );
       // Resume where the learner left off rather than always at question one.
@@ -85,7 +95,7 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
       setError(
         reason instanceof Error
           ? reason.message
-          : 'The practice session could not be prepared.',
+          : "The practice session could not be prepared.",
       );
     } finally {
       setLoading(false);
@@ -104,13 +114,16 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
     if (!attemptId) return;
     const queue = new PracticeAnswerQueue(
       (draft) =>
-        apiFetch(`/api/practice/sessions/${attemptId}/answers/${draft.questionId}`, {
-          method: 'PUT',
-          body: JSON.stringify({
-            selectedOption: draft.selectedOption,
-            elapsedSeconds: draft.elapsedSeconds,
-          }),
-        }).then(() => undefined),
+        apiFetch(
+          `/api/practice/sessions/${attemptId}/answers/${draft.questionId}`,
+          {
+            method: "PUT",
+            body: JSON.stringify({
+              selectedOption: draft.selectedOption,
+              elapsedSeconds: draft.elapsedSeconds,
+            }),
+          },
+        ).then(() => undefined),
       setSync,
     );
     queueRef.current = queue;
@@ -138,8 +151,8 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
   useEffect(() => {
     if (sync.pending === 0) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [sync.pending]);
 
   const questions = useMemo(() => payload?.questions ?? [], [payload]);
@@ -190,14 +203,14 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
     setError(null);
     try {
       await apiFetch(`/api/practice/sessions/${payload.attempt.id}/submit`, {
-        method: 'POST',
+        method: "POST",
       });
       router.replace(`/practice/${payload.attempt.id}/review`);
     } catch (reason) {
       setError(
         reason instanceof Error
           ? reason.message
-          : 'The practice session could not be submitted.',
+          : "The practice session could not be submitted.",
       );
       setSubmitting(false);
       setConfirmingSubmit(false);
@@ -210,8 +223,8 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
       const target = event.target as HTMLElement | null;
       if (
         target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
           target.isContentEditable)
       ) {
         return;
@@ -224,17 +237,17 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
         select(question.options[optionIndex]);
         return;
       }
-      if (event.key === 'ArrowRight') {
+      if (event.key === "ArrowRight") {
         event.preventDefault();
         goTo(currentIndex + 1);
       }
-      if (event.key === 'ArrowLeft') {
+      if (event.key === "ArrowLeft") {
         event.preventDefault();
         goTo(currentIndex - 1);
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
     // `select` is stable enough for this handler; it only reads current state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmingSubmit, currentIndex, goTo, payload, submitting]);
@@ -249,7 +262,7 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
           We could not open this practice set
         </h1>
         <p className="mt-2 text-sm leading-6 text-ink-soft">
-          {error ?? 'The selected topic is not available right now.'}
+          {error ?? "The selected topic is not available right now."}
         </p>
         <button
           type="button"
@@ -268,50 +281,35 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
 
   return (
     <div className="mx-auto max-w-7xl p-4 sm:p-8 lg:p-10">
-      <header className="rounded-[1.5rem] border border-hairline bg-surface p-4 shadow-[0_16px_40px_rgba(20,20,30,0.055)] sm:rounded-[1.75rem] sm:p-5">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <p className="flex items-center gap-2 text-xs font-medium text-ink-mute">
-              <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
-              Reviewed practice
-            </p>
-            <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-              {payload.attempt.title}
-            </h1>
-            <p className="mt-2 text-sm text-ink-soft">
-              {scope.chapter} · {progress.answered}/{payload.attempt.totalQuestions}{' '}
-              answered
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 self-start text-xs font-bold">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-2 text-white">
-              <Timer className="h-3.5 w-3.5" aria-hidden="true" />
-              {formatDuration(elapsedSeconds)}
-            </span>
-            {payload.attempt.difficultyMix.map((entry) => (
-              <span
-                key={entry.label}
-                className="rounded-full bg-canvas px-3 py-2 text-ink-soft"
-              >
-                {entry.count} {entry.label}
-              </span>
-            ))}
-          </div>
+      <header className="rounded-2xl border border-hairline bg-surface px-3 py-2.5 shadow-[0_8px_22px_rgba(20,20,30,0.04)] sm:px-4">
+        <div className="flex items-center gap-3">
+          <h1 className="min-w-0 truncate font-heading text-sm font-bold tracking-tight text-ink sm:text-base">
+            {payload.attempt.title}
+          </h1>
+          <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-ink px-2.5 py-1 text-[11px] font-bold text-white">
+            <Timer className="h-3 w-3" aria-hidden="true" />
+            {formatDuration(elapsedSeconds)}
+          </span>
         </div>
-        <div
-          className="mt-4 h-1.5 overflow-hidden rounded-full bg-canvas"
-          role="progressbar"
-          aria-valuenow={progress.answered}
-          aria-valuemin={0}
-          aria-valuemax={payload.attempt.totalQuestions}
-          aria-label="Answered questions"
-        >
+        <div className="mt-2 flex items-center gap-3 text-[11px] font-semibold text-ink-mute">
+          <span className="shrink-0 text-ink-soft">
+            {progress.answered}/{payload.attempt.totalQuestions} answered
+          </span>
           <div
-            className="h-full rounded-full bg-primary transition-all duration-500"
-            style={{
-              width: `${Math.round((progress.answered / Math.max(1, payload.attempt.totalQuestions)) * 100)}%`,
-            }}
-          />
+            className="h-1.5 flex-1 overflow-hidden rounded-full bg-canvas"
+            role="progressbar"
+            aria-valuenow={progress.answered}
+            aria-valuemin={0}
+            aria-valuemax={payload.attempt.totalQuestions}
+            aria-label="Answered questions"
+          >
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-500"
+              style={{
+                width: `${Math.round((progress.answered / Math.max(1, payload.attempt.totalQuestions)) * 100)}%`,
+              }}
+            />
+          </div>
         </div>
       </header>
 
@@ -345,9 +343,9 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
           </div>
 
           <section className="rounded-[1.4rem] border border-hairline bg-surface p-5 shadow-[0_12px_28px_rgba(20,20,30,0.05)] sm:p-7">
-            <h2 className="font-heading text-xl font-bold leading-8 text-ink sm:text-2xl">
+            <StudyMarkdown className="font-heading text-xl font-bold leading-8 text-ink sm:text-2xl">
               {question.questionText}
-            </h2>
+            </StudyMarkdown>
             <div
               className="mt-6 space-y-3"
               role="radiogroup"
@@ -365,19 +363,23 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
                     onClick={() => select(option)}
                     className={`flex w-full items-center gap-3 rounded-2xl border p-4 text-left text-sm font-medium transition sm:p-5 ${
                       selected
-                        ? 'border-primary bg-primary-tint text-primary-strong ring-1 ring-primary'
-                        : 'border-hairline text-ink hover:border-primary/45 hover:bg-primary-tint/40'
+                        ? "border-primary bg-primary-tint text-primary-strong ring-1 ring-primary"
+                        : "border-hairline text-ink hover:border-primary/45 hover:bg-primary-tint/40"
                     } disabled:cursor-not-allowed disabled:opacity-60`}
                   >
                     <span
                       className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg text-xs font-bold ${
-                        selected ? 'bg-primary text-white' : 'bg-canvas text-ink-mute'
+                        selected
+                          ? "bg-primary text-white"
+                          : "bg-canvas text-ink-mute"
                       }`}
                       aria-hidden="true"
                     >
                       {index + 1}
                     </span>
-                    <span className="flex-1">{option}</span>
+                    <StudyMarkdown className="flex-1 min-w-0 text-sm font-medium">
+                      {option}
+                    </StudyMarkdown>
                     {selected && (
                       <CheckCircle2
                         className="h-5 w-5 shrink-0 text-primary"
@@ -402,12 +404,12 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
               aria-pressed={isMarked}
               className={`inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${
                 isMarked
-                  ? 'border-amber-200 bg-amber-50 text-amber-800'
-                  : 'border-hairline text-ink-soft hover:bg-canvas'
+                  ? "border-amber-200 bg-amber-50 text-amber-800"
+                  : "border-hairline text-ink-soft hover:bg-canvas"
               }`}
             >
               <Flag className="h-4 w-4" aria-hidden="true" />
-              {isMarked ? 'Marked for review' : 'Mark for review'}
+              {isMarked ? "Marked for review" : "Mark for review"}
             </button>
           </div>
 
@@ -447,12 +449,17 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
 
         <aside className="rounded-[1.5rem] border border-hairline bg-surface p-4 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:rounded-[1.75rem] sm:p-5 xl:self-start">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-heading text-lg font-bold text-ink">Question map</h2>
+            <h2 className="font-heading text-lg font-bold text-ink">
+              Question map
+            </h2>
             <span className="text-xs font-semibold text-ink-soft">
               {progress.answered}/{questions.length}
             </span>
           </div>
-          <div className="mt-5 grid grid-cols-5 gap-2" aria-label="Question navigation">
+          <div
+            className="mt-5 grid grid-cols-5 gap-2"
+            aria-label="Question navigation"
+          >
             {questions.map((item, index) => {
               const isCurrent = index === currentIndex;
               const isAnswered = Boolean(answers[item.id]);
@@ -463,14 +470,14 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
                   type="button"
                   onClick={() => goTo(index)}
                   disabled={submitting}
-                  aria-label={`Go to question ${index + 1}${isAnswered ? ', answered' : ', not answered'}${isFlagged ? ', marked for review' : ''}`}
-                  aria-current={isCurrent ? 'step' : undefined}
+                  aria-label={`Go to question ${index + 1}${isAnswered ? ", answered" : ", not answered"}${isFlagged ? ", marked for review" : ""}`}
+                  aria-current={isCurrent ? "step" : undefined}
                   className={`relative grid aspect-square place-items-center rounded-lg text-xs font-bold transition ${
                     isCurrent
-                      ? 'bg-primary text-white ring-2 ring-primary/30'
+                      ? "bg-primary text-white ring-2 ring-primary/30"
                       : isAnswered
-                        ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                        : 'bg-canvas text-ink-soft hover:bg-primary-tint'
+                        ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        : "bg-canvas text-ink-soft hover:bg-primary-tint"
                   }`}
                 >
                   {index + 1}
@@ -498,7 +505,9 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
             </div>
             <div className="flex items-center justify-between">
               <dt>Left</dt>
-              <dd className="font-bold text-ink">{progress.unanswered.length}</dd>
+              <dd className="font-bold text-ink">
+                {progress.unanswered.length}
+              </dd>
             </div>
           </dl>
 
@@ -506,7 +515,11 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
             <button
               type="button"
               onClick={() => {
-                const next = nextUnansweredIndex(questionIds, answers, currentIndex);
+                const next = nextUnansweredIndex(
+                  questionIds,
+                  answers,
+                  currentIndex,
+                );
                 if (next !== null) goTo(next);
               }}
               className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-hairline px-3 py-2 text-xs font-bold text-ink-soft transition hover:bg-canvas"
@@ -564,7 +577,8 @@ function SyncStatus({
     return (
       <p className="flex items-center gap-2 text-xs font-semibold text-rose-700">
         <CircleAlert className="h-4 w-4" aria-hidden="true" />
-        {sync.pending} answer{sync.pending === 1 ? '' : 's'} not saved yet — retrying.
+        {sync.pending} answer{sync.pending === 1 ? "" : "s"} not saved yet —
+        retrying.
         <button
           type="button"
           onClick={onRetry}
@@ -577,16 +591,25 @@ function SyncStatus({
   }
   if (sync.saving || sync.pending > 0) {
     return (
-      <p className="flex items-center gap-2 text-xs font-semibold text-ink-soft" aria-live="polite">
-        <RefreshCw className="h-4 w-4 animate-spin text-primary" aria-hidden="true" />
+      <p
+        className="flex items-center gap-2 text-xs font-semibold text-ink-soft"
+        aria-live="polite"
+      >
+        <RefreshCw
+          className="h-4 w-4 animate-spin text-primary"
+          aria-hidden="true"
+        />
         Saving your answer...
       </p>
     );
   }
   return (
-    <p className="flex items-center gap-2 text-xs font-semibold text-ink-soft" aria-live="polite">
+    <p
+      className="flex items-center gap-2 text-xs font-semibold text-ink-soft"
+      aria-live="polite"
+    >
       <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden="true" />
-      {answered ? 'Answer saved securely.' : 'Choose an answer to save it.'}
+      {answered ? "Answer saved securely." : "Choose an answer to save it."}
     </p>
   );
 }
@@ -684,9 +707,12 @@ function SubmitConfirmation({
 
         {pendingSaves > 0 ? (
           <p className="mt-5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
-            <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            {pendingSaves} answer{pendingSaves === 1 ? '' : 's'} still syncing. Give
-            it a moment so nothing is lost.
+            <CircleAlert
+              className="mt-0.5 h-4 w-4 shrink-0"
+              aria-hidden="true"
+            />
+            {pendingSaves} answer{pendingSaves === 1 ? "" : "s"} still syncing.
+            Give it a moment so nothing is lost.
           </p>
         ) : null}
 
@@ -705,7 +731,10 @@ function SubmitConfirmation({
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <LoaderCircle
+                className="h-4 w-4 animate-spin"
+                aria-hidden="true"
+              />
             ) : (
               <Send className="h-4 w-4" aria-hidden="true" />
             )}
@@ -722,7 +751,10 @@ function PracticeSkeleton() {
     <div className="mx-auto flex min-h-screen max-w-4xl items-center p-4 sm:p-8">
       <section className="w-full rounded-[2rem] border border-hairline bg-surface p-6 shadow-[0_22px_70px_rgba(20,20,30,0.07)]">
         <p className="flex items-center gap-3 text-sm font-semibold text-ink-soft">
-          <LoaderCircle className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
+          <LoaderCircle
+            className="h-5 w-5 animate-spin text-primary"
+            aria-hidden="true"
+          />
           Preparing your balanced practice set...
         </p>
         <div className="mt-6 grid gap-4 md:grid-cols-[1fr_16rem]">
@@ -739,7 +771,10 @@ function PracticeSkeleton() {
             <div className="h-5 w-28 rounded-full skeleton" />
             <div className="mt-5 grid grid-cols-5 gap-2">
               {Array.from({ length: 15 }, (_, index) => (
-                <div key={index} className="aspect-square rounded-lg skeleton" />
+                <div
+                  key={index}
+                  className="aspect-square rounded-lg skeleton"
+                />
               ))}
             </div>
           </div>

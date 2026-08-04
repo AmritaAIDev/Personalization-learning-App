@@ -106,9 +106,12 @@ export class PracticeAnswerQueue {
 
   private scheduleRetry(): void {
     if (this.timer || this.stopped) return;
-    this.timer = setTimeout(() => {
-      this.timer = null;
-      void this.drain();
-    }, retryDelayFor(this.failureCount - 1));
+    this.timer = setTimeout(
+      () => {
+        this.timer = null;
+        void this.drain();
+      },
+      retryDelayFor(this.failureCount - 1),
+    );
   }
 }

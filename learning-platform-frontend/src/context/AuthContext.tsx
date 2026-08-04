@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   createContext,
@@ -8,9 +8,9 @@ import {
   useMemo,
   useState,
   type ReactNode,
-} from 'react';
-import { ApiError, apiFetch, clearApiMemoryCache } from '@/lib/api';
-import type { AuthenticatedUser } from '@/lib/diagnostic-types';
+} from "react";
+import { ApiError, apiFetch, clearApiMemoryCache } from "@/lib/api";
+import type { AuthenticatedUser } from "@/lib/diagnostic-types";
 
 interface AuthContextValue {
   user: AuthenticatedUser | null;
@@ -38,7 +38,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const maxAttempts = 4;
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       try {
-        const response = await apiFetch<{ user: AuthenticatedUser }>('/api/auth/me');
+        const response = await apiFetch<{ user: AuthenticatedUser }>(
+          "/api/auth/me",
+        );
         setUser(response.user);
         setLoading(false);
         return;
@@ -54,7 +56,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
           continue;
         }
-        console.warn('Auth check failed transiently; keeping current session.', error);
+        console.warn(
+          "Auth check failed transiently; keeping current session.",
+          error,
+        );
         setLoading(false);
       }
     }
@@ -74,19 +79,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshAuth,
       login: async (email, password) => {
         clearApiMemoryCache();
-        const response = await apiFetch<{ user: AuthenticatedUser }>('/api/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email, password }),
-        });
+        const response = await apiFetch<{ user: AuthenticatedUser }>(
+          "/api/auth/login",
+          {
+            method: "POST",
+            body: JSON.stringify({ email, password }),
+          },
+        );
         setUser(response.user);
         return response.user;
       },
       register: async (name, email, password) => {
         clearApiMemoryCache();
         const response = await apiFetch<{ user: AuthenticatedUser }>(
-          '/api/auth/register',
+          "/api/auth/register",
           {
-            method: 'POST',
+            method: "POST",
             body: JSON.stringify({ name, email, password }),
           },
         );
@@ -94,8 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return response.user;
       },
       logout: async () => {
-        await apiFetch<{ loggedOut: boolean }>('/api/auth/logout', {
-          method: 'POST',
+        await apiFetch<{ loggedOut: boolean }>("/api/auth/logout", {
+          method: "POST",
         });
         clearApiMemoryCache();
         setUser(null);
@@ -110,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used inside an AuthProvider.');
+    throw new Error("useAuth must be used inside an AuthProvider.");
   }
   return context;
 }

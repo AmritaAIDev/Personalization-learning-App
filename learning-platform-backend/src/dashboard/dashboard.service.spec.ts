@@ -133,7 +133,9 @@ describe('DashboardService', () => {
   });
 
   it('derives subject coverage from the published catalogue and student topic state', async () => {
-    diagnosticsService.getDashboard.mockResolvedValue(diagnosticDashboard(null));
+    diagnosticsService.getDashboard.mockResolvedValue(
+      diagnosticDashboard(null),
+    );
     competencyService.getGrowth.mockResolvedValue({
       overall: { topicsTracked: 2, mastered: 1, score: 66, momentum: 4 },
       topics: [
@@ -164,7 +166,11 @@ describe('DashboardService', () => {
       addOrderBy: jest.fn().mockReturnThis(),
       getRawMany: jest.fn().mockResolvedValue([
         { subject: 'Physics', chapter: 'Electrostatics', topic: 'Gauss Law' },
-        { subject: 'Physics', chapter: 'Electrostatics', topic: 'Electric Field' },
+        {
+          subject: 'Physics',
+          chapter: 'Electrostatics',
+          topic: 'Electric Field',
+        },
         { subject: 'Physics', chapter: 'Electrostatics', topic: 'Capacitance' },
       ]),
     });
@@ -180,10 +186,8 @@ describe('DashboardService', () => {
         notStartedTopics: 1,
       }),
     ]);
-    expect(result.subjectCoverage[0].topics.map((topic) => topic.topic)).toEqual([
-      'Electric Field',
-      'Capacitance',
-      'Gauss Law',
-    ]);
+    expect(
+      result.subjectCoverage[0].topics.map((topic) => topic.topic),
+    ).toEqual(['Electric Field', 'Capacitance', 'Gauss Law']);
   });
 });

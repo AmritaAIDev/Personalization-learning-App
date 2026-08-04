@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   CheckCheck,
   CircleAlert,
@@ -11,8 +11,8 @@ import {
   RotateCcw,
   Sparkles,
   X,
-} from 'lucide-react';
-import { apiFetch } from '@/lib/api';
+} from "lucide-react";
+import { apiFetch } from "@/lib/api";
 import {
   appendFlashcards,
   createFlashcardSession,
@@ -24,14 +24,14 @@ import {
   remainingFlashcards,
   shouldPrefetchFlashcards,
   type FlashcardSession,
-} from '@/lib/flashcard-session';
+} from "@/lib/flashcard-session";
 import type {
   Flashcard,
   FlashcardRating,
   LearningScope,
-} from '@/lib/learning-types';
-import { useBodyScrollLock } from '@/lib/use-body-scroll-lock';
-import StudyMarkdown from './StudyMarkdown';
+} from "@/lib/learning-types";
+import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
+import StudyMarkdown from "./StudyMarkdown";
 
 const RATINGS: Array<{
   value: FlashcardRating;
@@ -41,40 +41,40 @@ const RATINGS: Array<{
   className: string;
 }> = [
   {
-    value: 'AGAIN',
-    label: 'Again',
-    caption: 'Show soon',
-    shortcut: '1',
-    className: 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100',
+    value: "AGAIN",
+    label: "Again",
+    caption: "Show soon",
+    shortcut: "1",
+    className: "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100",
   },
   {
-    value: 'HARD',
-    label: 'Hard',
-    caption: 'Shaky',
-    shortcut: '2',
-    className: 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100',
+    value: "HARD",
+    label: "Hard",
+    caption: "Shaky",
+    shortcut: "2",
+    className: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
   },
   {
-    value: 'GOOD',
-    label: 'Good',
-    caption: 'Recalled',
-    shortcut: '3',
+    value: "GOOD",
+    label: "Good",
+    caption: "Recalled",
+    shortcut: "3",
     className:
-      'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
+      "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
   },
   {
-    value: 'EASY',
-    label: 'Easy',
-    caption: 'Instant',
-    shortcut: '4',
-    className: 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100',
+    value: "EASY",
+    label: "Easy",
+    caption: "Instant",
+    shortcut: "4",
+    className: "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100",
   },
 ];
 
-type DeckStatus = 'loading' | 'ready' | 'error';
+type DeckStatus = "loading" | "ready" | "error";
 
 /** What the deck body should render, derived rather than tracked separately. */
-type DeckView = 'loading' | 'card' | 'error' | 'summary';
+type DeckView = "loading" | "card" | "error" | "summary";
 
 /**
  * Recall workspace for a topic.
@@ -94,7 +94,7 @@ export default function FlashcardDeck({
   const [session, setSession] = useState<FlashcardSession>(
     createFlashcardSession,
   );
-  const [status, setStatus] = useState<DeckStatus>('loading');
+  const [status, setStatus] = useState<DeckStatus>("loading");
   const [flipped, setFlipped] = useState(false);
   const [hintVisible, setHintVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,8 +127,8 @@ export default function FlashcardDeck({
   );
 
   const requestBatch = useCallback(async (): Promise<Flashcard[]> => {
-    return apiFetch<Flashcard[]>('/api/learning/flashcards/generate', {
-      method: 'POST',
+    return apiFetch<Flashcard[]>("/api/learning/flashcards/generate", {
+      method: "POST",
       body: JSON.stringify({
         subject,
         chapter,
@@ -147,7 +147,7 @@ export default function FlashcardDeck({
    * `background` keeps a shortfall quiet until the queue actually runs dry.
    */
   const loadBatch = useCallback(
-    (mode: 'background' | 'foreground'): Promise<void> => {
+    (mode: "background" | "foreground"): Promise<void> => {
       if (fetchingRef.current) return Promise.resolve();
       fetchingRef.current = true;
 
@@ -162,21 +162,21 @@ export default function FlashcardDeck({
           if (!sourceDryRef.current) setError(null);
           // An empty batch is not a failure: the topic simply has nothing new
           // left, which the summary view reports calmly.
-          setStatus('ready');
+          setStatus("ready");
         })
         .catch((reason: unknown) => {
           setError(
             reason instanceof Error
               ? reason.message
-              : 'Flashcards are unavailable right now.',
+              : "Flashcards are unavailable right now.",
           );
           // A failed top-up only becomes an error screen once the learner has
           // actually run out of cards; otherwise they keep reviewing undisturbed.
           if (
-            mode === 'foreground' ||
+            mode === "foreground" ||
             remainingFlashcards(sessionRef.current) === 0
           ) {
-            setStatus('error');
+            setStatus("error");
           }
         })
         .finally(() => {
@@ -191,29 +191,30 @@ export default function FlashcardDeck({
     setError(null);
     setLoadingMore(true);
     sourceDryRef.current = false;
-    void loadBatch('foreground').finally(() => setLoadingMore(false));
+    void loadBatch("foreground").finally(() => setLoadingMore(false));
   }, [loadBatch]);
 
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
-    void loadBatch('foreground');
+    void loadBatch("foreground");
   }, [loadBatch]);
 
   // Keep a small buffer ahead of the learner so a rating never waits on the API.
   useEffect(() => {
-    if (status !== 'ready' || fetchingRef.current || sourceDryRef.current) return;
+    if (status !== "ready" || fetchingRef.current || sourceDryRef.current)
+      return;
     if (!shouldPrefetchFlashcards(session)) return;
-    void loadBatch('background');
+    void loadBatch("background");
   }, [loadBatch, session, status]);
 
   const view: DeckView = card
-    ? 'card'
-    : status === 'loading'
-      ? 'loading'
-      : status === 'error'
-        ? 'error'
-        : 'summary';
+    ? "card"
+    : status === "loading"
+      ? "loading"
+      : status === "error"
+        ? "error"
+        : "summary";
 
   const submitRating = useCallback(
     (rating: FlashcardRating) => {
@@ -224,7 +225,7 @@ export default function FlashcardDeck({
       // the next card.
       if (isPersistedFlashcard(active)) {
         void apiFetch(`/api/learning/flashcards/${active.id}/review`, {
-          method: 'POST',
+          method: "POST",
           body: JSON.stringify({ rating }),
         }).catch(() => undefined);
       }
@@ -245,7 +246,7 @@ export default function FlashcardDeck({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         event.preventDefault();
         onClose();
         return;
@@ -258,7 +259,7 @@ export default function FlashcardDeck({
       }
       if (!currentFlashcard(sessionRef.current)) return;
 
-      if (event.key === ' ' || event.key === 'Enter') {
+      if (event.key === " " || event.key === "Enter") {
         // A focused control activates itself on these keys; acting here too
         // would flip the card a second time.
         if (target?.closest?.('button, a, [role="button"]')) return;
@@ -266,7 +267,7 @@ export default function FlashcardDeck({
         flip();
         return;
       }
-      if (event.key.toLowerCase() === 'h') {
+      if (event.key.toLowerCase() === "h") {
         event.preventDefault();
         setHintVisible((value) => !value);
         return;
@@ -277,8 +278,8 @@ export default function FlashcardDeck({
         submitRating(rating.value);
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [flip, flipped, onClose, submitRating]);
 
   const summary = useMemo(
@@ -290,7 +291,7 @@ export default function FlashcardDeck({
     [session.tally],
   );
 
-  if (typeof document === 'undefined') return null;
+  if (typeof document === "undefined") return null;
 
   return createPortal(
     <div
@@ -307,7 +308,8 @@ export default function FlashcardDeck({
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Recall space
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Recall
+                space
               </p>
               <h2 className="mt-1 truncate font-heading text-xl font-bold tracking-tight text-ink sm:text-2xl">
                 {topic}
@@ -337,36 +339,42 @@ export default function FlashcardDeck({
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] font-semibold text-ink-mute">
             <span aria-live="polite">
               {session.reviewed} reviewed
-              {remaining > 0 ? ` · ${remaining} in queue` : ''}
+              {remaining > 0 ? ` · ${remaining} in queue` : ""}
             </span>
             {loadingMore ? (
               <span className="flex items-center gap-1.5 text-primary">
-                <LoaderCircle className="h-3 w-3 animate-spin" aria-hidden="true" />
+                <LoaderCircle
+                  className="h-3 w-3 animate-spin"
+                  aria-hidden="true"
+                />
                 Preparing more cards
               </span>
             ) : null}
           </div>
           {shortcutsVisible ? (
             <p className="mt-2 hidden text-[11px] leading-5 text-ink-mute sm:block">
-              <kbd className="font-bold text-ink-soft">Space</kbd> flip ·{' '}
-              <kbd className="font-bold text-ink-soft">H</kbd> hint ·{' '}
-              <kbd className="font-bold text-ink-soft">1–4</kbd> rate ·{' '}
+              <kbd className="font-bold text-ink-soft">Space</kbd> flip ·{" "}
+              <kbd className="font-bold text-ink-soft">H</kbd> hint ·{" "}
+              <kbd className="font-bold text-ink-soft">1–4</kbd> rate ·{" "}
               <kbd className="font-bold text-ink-soft">Esc</kbd> close
             </p>
           ) : null}
         </header>
 
         <div className="flex min-h-0 flex-1 flex-col p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-7">
-          {view === 'loading' ? <DeckSkeleton /> : null}
+          {view === "loading" ? <DeckSkeleton /> : null}
 
-          {view === 'error' ? (
+          {view === "error" ? (
             <div
               className="mx-auto my-auto max-w-md rounded-2xl border border-rose-100 bg-rose-50 p-5 text-sm text-rose-800"
               role="alert"
             >
               <p className="flex items-start gap-2 font-semibold">
-                <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                {error ?? 'Flashcards are unavailable right now.'}
+                <CircleAlert
+                  className="mt-0.5 h-4 w-4 shrink-0"
+                  aria-hidden="true"
+                />
+                {error ?? "Flashcards are unavailable right now."}
               </p>
               <button
                 type="button"
@@ -378,7 +386,7 @@ export default function FlashcardDeck({
             </div>
           ) : null}
 
-          {view === 'summary' ? (
+          {view === "summary" ? (
             <RunSummary
               reviewed={session.reviewed}
               summary={summary}
@@ -388,20 +396,22 @@ export default function FlashcardDeck({
             />
           ) : null}
 
-          {view === 'card' && card ? (
+          {view === "card" && card ? (
             <>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-semibold text-ink-mute">
                 <span>
                   {flipped
-                    ? 'Rate how the recall felt'
-                    : 'Recall the answer, then reveal it'}
+                    ? "Rate how the recall felt"
+                    : "Recall the answer, then reveal it"}
                 </span>
                 {card.review ? (
                   <span className="rounded-full bg-primary-tint px-2.5 py-1 text-primary">
                     Seen {card.review.repetitions}×
                   </span>
                 ) : (
-                  <span className="rounded-full bg-canvas px-2.5 py-1">New card</span>
+                  <span className="rounded-full bg-canvas px-2.5 py-1">
+                    New card
+                  </span>
                 )}
               </div>
 
@@ -411,15 +421,15 @@ export default function FlashcardDeck({
                   role="button"
                   tabIndex={0}
                   aria-pressed={flipped}
-                  aria-label={flipped ? 'Hide the answer' : 'Reveal the answer'}
+                  aria-label={flipped ? "Hide the answer" : "Reveal the answer"}
                   onClick={flip}
                   onKeyDown={(event) => {
-                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    if (event.key !== "Enter" && event.key !== " ") return;
                     event.preventDefault();
                     flip();
                   }}
                   className={`flip-inner block h-full w-full cursor-pointer text-left ${
-                    flipped ? 'is-flipped' : ''
+                    flipped ? "is-flipped" : ""
                   }`}
                 >
                   <div className="flip-face flex flex-col overflow-y-auto overscroll-contain rounded-[1.75rem] border border-[#e7ebe8] bg-white p-6 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:p-9">
@@ -451,7 +461,10 @@ export default function FlashcardDeck({
                           }}
                           className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-hairline px-3 text-xs font-bold text-ink-soft transition hover:border-primary/40 hover:text-primary"
                         >
-                          <Lightbulb className="h-3.5 w-3.5" aria-hidden="true" />
+                          <Lightbulb
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                          />
                           Need a nudge
                         </button>
                       ) : null}
@@ -503,7 +516,8 @@ export default function FlashcardDeck({
                   onClick={flip}
                   className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-ink px-3 py-2 text-sm font-bold text-white transition hover:bg-ink/90"
                 >
-                  <RotateCcw className="h-4 w-4" aria-hidden="true" /> Reveal answer
+                  <RotateCcw className="h-4 w-4" aria-hidden="true" /> Reveal
+                  answer
                 </button>
               )}
             </>
@@ -548,12 +562,12 @@ function RunSummary({
         <CheckCheck className="h-7 w-7" aria-hidden="true" />
       </span>
       <h3 className="mt-5 font-heading text-2xl font-bold tracking-tight text-ink">
-        {reviewed > 0 ? 'Recall run complete' : 'No cards to review'}
+        {reviewed > 0 ? "Recall run complete" : "No cards to review"}
       </h3>
       <p className="mt-2 text-sm leading-6 text-ink-soft">
         {reviewed > 0
-          ? `You worked through ${reviewed} card${reviewed === 1 ? '' : 's'}. Ratings are saved, so due cards return on schedule.`
-          : 'This topic has no fresh recall prompt right now. Try again after a practice round adds new material.'}
+          ? `You worked through ${reviewed} card${reviewed === 1 ? "" : "s"}. Ratings are saved, so due cards return on schedule.`
+          : "This topic has no fresh recall prompt right now. Try again after a practice round adds new material."}
       </p>
 
       {reviewed > 0 ? (

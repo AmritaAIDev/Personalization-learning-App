@@ -1,12 +1,9 @@
-import type { DashboardPayload } from './diagnostic-types';
-import type { GrowthPayload } from './growth-types';
-import type { LearningDashboardPayload, LearningScope } from './learning-types';
+import type { DashboardPayload } from "./diagnostic-types";
+import type { GrowthPayload } from "./growth-types";
+import type { LearningDashboardPayload, LearningScope } from "./learning-types";
 
 export type StudentDashboardActionKind =
-  | 'RESUME_DIAGNOSTIC'
-  | 'CONTINUE_LEARNING'
-  | 'REVIEW_MISTAKES'
-  | 'FIND_TOPIC';
+  "RESUME_DIAGNOSTIC" | "CONTINUE_LEARNING" | "REVIEW_MISTAKES" | "FIND_TOPIC";
 
 export type StudentDashboardAction = {
   id: string;
@@ -43,7 +40,7 @@ export type StudentDashboardPayload = {
   };
   activity: Array<{
     id: string;
-    type: 'LEARNING' | 'DIAGNOSTIC';
+    type: "LEARNING" | "DIAGNOSTIC";
     title: string;
     detail: string;
     occurredAt: string;
@@ -58,9 +55,11 @@ export type StudentDashboardPayload = {
     activeTopics: number;
     pausedTopics: number;
     notStartedTopics: number;
-    topics: Array<LearningScope & {
-      status: 'MASTERED' | 'ACTIVE' | 'PAUSED' | 'NOT_STARTED';
-      score: number | null;
-    }>;
+    topics: Array<
+      LearningScope & {
+        status: "MASTERED" | "ACTIVE" | "PAUSED" | "NOT_STARTED";
+        score: number | null;
+      }
+    >;
   }>;
 };

@@ -747,6 +747,7 @@ describe('AdaptiveService row-level answer mutations', () => {
     const itemsRepository = {
       createQueryBuilder: jest.fn(() => createQueryBuilder(item)),
       findOne: jest.fn(async () => item),
+      find: jest.fn(async () => [item]),
       save: jest.fn(async (value: LearningSessionItem) => value),
     };
     const answersRepository = {

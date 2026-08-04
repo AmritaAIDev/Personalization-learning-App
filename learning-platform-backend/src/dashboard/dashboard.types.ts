@@ -25,10 +25,7 @@ export interface DashboardActivity extends Partial<LearningScope> {
 }
 
 export type DashboardTopicProgressStatus =
-  | 'MASTERED'
-  | 'ACTIVE'
-  | 'PAUSED'
-  | 'NOT_STARTED';
+  'MASTERED' | 'ACTIVE' | 'PAUSED' | 'NOT_STARTED';
 
 export interface DashboardSubjectCoverage {
   subject: string;
@@ -37,8 +34,10 @@ export interface DashboardSubjectCoverage {
   activeTopics: number;
   pausedTopics: number;
   notStartedTopics: number;
-  topics: Array<LearningScope & {
-    status: DashboardTopicProgressStatus;
-    score: number | null;
-  }>;
+  topics: Array<
+    LearningScope & {
+      status: DashboardTopicProgressStatus;
+      score: number | null;
+    }
+  >;
 }

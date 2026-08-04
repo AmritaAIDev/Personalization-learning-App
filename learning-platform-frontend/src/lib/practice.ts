@@ -4,15 +4,15 @@ export interface PracticeScope {
   topic: string;
 }
 
-type SearchParamsReader = Pick<URLSearchParams, 'get'>;
+type SearchParamsReader = Pick<URLSearchParams, "get">;
 
 /** Parses only a complete, human-readable practice scope from the URL. */
 export function practiceScopeFromSearchParams(
   searchParams: SearchParamsReader,
 ): PracticeScope | null {
-  const subject = searchParams.get('subject')?.trim();
-  const chapter = searchParams.get('chapter')?.trim();
-  const topic = searchParams.get('topic')?.trim();
+  const subject = searchParams.get("subject")?.trim();
+  const chapter = searchParams.get("chapter")?.trim();
+  const topic = searchParams.get("topic")?.trim();
 
   if (!subject || !chapter || !topic) {
     return null;
@@ -33,9 +33,12 @@ export function practiceHref(scope: PracticeScope): string {
 /** Clamped to the range the backend accepts for a stored answer time. */
 export function elapsedPracticeSeconds(startedAt: string | number): number {
   const startedAtTime =
-    typeof startedAt === 'number' ? startedAt : new Date(startedAt).getTime();
+    typeof startedAt === "number" ? startedAt : new Date(startedAt).getTime();
   if (Number.isNaN(startedAtTime)) return 0;
-  return Math.max(0, Math.min(60 * 60, Math.floor((Date.now() - startedAtTime) / 1000)));
+  return Math.max(
+    0,
+    Math.min(60 * 60, Math.floor((Date.now() - startedAtTime) / 1000)),
+  );
 }
 
 export type PracticeAttemptProgress = {

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Urbanist } from "next/font/google";
+import { Urbanist, Poppins } from "next/font/google";
 import "./globals.css";
 import "katex/dist/katex.min.css";
 import { AuthProvider } from "@/context/AuthContext";
@@ -9,6 +9,13 @@ const urbanist = Urbanist({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-urbanist",
+});
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-poppins",
 });
 
 export const metadata: Metadata = {
@@ -24,7 +31,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${urbanist.variable} h-full antialiased`}
+      className={`${urbanist.variable} ${poppins.variable} h-full antialiased`}
     >
       <body
         suppressHydrationWarning

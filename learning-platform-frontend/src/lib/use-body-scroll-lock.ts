@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 /**
  * Freezes the page behind a full-surface dialog. Without this, scrolling on a
@@ -9,9 +9,9 @@ import { useEffect } from 'react';
  */
 export function useBodyScrollLock(active = true): void {
   useEffect(() => {
-    if (!active || typeof document === 'undefined') return;
+    if (!active || typeof document === "undefined") return;
     const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previous;
     };

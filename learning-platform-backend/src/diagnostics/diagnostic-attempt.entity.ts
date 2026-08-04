@@ -11,7 +11,10 @@ import {
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import type { DiagnosticAnalysis } from './diagnostic.types';
-import { DiagnosticAttemptMode, DiagnosticAttemptStatus } from './diagnostic.types';
+import {
+  DiagnosticAttemptMode,
+  DiagnosticAttemptStatus,
+} from './diagnostic.types';
 import { DiagnosticAnswer } from './diagnostic-answer.entity';
 
 /**
@@ -34,7 +37,11 @@ export class DiagnosticAttempt {
   @Column({ type: 'varchar', length: 100 })
   subject: string;
 
-  @Column({ type: 'varchar', length: 24, default: DiagnosticAttemptMode.PROGRAM })
+  @Column({
+    type: 'varchar',
+    length: 24,
+    default: DiagnosticAttemptMode.PROGRAM,
+  })
   mode: DiagnosticAttemptMode;
 
   @Column({ type: 'varchar', length: 160, nullable: true })

@@ -27,6 +27,7 @@ import {
 } from './adaptive-content.service';
 import {
   FlashcardRating,
+  FlashcardSource,
   FlashcardStatus,
   GeneratedLearningQuestionStatus,
   LearningQuestionSource,
@@ -98,6 +99,8 @@ type PublicSessionPayload = {
     difficulty: string;
     attemptCount: number;
     requiresRetry: boolean;
+    /** Options already used on this item, so the retry can rule them out. */
+    attemptedOptions: string[];
   } | null;
   progress: Array<{
     id: string;
@@ -105,6 +108,53 @@ type PublicSessionPayload = {
     status: 'CURRENT' | 'PENDING' | 'RESOLVED';
     attemptCount: number;
   }>;
+};
+
+/** Default number of cards a recall run asks for in one delivery batch. */
+const FLASHCARD_BATCH_SIZE = 6;
+
+/**
+ * How deep the reusable card pool should grow for a topic. Once reached, every
+ * later recall run is served from the database in milliseconds instead of
+ * waiting on a model round trip.
+ */
+const FLASHCARD_POOL_TARGET = 30;
+
+/** Multiplier used to look past cards the running deck has already shown. */
+const FLASHCARD_POOL_LOOKAHEAD = 4;
+
+type FlashcardPoolRow = {
+  id: string;
+  subject: string;
+  chapter: string;
+  topic: string;
+  front: string;
+  back: string;
+  hint: string | null;
+  tags: string[] | null;
+  lastRating: FlashcardRating | null;
+  repetitions: number | null;
+  intervalDays: number | null;
+  dueAt: Date | null;
+  lastReviewedAt: Date | null;
+};
+
+type FlashcardPayload = {
+  id: string;
+  subject: string;
+  chapter: string;
+  topic: string;
+  front: string;
+  back: string;
+  hint: string | null;
+  tags: string[];
+  review: {
+    lastRating: FlashcardRating;
+    repetitions: number;
+    intervalDays: number;
+    dueAt: Date;
+    lastReviewedAt: Date;
+  } | null;
 };
 
 type AnswerMutation = {
@@ -129,6 +179,9 @@ type AnswerMutation = {
 
 @Injectable()
 export class AdaptiveService {
+  /** One background card top-up per topic at a time. */
+  private readonly flashcardTopUps = new Map<string, Promise<void>>();
+
   constructor(
     private readonly dataSource: DataSource,
     private readonly contentService: AdaptiveContentService,
@@ -349,23 +402,30 @@ export class AdaptiveService {
 
     const tutorPending =
       mutation.kind === 'SOCRATIC_HINT' || mutation.shouldExplainSecondFailure;
+    // Marked before the background write starts so the very next conversation
+    // read already reports "writing" instead of an empty thread.
+    if (tutorPending) this.tutorService.markPending(sessionId);
     if (mutation.kind === 'SOCRATIC_HINT') {
-      void this.tutorService.createSocraticHint(
-        userId,
-        mutation.session,
-        mutation.sessionItemId,
-        mutation.question,
-        mutation.selectedOption,
-      ).catch(() => undefined);
+      void this.tutorService
+        .createSocraticHint(
+          userId,
+          mutation.session,
+          mutation.sessionItemId,
+          mutation.question,
+          mutation.selectedOption,
+        )
+        .catch(() => undefined);
     }
     if (mutation.shouldExplainSecondFailure) {
-      void this.tutorService.createAnswerExplanation(
-        userId,
-        mutation.session,
-        mutation.sessionItemId,
-        mutation.question,
-        mutation.selectedOption,
-      ).catch(() => undefined);
+      void this.tutorService
+        .createAnswerExplanation(
+          userId,
+          mutation.session,
+          mutation.sessionItemId,
+          mutation.question,
+          mutation.selectedOption,
+        )
+        .catch(() => undefined);
     }
     if (mutation.prefetchScope && mutation.prefetchLevel) {
       void this.prefetchPracticeContinuity(
@@ -454,10 +514,25 @@ export class AdaptiveService {
     };
   }
 
-  getFlashcards(userId: string, input: FlashcardQueryDto) {
-    void userId;
-    void input;
-    return [];
+  /**
+   * Spaced-repetition queue for the learner: cards never seen first, then
+   * everything already due, then the rest by schedule.
+   */
+  async getFlashcards(
+    userId: string,
+    input: FlashcardQueryDto,
+  ): Promise<FlashcardPayload[]> {
+    const limit = Math.min(Math.max(input.limit ?? 20, 1), 30);
+    const rows = await this.queryFlashcardPool(
+      userId,
+      {
+        subject: input.subject?.trim(),
+        chapter: input.chapter?.trim(),
+        topic: input.topic?.trim(),
+      },
+      limit,
+    );
+    return rows.map((row) => this.toPoolPayload(row));
   }
 
   async reviewFlashcard(
@@ -487,26 +562,63 @@ export class AdaptiveService {
     return this.toFlashcardPayload(card, saved);
   }
 
-  async generateFlashcards(userId: string, input: GenerateFlashcardsDto) {
-    void userId;
+  /**
+   * Delivers the next recall batch for a topic.
+   *
+   * The reviewed card pool is served first, so a warm topic answers from the
+   * database instead of waiting on the model. Generation only runs for the
+   * shortfall, and every generated card is persisted with a real identifier so
+   * the learner's rating can drive the spaced-repetition schedule and so the
+   * next run is instant.
+   */
+  async generateFlashcards(
+    userId: string,
+    input: GenerateFlashcardsDto,
+  ): Promise<FlashcardPayload[]> {
     const scope = this.toScope(input);
-    const count = input.count ?? 6;
-    const sourceMaterial = await this.buildFlashcardSourceMaterial(scope);
-    const generated = await this.agentService.generateFlashcards({
-      ...scope,
-      count,
-      sourceMaterial,
-      excludedPrompts: input.excludedPrompts ?? [],
+    const count = Math.min(
+      Math.max(input.count ?? FLASHCARD_BATCH_SIZE, 1),
+      12,
+    );
+    const excluded = new Set(
+      (input.excludedPrompts ?? []).map((prompt) =>
+        this.normalizeFlashcardFront(prompt),
+      ),
+    );
+
+    const lookahead = count * FLASHCARD_POOL_LOOKAHEAD;
+    const pool = await this.queryFlashcardPool(userId, scope, lookahead);
+    const unseen = pool.filter(
+      (row) => !excluded.has(this.normalizeFlashcardFront(row.front)),
+    );
+    const served = unseen.slice(0, count).map((row) => this.toPoolPayload(row));
+
+    if (served.length >= count) {
+      // Keep the pool ahead of the learner without making them wait for it.
+      this.scheduleFlashcardTopUp(scope);
+      return served;
+    }
+
+    // A generation failure must not throw away cards the pool already has: a
+    // short batch keeps the run going, and the next request tries again.
+    const generated = await this.generateAndPersistFlashcards(
+      scope,
+      Math.max(count - served.length, 3),
+      [
+        ...excluded,
+        ...served.map((card) => this.normalizeFlashcardFront(card.front)),
+      ],
+    ).catch((error: unknown) => {
+      if (served.length > 0) return [] as FlashcardPayload[];
+      throw error;
     });
-    return generated.map((card, index) => ({
-      id: `live-${Date.now()}-${index}`,
-      ...scope,
-      front: card.front,
-      back: card.back,
-      hint: card.hint,
-      tags: card.tags,
-      review: null,
-    }));
+    const batch = [...served, ...generated].slice(0, count);
+    if (batch.length === 0) {
+      throw new ServiceUnavailableException(
+        'No new recall prompt could be prepared for this topic right now.',
+      );
+    }
+    return batch;
   }
 
   private async applyAnswer(
@@ -878,6 +990,10 @@ export class AdaptiveService {
               requiresRetry:
                 (current.answers?.length ?? 0) === 1 &&
                 current.answers?.[0]?.isCorrect === false,
+              attemptedOptions: (current.answers ?? [])
+                .slice()
+                .sort((left, right) => left.attemptNumber - right.attemptNumber)
+                .map((answer) => answer.selectedOption),
             }
           : null,
       progress: items.map((item) => ({
@@ -1123,6 +1239,163 @@ export class AdaptiveService {
       .slice(0, 3);
   }
 
+  /**
+   * One indexed query for the whole recall queue. New cards sort first, then
+   * cards that are due, then the remaining schedule.
+   */
+  private async queryFlashcardPool(
+    userId: string,
+    filters: { subject?: string; chapter?: string; topic?: string },
+    limit: number,
+  ): Promise<FlashcardPoolRow[]> {
+    const params: unknown[] = [userId, FlashcardStatus.PUBLISHED];
+    const conditions = ['c.status = $2'];
+    for (const [column, value] of [
+      ['subject', filters.subject],
+      ['chapter', filters.chapter],
+      ['topic', filters.topic],
+    ] as const) {
+      if (!value) continue;
+      params.push(value);
+      conditions.push(`c.${column} = $${params.length}`);
+    }
+    params.push(limit);
+
+    // New cards first, then anything due, then the rest of the schedule. Every
+    // value is bound, never interpolated.
+    const rows = (await this.dataSource.query(
+      `SELECT c.id, c.subject, c.chapter, c.topic, c.front, c.back, c.hint, c.tags,
+              r.last_rating AS "lastRating",
+              r.repetitions AS "repetitions",
+              r.interval_days AS "intervalDays",
+              r.due_at AS "dueAt",
+              r.last_reviewed_at AS "lastReviewedAt"
+       FROM flashcards c
+       LEFT JOIN flashcard_reviews r
+         ON r.flashcard_id = c.id AND r.user_id = $1
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY
+         CASE WHEN r.id IS NULL THEN 0 WHEN r.due_at <= now() THEN 1 ELSE 2 END ASC,
+         r.due_at ASC NULLS FIRST,
+         c.created_at ASC
+       LIMIT $${params.length}`,
+      params,
+    )) as unknown as FlashcardPoolRow[];
+    return rows;
+  }
+
+  /**
+   * Generates the shortfall and stores it as reusable reviewed content. Cards
+   * are topic-scoped and derived only from published questions, so the pool is
+   * shared safely across learners while each learner keeps a private schedule.
+   */
+  private async generateAndPersistFlashcards(
+    scope: LearningScope,
+    count: number,
+    excludedFronts: string[],
+  ): Promise<FlashcardPayload[]> {
+    const [sourceMaterial, existing] = await Promise.all([
+      this.buildFlashcardSourceMaterial(scope),
+      this.flashcardsRepository.find({
+        where: { ...scope, status: FlashcardStatus.PUBLISHED },
+        select: { id: true, front: true },
+        order: { createdAt: 'DESC' },
+        take: 40,
+      }),
+    ]);
+    const existingFronts = new Set(
+      existing.map((card) => this.normalizeFlashcardFront(card.front)),
+    );
+    // Telling the model what the pool already covers is what keeps a topic's
+    // cards genuinely distinct instead of endlessly rephrased.
+    const generated = await this.agentService.generateFlashcards({
+      ...scope,
+      count: Math.min(Math.max(count, 3), 12),
+      sourceMaterial,
+      excludedPrompts: [
+        ...new Set([
+          ...existing.map((card) => card.front.trim().slice(0, 240)),
+          ...excludedFronts,
+        ]),
+      ].slice(-40),
+    });
+
+    const records = generated
+      .filter(
+        (card) => !existingFronts.has(this.normalizeFlashcardFront(card.front)),
+      )
+      .map((card) =>
+        this.flashcardsRepository.create({
+          ...scope,
+          front: card.front,
+          back: card.back,
+          hint: card.hint,
+          tags: card.tags,
+          source: FlashcardSource.AI_GENERATED,
+          status: FlashcardStatus.PUBLISHED,
+        }),
+      );
+    if (records.length === 0) return [];
+    const saved = await this.flashcardsRepository.save(records);
+    return saved.map((card) => this.toFlashcardPayload(card, null));
+  }
+
+  /**
+   * Fire-and-forget pool warm-up. Only one run per topic is ever in flight, and
+   * failures stay silent because the learner already has their batch.
+   */
+  private scheduleFlashcardTopUp(scope: LearningScope): void {
+    const key = `${scope.subject}|${scope.chapter}|${scope.topic}`;
+    if (this.flashcardTopUps.has(key)) return;
+    const task = (async () => {
+      const total = await this.flashcardsRepository.count({
+        where: { ...scope, status: FlashcardStatus.PUBLISHED },
+      });
+      if (total >= FLASHCARD_POOL_TARGET) return;
+      await this.generateAndPersistFlashcards(
+        scope,
+        Math.min(FLASHCARD_BATCH_SIZE, FLASHCARD_POOL_TARGET - total),
+        [],
+      );
+    })()
+      .catch(() => undefined)
+      .finally(() => {
+        this.flashcardTopUps.delete(key);
+      });
+    this.flashcardTopUps.set(key, task);
+  }
+
+  private toPoolPayload(row: FlashcardPoolRow): FlashcardPayload {
+    return {
+      id: row.id,
+      subject: row.subject,
+      chapter: row.chapter,
+      topic: row.topic,
+      front: row.front,
+      back: row.back,
+      hint: row.hint,
+      tags: Array.isArray(row.tags) ? row.tags : [],
+      review:
+        row.lastRating && row.dueAt
+          ? {
+              lastRating: row.lastRating,
+              repetitions: Number(row.repetitions ?? 0),
+              intervalDays: Number(row.intervalDays ?? 0),
+              dueAt: row.dueAt,
+              lastReviewedAt: row.lastReviewedAt ?? row.dueAt,
+            }
+          : null,
+    };
+  }
+
+  private normalizeFlashcardFront(value: string): string {
+    return value
+      .toLocaleLowerCase('en-US')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .slice(0, 240);
+  }
+
   private async buildFlashcardSourceMaterial(
     scope: LearningScope,
   ): Promise<string> {
@@ -1196,7 +1469,10 @@ export class AdaptiveService {
     };
   }
 
-  private toFlashcardPayload(card: Flashcard, review: FlashcardReview | null) {
+  private toFlashcardPayload(
+    card: Flashcard,
+    review: FlashcardReview | null,
+  ): FlashcardPayload {
     return {
       id: card.id,
       subject: card.subject,

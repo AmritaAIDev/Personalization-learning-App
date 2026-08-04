@@ -35,6 +35,8 @@ export interface PracticeAttemptPayload {
     status: PracticeStatus;
     totalQuestions: number;
     startedAt: string;
+    /** Real composition of this attempt, computed by the backend. */
+    difficultyMix: Array<{ label: string; count: number }>;
   };
   questions: PracticeQuestion[];
   answers: Array<{ questionId: string; selectedOption: string }>;

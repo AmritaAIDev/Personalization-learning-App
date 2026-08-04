@@ -8,7 +8,16 @@ import { LearningSession } from './learning-session.entity';
 import { TutorConversation } from './tutor-conversation.entity';
 import { TutorMessage } from './tutor-message.entity';
 
-const TUTOR_AI_TIMEOUT_MS = 5500;
+/**
+ * Hints and explanations are written in the background while the learner reads
+ * the question, so they can afford a realistic model budget. A direct chat
+ * message is answered inside the request, so it gets the tighter budget.
+ */
+const TUTOR_BACKGROUND_TIMEOUT_MS = 20_000;
+const TUTOR_INTERACTIVE_TIMEOUT_MS = 14_000;
+
+/** Safety valve so a lost background call cannot pin the UI in "writing…". */
+const TUTOR_PENDING_TTL_MS = 30_000;
 
 export interface TutorMessagePayload {
   id: string;
@@ -23,6 +32,8 @@ export interface TutorMessagePayload {
 @Injectable()
 export class TutorService {
   private readonly logger = new Logger(TutorService.name);
+  /** Sessions with a background tutor reply in flight, with an expiry stamp. */
+  private readonly pendingBySession = new Map<string, number>();
 
   constructor(
     private readonly agentService: AgentService,
@@ -32,23 +43,70 @@ export class TutorService {
     private readonly messagesRepository: Repository<TutorMessage>,
   ) {}
 
+  /**
+   * Marks a session as waiting on a background tutor reply. The client uses it
+   * to show a live "writing" state instead of polling blindly.
+   */
+  markPending(sessionId: string): void {
+    this.pendingBySession.set(sessionId, Date.now() + TUTOR_PENDING_TTL_MS);
+  }
+
+  isPending(sessionId: string): boolean {
+    const expiresAt = this.pendingBySession.get(sessionId);
+    if (expiresAt === undefined) return false;
+    if (expiresAt <= Date.now()) {
+      this.pendingBySession.delete(sessionId);
+      return false;
+    }
+    return true;
+  }
+
+  private clearPending(sessionId: string): void {
+    this.pendingBySession.delete(sessionId);
+  }
+
   async getConversationMessages(
     userId: string,
     session: LearningSession,
-  ): Promise<{ conversationId: string; messages: TutorMessagePayload[] }> {
+  ): Promise<{
+    conversationId: string;
+    messages: TutorMessagePayload[];
+    pending: boolean;
+  }> {
     const conversation = await this.getOrCreateConversation(userId, session);
     const messages = await this.messagesRepository.find({
       where: { conversationId: conversation.id },
       order: { createdAt: 'ASC' },
-      take: 40,
+      take: 60,
     });
     return {
       conversationId: conversation.id,
       messages: messages.map((message) => this.toPayload(message)),
+      pending: this.isPending(session.id),
     };
   }
 
   async createSocraticHint(
+    userId: string,
+    session: LearningSession,
+    sessionItemId: string,
+    question: LearningQuestionReference,
+    selectedOption: string,
+  ): Promise<TutorMessagePayload> {
+    try {
+      return await this.writeSocraticHint(
+        userId,
+        session,
+        sessionItemId,
+        question,
+        selectedOption,
+      );
+    } finally {
+      this.clearPending(session.id);
+    }
+  }
+
+  private async writeSocraticHint(
     userId: string,
     session: LearningSession,
     sessionItemId: string,
@@ -73,6 +131,7 @@ export class TutorService {
           recentMessages: await this.recentMessages(conversation.id),
         }),
       () => this.fallbackHint(question),
+      TUTOR_BACKGROUND_TIMEOUT_MS,
     );
     const content = this.enforceSocraticAnswerBoundary(
       generatedContent,
@@ -87,6 +146,26 @@ export class TutorService {
   }
 
   async createAnswerExplanation(
+    userId: string,
+    session: LearningSession,
+    sessionItemId: string,
+    question: LearningQuestionReference,
+    selectedOption: string,
+  ): Promise<TutorMessagePayload> {
+    try {
+      return await this.writeAnswerExplanation(
+        userId,
+        session,
+        sessionItemId,
+        question,
+        selectedOption,
+      );
+    } finally {
+      this.clearPending(session.id);
+    }
+  }
+
+  private async writeAnswerExplanation(
     userId: string,
     session: LearningSession,
     sessionItemId: string,
@@ -113,6 +192,7 @@ export class TutorService {
           recentMessages: await this.recentMessages(conversation.id),
         }),
       () => this.fallbackExplanation(question, selectedOption),
+      TUTOR_BACKGROUND_TIMEOUT_MS,
     );
     return this.saveAssistantMessage(
       conversation.id,
@@ -163,6 +243,7 @@ export class TutorService {
             ? this.fallbackExplanation(question, '')
             : this.fallbackHint(question)
           : 'Tell me which part of the topic feels uncertain, and we can isolate one idea at a time.',
+      TUTOR_INTERACTIVE_TIMEOUT_MS,
     );
     return this.saveAssistantMessage(
       conversation.id,
@@ -225,9 +306,10 @@ export class TutorService {
   private async withFallback(
     operation: () => Promise<string>,
     fallback: () => string,
+    timeoutMs: number,
   ): Promise<string> {
     try {
-      return await this.withTimeout(operation(), TUTOR_AI_TIMEOUT_MS);
+      return await this.withTimeout(operation(), timeoutMs);
     } catch (error) {
       this.logger.warn(
         `Tutor AI unavailable; serving database-backed guidance. ${this.toErrorMessage(error)}`,

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { learningTabFromSearchParams, learningUrl } from './learning';
+import {
+  describeRoundOutcome,
+  learningTabFromSearchParams,
+  learningUrl,
+} from './learning';
 
 describe('learning helpers', () => {
   it('builds a learning url with an optional workspace tab', () => {
@@ -24,5 +28,37 @@ describe('learning helpers', () => {
     expect(learningTabFromSearchParams(bad as never)).toBe('overview');
     expect(learningTabFromSearchParams(good as never)).toBe('flashcards');
     expect(learningTabFromSearchParams(legacy as never)).toBe('flashcards');
+  });
+});
+
+describe('round outcome copy', () => {
+  it('celebrates mastery and points at durable review', () => {
+    const outcome = describeRoundOutcome('MASTERED');
+    expect(outcome.tone).toBe('mastered');
+    expect(outcome.continueLabel).toMatch(/flashcards/i);
+  });
+
+  it('frames a demotion as rebuilding rather than failure', () => {
+    const outcome = describeRoundOutcome('DEMOTED');
+    expect(outcome.tone).toBe('rebuild');
+    expect(outcome.title).not.toMatch(/fail/i);
+  });
+
+  it('gives every transition a distinct, actionable label', () => {
+    const transitions = [
+      'NONE',
+      'ADVANCED',
+      'REINFORCE',
+      'DEMOTED',
+      'PREREQUISITE',
+      'MASTERED',
+    ] as const;
+    const titles = transitions.map(
+      (transition) => describeRoundOutcome(transition).title,
+    );
+    expect(new Set(titles).size).toBe(transitions.length);
+    for (const transition of transitions) {
+      expect(describeRoundOutcome(transition).continueLabel.length).toBeGreaterThan(0);
+    }
   });
 });

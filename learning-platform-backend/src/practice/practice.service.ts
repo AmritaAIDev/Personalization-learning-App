@@ -50,6 +50,8 @@ type PracticeAttemptPayload = {
     status: PracticeAttemptStatus;
     totalQuestions: number;
     startedAt: Date;
+    /** Real composition of this attempt, never a hardcoded UI assumption. */
+    difficultyMix: Array<{ label: string; count: number }>;
   };
   questions: PublicPracticeQuestion[];
   answers: Array<{ questionId: string; selectedOption: string }>;
@@ -91,12 +93,21 @@ export class PracticeService {
       return this.toAttemptPayload(activeAttempt);
     }
 
+    // Only the columns the balancer reads are loaded here; the full rows are
+    // fetched once for the selected fifteen when the payload is built.
     const candidates = await this.questionsRepository.find({
       where: {
         subject: input.subject,
         chapter: input.chapter,
         topic: input.topic,
         status: QuestionPublicationStatus.PUBLISHED,
+      },
+      select: {
+        id: true,
+        topic: true,
+        difficulty: true,
+        bloom_level: true,
+        concept_tags: true,
       },
       order: { created_at: 'ASC' },
     });
@@ -129,13 +140,24 @@ export class PracticeService {
     return this.toAttemptPayload(attempt);
   }
 
+  /**
+   * Autosave path. It runs on every option tap, so it stays deliberately lean:
+   * one attempt lookup, one option check, and one conflict-safe upsert. No
+   * answer relations are loaded and no correctness is ever computed here.
+   */
   async saveAnswer(
     userId: string,
     attemptId: string,
     questionId: string,
     input: SavePracticeAnswerDto,
   ) {
-    const attempt = await this.getOwnedAttempt(userId, attemptId, true);
+    const attempt = await this.attemptsRepository.findOne({
+      where: { id: attemptId, userId },
+      select: { id: true, status: true, questionIds: true },
+    });
+    if (!attempt) {
+      throw new NotFoundException('Practice session not found.');
+    }
     if (attempt.status !== PracticeAttemptStatus.IN_PROGRESS) {
       throw new ConflictException(
         'This practice session has already been submitted.',
@@ -149,6 +171,7 @@ export class PracticeService {
 
     const question = await this.questionsRepository.findOne({
       where: { id: questionId },
+      select: { id: true, options: true },
     });
     if (!question) {
       throw new NotFoundException('Question not found.');
@@ -159,27 +182,21 @@ export class PracticeService {
       );
     }
 
-    let answer = await this.answersRepository.findOne({
-      where: { attemptId: attempt.id, questionId },
-    });
-    if (!answer) {
-      answer = this.answersRepository.create({
+    const savedAt = new Date();
+    await this.answersRepository.upsert(
+      {
         attemptId: attempt.id,
         questionId,
         selectedOption: input.selectedOption,
         elapsedSeconds: input.elapsedSeconds ?? null,
         isCorrect: null,
-      });
-    } else {
-      answer.selectedOption = input.selectedOption;
-      answer.elapsedSeconds = input.elapsedSeconds ?? answer.elapsedSeconds;
-      answer.isCorrect = null;
-    }
-    await this.answersRepository.save(answer);
+      },
+      { conflictPaths: ['attemptId', 'questionId'] },
+    );
     return {
-      questionId: answer.questionId,
-      selectedOption: answer.selectedOption,
-      savedAt: answer.updatedAt ?? new Date(),
+      questionId,
+      selectedOption: input.selectedOption,
+      savedAt,
     };
   }
 
@@ -484,6 +501,12 @@ export class PracticeService {
         status: attempt.status,
         totalQuestions: attempt.totalQuestions,
         startedAt: attempt.startedAt,
+        difficultyMix: PRACTICE_DIFFICULTIES.map((difficulty) => ({
+          label: difficulty,
+          count: questions.filter(
+            (question) => question.difficulty === difficulty,
+          ).length,
+        })).filter((entry) => entry.count > 0),
       },
       questions: questions.map((question, index) => ({
         id: question.id,

@@ -57,14 +57,16 @@ export class AdaptiveController {
   }
 
   @Get('flashcards')
-  getFlashcards(
+  async getFlashcards(
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: FlashcardQueryDto,
   ) {
-    return { data: this.adaptiveService.getFlashcards(user.id, query) };
+    return { data: await this.adaptiveService.getFlashcards(user.id, query) };
   }
 
-  @Throttle({ default: { limit: 4, ttl: 60_000 } })
+  // A cached pool answers most batches instantly, so a recall run can request
+  // several batches per minute without hitting the AI generation path.
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
   @Post('flashcards/generate')
   async generateFlashcards(
     @CurrentUser() user: AuthenticatedUser,

@@ -19,111 +19,29 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import type { TutorMessage } from '@/lib/learning-types';
-import {
-  parseTutorMarkdown,
-  type TutorInlineSegment,
-} from '@/lib/tutor-markdown';
+import { nextTutorPollDelay } from '@/lib/tutor-polling';
+import StudyMarkdown from './StudyMarkdown';
 
 type ConversationPayload = {
   conversationId: string;
   messages: TutorMessage[];
+  pending?: boolean;
 };
-
-function InlineTutorText({ segments }: { segments: TutorInlineSegment[] }) {
-  return (
-    <>
-      {segments.map((segment, index) => {
-        if (segment.type === 'strong') {
-          return (
-            <strong
-              key={`${segment.text}-${index}`}
-              className="font-bold text-[#1a1a1f]"
-            >
-              {segment.text}
-            </strong>
-          );
-        }
-        if (segment.type === 'code') {
-          return (
-            <code
-              key={`${segment.text}-${index}`}
-              className="rounded-md bg-[#f2f2f5] px-1.5 py-0.5 text-[0.82em] font-semibold text-[#1a1a1f]"
-            >
-              {segment.text}
-            </code>
-          );
-        }
-        return <span key={`${segment.text}-${index}`}>{segment.text}</span>;
-      })}
-    </>
-  );
-}
-
-function TutorText({ content }: { content: string }) {
-  const blocks = useMemo(() => parseTutorMarkdown(content), [content]);
-
-  return (
-    <div className="space-y-2.5 text-sm leading-6 text-[#45474d]">
-      {blocks.map((block, index) => {
-        if (block.type === 'heading') {
-          return (
-            <h4
-              key={`${block.text}-${index}`}
-              className="font-bold text-[#1a1a1f]"
-            >
-              {block.text}
-            </h4>
-          );
-        }
-        if (block.type === 'unorderedList') {
-          return (
-            <ul key={`ul-${index}`} className="list-disc space-y-1 pl-5">
-              {block.items.map((item, itemIndex) => (
-                <li key={`ul-${index}-${itemIndex}`}>
-                  <InlineTutorText segments={item} />
-                </li>
-              ))}
-            </ul>
-          );
-        }
-        if (block.type === 'orderedList') {
-          return (
-            <ol key={`ol-${index}`} className="list-decimal space-y-1 pl-5">
-              {block.items.map((item, itemIndex) => (
-                <li key={`ol-${index}-${itemIndex}`}>
-                  <InlineTutorText segments={item} />
-                </li>
-              ))}
-            </ol>
-          );
-        }
-        if (block.type === 'codeBlock') {
-          return (
-            <pre
-              key={`code-${index}`}
-              className="overflow-x-auto rounded-xl bg-[#1a1a1f] p-3 text-xs leading-5 text-white"
-            >
-              <code>{block.code}</code>
-            </pre>
-          );
-        }
-        return (
-          <p key={`p-${index}`} className="whitespace-pre-wrap">
-            <InlineTutorText segments={block.segments} />
-          </p>
-        );
-      })}
-    </div>
-  );
-}
 
 type StudyAssistantProps = {
   sessionId: string;
   autoOpenMessage: TutorMessage | null;
+  /** True while the backend is writing a hint or explanation for this session. */
   refreshWhen?: boolean;
   variant?: 'floating' | 'panel';
   title?: string;
 };
+
+const QUICK_PROMPTS = [
+  'Give me a hint without revealing the answer.',
+  'Explain this in simpler steps.',
+  'Why is my selected option wrong?',
+];
 
 export default function StudyAssistant({
   sessionId,
@@ -137,17 +55,23 @@ export default function StudyAssistant({
     string | null
   >(null);
   const [messages, setMessages] = useState<TutorMessage[]>([]);
+  const [pendingReply, setPendingReply] = useState(refreshWhen);
+  const [draftMessage, setDraftMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const loadedSessionRef = useRef<string | null>(null);
-  const refreshConversationRef = useRef<() => void>(() => undefined);
+  const inFlightRef = useRef(false);
+  const stickToBottomRef = useRef(true);
 
   const autoMessageVisible =
     autoOpenMessage !== null && autoOpenMessage.id !== dismissedAutoMessageId;
   const isOpen = variant === 'panel' ? true : isManuallyOpen || autoMessageVisible;
+
   const visibleMessages = useMemo(
     () =>
       autoMessageVisible && !messages.some((item) => item.id === autoOpenMessage?.id)
@@ -155,39 +79,19 @@ export default function StudyAssistant({
         : messages,
     [autoMessageVisible, autoOpenMessage, messages],
   );
-  const quickPrompts = [
-    'Give me a hint without revealing the answer.',
-    'Explain this in simpler steps.',
-    'Why is my selected option wrong?',
-  ];
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [visibleMessages, isOpen]);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      loadedSessionRef.current = null;
-      setMessages([]);
-      setError(null);
-      setMessage('');
-    }, 0);
-    return () => window.clearTimeout(timeout);
-  }, [sessionId]);
-
-  const loadConversation = useCallback(async (force = false) => {
-    if (loading) return;
-    if (!force && loadedSessionRef.current === sessionId) return;
-    if (!force && messages.length > 0) {
-      loadedSessionRef.current = sessionId;
-      return;
-    }
-    setLoading(true);
+  const loadConversation = useCallback(async () => {
+    // A single-flight guard, not an early return on `loading`: the old version
+    // silently dropped polls while a slow read was in progress.
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    if (loadedSessionRef.current !== sessionId) setLoading(true);
     try {
       const data = await apiFetch<ConversationPayload>(
         `/api/learning/sessions/${sessionId}/tutor`,
       );
       setMessages(data.messages);
+      setPendingReply(Boolean(data.pending));
       loadedSessionRef.current = sessionId;
       setError(null);
     } catch (reason) {
@@ -197,32 +101,71 @@ export default function StudyAssistant({
           : 'The study assistant could not be opened.',
       );
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
     }
-  }, [loading, messages.length, sessionId]);
-
-  useEffect(() => {
-    refreshConversationRef.current = () => void loadConversation(true);
-  }, [loadConversation]);
-
-  useEffect(() => {
-    if (!refreshWhen) return;
-    let attempts = 0;
-    const interval = window.setInterval(() => {
-      attempts += 1;
-      refreshConversationRef.current();
-      if (attempts >= 6) window.clearInterval(interval);
-    }, 1000);
-    return () => window.clearInterval(interval);
-  }, [refreshWhen, sessionId]);
+  }, [sessionId]);
 
   useEffect(() => {
     if (!isOpen || loadedSessionRef.current === sessionId) return;
-    const timeout = window.setTimeout(() => {
-      void loadConversation();
-    }, 0);
-    return () => window.clearTimeout(timeout);
+    void loadConversation();
   }, [isOpen, loadConversation, sessionId]);
+
+  // A hint is being written server-side; mirror it locally so the board shows a
+  // live "writing" bubble immediately, before the first poll returns. Following
+  // a prop is done while rendering rather than in an effect, which would cost
+  // an extra render on every answer.
+  const [trackedRefreshSignal, setTrackedRefreshSignal] = useState(refreshWhen);
+  if (trackedRefreshSignal !== refreshWhen) {
+    setTrackedRefreshSignal(refreshWhen);
+    if (refreshWhen) setPendingReply(true);
+  }
+
+  /**
+   * Backs off while waiting for a background tutor reply: quick first checks so
+   * a fast hint lands immediately, then slower ones so a slow model does not
+   * turn into a request storm.
+   */
+  useEffect(() => {
+    if (!pendingReply) return;
+    let attempt = 0;
+    let timer: number | undefined;
+    let cancelled = false;
+
+    const tick = () => {
+      if (cancelled) return;
+      attempt += 1;
+      void loadConversation().finally(() => {
+        if (cancelled) return;
+        const delay = nextTutorPollDelay(attempt);
+        if (delay === null) {
+          setPendingReply(false);
+          return;
+        }
+        timer = window.setTimeout(tick, delay);
+      });
+    };
+
+    timer = window.setTimeout(tick, nextTutorPollDelay(0) ?? 600);
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [loadConversation, pendingReply]);
+
+  // Follow new messages only when the learner is already reading the newest
+  // ones, so scrolling back through an explanation is never yanked away.
+  useEffect(() => {
+    if (!stickToBottomRef.current) return;
+    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [visibleMessages, pendingReply, draftMessage, isOpen]);
+
+  const onScroll = () => {
+    const node = scrollRef.current;
+    if (!node) return;
+    stickToBottomRef.current =
+      node.scrollHeight - node.scrollTop - node.clientHeight < 80;
+  };
 
   const toggle = () => {
     if (variant === 'panel') return;
@@ -241,19 +184,25 @@ export default function StudyAssistant({
     setSending(true);
     setError(null);
     setMessage('');
+    // Echo the question straight away: the learner should never wonder whether
+    // their message was registered while the model is thinking.
+    setDraftMessage(trimmed);
+    stickToBottomRef.current = true;
     try {
       await apiFetch<{ message: TutorMessage }>(
         `/api/learning/sessions/${sessionId}/tutor`,
         { method: 'POST', body: JSON.stringify({ message: trimmed }) },
       );
-      await loadConversation(true);
+      await loadConversation();
     } catch (reason) {
       setError(
         reason instanceof Error
           ? reason.message
           : 'The assistant could not respond just now.',
       );
+      setMessage(trimmed);
     } finally {
+      setDraftMessage(null);
       setSending(false);
     }
   };
@@ -269,6 +218,8 @@ export default function StudyAssistant({
     void sendMessage(message);
   };
 
+  const showWritingBubble = pendingReply || sending;
+
   const panel = isOpen ? (
     <section
       id={`study-assistant-${sessionId}`}
@@ -277,29 +228,35 @@ export default function StudyAssistant({
       aria-label={title}
       className={
         variant === 'panel'
-          ? 'flex h-full min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-[#eadde0] bg-white shadow-[0_16px_40px_rgba(20, 20, 30,0.06)]'
-          : 'mb-3 flex h-[min(39rem,calc(100vh-9rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-[1.75rem] border border-[#eadde0] bg-white shadow-[0_24px_70px_rgba(20, 20, 30,0.24)]'
+          ? 'flex h-full min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-hairline bg-white shadow-[0_16px_40px_rgba(20,20,30,0.06)]'
+          : 'mb-3 flex h-[min(39rem,calc(100vh-9rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-[1.75rem] border border-hairline bg-white shadow-[0_24px_70px_rgba(20,20,30,0.24)]'
       }
     >
       <header
-        className={`flex items-center justify-between gap-3 border-b border-[#eee8e9] px-4 py-3 ${
-          variant === 'panel'
-            ? 'bg-[#eef3f0] text-[#1a1a1f]'
-            : 'bg-[#1a1a1f] text-white'
+        className={`flex items-center justify-between gap-3 border-b border-hairline px-4 py-3 ${
+          variant === 'panel' ? 'bg-primary-tint text-ink' : 'bg-ink text-white'
         }`}
       >
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#3f6f57] text-white shadow-[0_8px_18px_rgba(20, 20, 30,0.18)]">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-white shadow-[0_8px_18px_rgba(20,20,30,0.18)]">
             <GraduationCap className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
             <h3 className="truncate font-heading text-base font-bold">{title}</h3>
             <p
-              className={`text-[11px] font-semibold ${
-                variant === 'panel' ? 'text-[#2c4c3d]' : 'text-[#a8c4b6]'
+              className={`flex items-center gap-1.5 text-[11px] font-semibold ${
+                variant === 'panel' ? 'text-primary-strong' : 'text-[#a8c4b6]'
               }`}
+              aria-live="polite"
             >
-              Connected to this question
+              {showWritingBubble ? (
+                <>
+                  <span className="tutor-dot" aria-hidden="true" />
+                  Writing your guidance
+                </>
+              ) : (
+                'Connected to this question'
+              )}
             </p>
           </div>
         </div>
@@ -318,49 +275,73 @@ export default function StudyAssistant({
         ) : null}
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#fff,#fcfbfb)] p-4">
-        {loading && (
-          <p className="flex items-center gap-2 text-sm font-semibold text-[#52525b]">
-            <LoaderCircle
-              className="h-4 w-4 animate-spin text-[#3f6f57]"
-              aria-hidden="true"
-            />
-            Loading your study thread...
-          </p>
-        )}
-        {!loading && visibleMessages.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-[#e4dcde] bg-white p-4 text-sm leading-6 text-[#52525b]">
-            Ask for a hint, a simpler explanation, or why an option fails. The
-            assistant stays tied to your current question flow.
-            {variant === 'panel' ? (
-              <button
-                type="button"
-                onClick={() => void loadConversation(true)}
-                className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-[#d9dadd] px-3 py-2 text-xs font-bold text-[#52525b] transition hover:bg-[#f4f4f6]"
-              >
-                Reload tutor thread
-              </button>
-            ) : null}
+      <div
+        ref={scrollRef}
+        onScroll={onScroll}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,#fff,#fcfbfb)] p-4"
+      >
+        {loading && visibleMessages.length === 0 ? (
+          <div className="space-y-3" aria-label="Loading your study thread">
+            <div className="h-16 rounded-2xl skeleton" />
+            <div className="h-10 w-3/4 rounded-2xl skeleton" />
           </div>
-        )}
+        ) : null}
+
+        {!loading && visibleMessages.length === 0 && !showWritingBubble ? (
+          <div className="rounded-2xl border border-dashed border-hairline bg-white p-4 text-sm leading-6 text-ink-soft">
+            Ask for a hint, a simpler explanation, or why an option fails. The
+            assistant stays tied to your current question, and it never reveals an
+            answer you still have an attempt left on.
+          </div>
+        ) : null}
+
         <div className="space-y-3">
           {visibleMessages.map((item) => (
             <article
               key={item.id}
               className={
                 item.role === 'USER'
-                  ? 'ml-8 rounded-2xl rounded-br-md bg-[#3f6f57] px-3.5 py-3 text-sm leading-6 text-white'
-                  : 'mr-3 rounded-2xl rounded-bl-md border border-[#e9e1e3] bg-white px-3.5 py-3 shadow-[0_6px_16px_rgba(20, 20, 30,0.04)]'
+                  ? 'ml-8 rounded-2xl rounded-br-md bg-primary px-3.5 py-3 text-sm leading-6 text-white'
+                  : 'mr-3 rounded-2xl rounded-bl-md border border-hairline bg-white px-3.5 py-3 shadow-[0_6px_16px_rgba(20,20,30,0.04)]'
               }
             >
               {item.role === 'USER' ? (
                 <p className="whitespace-pre-wrap">{item.content}</p>
               ) : (
-                <TutorText content={item.content} />
+                <>
+                  {item.messageType !== 'GENERAL' ? (
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+                      {item.messageType === 'SOCRATIC_HINT'
+                        ? 'Hint'
+                        : 'Full explanation'}
+                    </p>
+                  ) : null}
+                  <StudyMarkdown className="text-sm leading-6 text-ink-soft">
+                    {item.content}
+                  </StudyMarkdown>
+                </>
               )}
             </article>
           ))}
+
+          {draftMessage ? (
+            <article className="ml-8 rounded-2xl rounded-br-md bg-primary/85 px-3.5 py-3 text-sm leading-6 text-white">
+              <p className="whitespace-pre-wrap">{draftMessage}</p>
+            </article>
+          ) : null}
+
+          {showWritingBubble ? (
+            <article
+              className="mr-3 flex items-center gap-2 rounded-2xl rounded-bl-md border border-hairline bg-white px-3.5 py-3.5"
+              aria-label="The tutor is writing"
+            >
+              <span className="tutor-dot" aria-hidden="true" />
+              <span className="tutor-dot tutor-dot--2" aria-hidden="true" />
+              <span className="tutor-dot tutor-dot--3" aria-hidden="true" />
+            </article>
+          ) : null}
         </div>
+
         {error && (
           <p
             className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700"
@@ -372,15 +353,15 @@ export default function StudyAssistant({
         <div ref={endRef} />
       </div>
 
-      <form onSubmit={send} className="border-t border-[#eee8e9] bg-white p-3">
+      <form onSubmit={send} className="border-t border-hairline bg-white p-3">
         <div className="mb-2 flex flex-wrap gap-2">
-          {quickPrompts.map((prompt) => (
+          {QUICK_PROMPTS.map((prompt) => (
             <button
               key={prompt}
               type="button"
               disabled={sending}
               onClick={() => void sendMessage(prompt)}
-              className="rounded-full border border-[#e7dde0] bg-[#fbfbfd] px-3 py-1.5 text-[11px] font-bold text-[#5d6067] transition hover:border-[#3f6f57]/40 hover:bg-[#eef3f0] hover:text-[#3f6f57] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-full border border-hairline bg-canvas px-3 py-1.5 text-[11px] font-bold text-ink-soft transition hover:border-primary/40 hover:bg-primary-tint hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
               {prompt.replace(/\.$/, '')}
             </button>
@@ -389,7 +370,7 @@ export default function StudyAssistant({
         <label className="sr-only" htmlFor={`tutor-message-${sessionId}`}>
           Ask the study assistant
         </label>
-        <div className="flex items-end gap-2 rounded-2xl border border-[#e5dfe1] bg-[#fbfbfd] p-2 focus-within:border-[#3f6f57] focus-within:ring-4 focus-within:ring-[#3f6f57]/10">
+        <div className="flex items-end gap-2 rounded-2xl border border-hairline bg-canvas p-2 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
           <textarea
             id={`tutor-message-${sessionId}`}
             value={message}
@@ -398,12 +379,12 @@ export default function StudyAssistant({
             rows={2}
             maxLength={1200}
             placeholder="Ask for a hint or explain the idea..."
-            className="max-h-24 min-h-10 flex-1 resize-none bg-transparent px-2 py-1 text-sm text-[#1a1a1f] outline-none placeholder:text-[#86868b]"
+            className="max-h-24 min-h-10 flex-1 resize-none bg-transparent px-2 py-1 text-sm text-ink outline-none placeholder:text-ink-mute"
           />
           <button
             type="submit"
             disabled={!message.trim() || sending}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#3f6f57] text-white shadow-[0_8px_18px_rgba(20, 20, 30,0.22)] transition hover:bg-[#315844] disabled:cursor-not-allowed disabled:opacity-55"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-white shadow-[0_8px_18px_rgba(20,20,30,0.22)] transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-55"
             aria-label="Send message"
           >
             {sending ? (
@@ -427,9 +408,9 @@ export default function StudyAssistant({
         onClick={toggle}
         aria-expanded={isOpen}
         aria-controls={`study-assistant-${sessionId}`}
-        className="group inline-flex min-h-12 items-center gap-2 rounded-2xl bg-[#1a1a1f] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(20, 20, 30,0.24)] transition hover:-translate-y-px hover:bg-[#45474d]"
+        className="group inline-flex min-h-12 items-center gap-2 rounded-2xl bg-ink px-4 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(20,20,30,0.24)] transition hover:-translate-y-px hover:bg-ink/90"
       >
-        <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#3f6f57]">
+        <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary">
           <BotMessageSquare className="h-4 w-4" aria-hidden="true" />
         </span>
         <span>{isOpen ? 'Hide helper' : 'Ask helper'}</span>

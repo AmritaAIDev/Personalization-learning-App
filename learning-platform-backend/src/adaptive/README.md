@@ -21,7 +21,25 @@ When a practice round starts or completes, the service also prefetches unused qu
 
 `learning_generation_jobs` is a durable database queue. The worker claims jobs with PostgreSQL row locking, retries failed DeepSeek calls up to three times, and builds a private `learning_generated_questions` pool for that learner and coordinate. It uses reviewed PostgreSQL material plus optional Qdrant context as grounding. These questions are not inserted into the public `questions` bank; global publication remains an explicit admin review action.
 
-Flashcards are generated live through DeepSeek from server-assembled reviewed question material and returned directly to the current learner screen. New AI flashcards are not stored in the database. `tutor_conversations` and `tutor_messages` preserve the side-assistant thread for a session.
+### Flashcards: cache-first delivery
+
+`flashcards` is a reusable, topic-scoped pool. A recall batch is served from it
+first, ordered for spaced repetition (never-seen cards, then cards that are due,
+then the rest of the schedule), so a warm topic answers in milliseconds instead
+of waiting on a model round trip. Generation runs only for the shortfall, and
+every generated card is persisted with a real identifier, which is what lets
+`flashcard_reviews` hold a per-learner schedule. After a batch is served the
+service tops the pool up in the background, one run per topic at a time, until
+it reaches its target depth.
+
+Cards are derived only from published question material, so the pool is shared
+safely across learners while each learner's review schedule stays private.
+
+`tutor_conversations` and `tutor_messages` preserve the side-assistant thread for
+a session. A hint or explanation is written in the background after an answer;
+the session is marked pending so the conversation endpoint can report that a
+reply is being written, and the flag clears when the message is saved or the
+fallback is used.
 
 For a first miss, the correct answer and stored solution are never included in the tutor prompt. A server-side response boundary also replaces a model response that repeats the exact stored answer with a database-backed Socratic hint. The full explanation is available only after the allowed second attempt.
 
@@ -33,13 +51,24 @@ For a first miss, the correct answer and stored solution are never included in t
 - `GET|POST /api/learning/sessions/:sessionId/tutor` - persisted Socratic chat.
 - `GET /api/learning/dashboard` - active, completed, historic, and suggested topics.
 - `GET /api/learning/coverage?subject=...&chapter=...&topic=...` - audits ready question coverage across all 12 adaptive coordinates for the requested topic.
-- `GET /api/learning/flashcards` - returns no stored deck for the live-only flashcard flow.
-- `POST /api/learning/flashcards/generate` - generates grounded live flashcards without persisting them.
-- `POST /api/learning/flashcards/:id/review` - legacy stored-card review endpoint; the current frontend does not call it for live cards.
+- `GET /api/learning/flashcards` - the learner's spaced-repetition queue, optionally scoped to a subject, chapter, or topic.
+- `POST /api/learning/flashcards/generate` - delivers the next recall batch: pool first, grounded generation only for the shortfall, persisted for reuse.
+- `POST /api/learning/flashcards/:id/review` - records a recall rating and advances that card's schedule.
+
+`GET /api/learning/sessions/:sessionId/tutor` also returns `pending`, which is
+true while a background hint or explanation is still being written.
 
 ## Operations
 
 Run `npm run migration:run`, then `npm run seed:adaptive` to install the reviewed baseline coordinate. Higher coordinates are populated by reviewed database rows and the DeepSeek worker as real database records, never by frontend sample data.
+
+## Latency budget
+
+Learner-facing generation is bounded on three axes: model output is capped per
+batch, supplemental Qdrant grounding is skipped when reviewed material is
+already rich and otherwise time-boxed with a short-lived cache, and a partially
+valid AI batch is kept rather than discarded, so one malformed item no longer
+costs a minute-long job retry.
 
 Use the coverage endpoint before scaling a topic: every coordinate should have at least five ready questions for a no-latency round. Coordinates below that threshold can still be supported by fallback search and generation, but they should be treated as content gaps during production QA.
 

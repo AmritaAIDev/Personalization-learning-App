@@ -88,6 +88,8 @@ export type LearningSessionPayload = {
     difficulty: string;
     attemptCount: number;
     requiresRetry: boolean;
+    /** Options already used on this item, so a retry can rule them out. */
+    attemptedOptions: string[];
   } | null;
   progress: Array<{
     id: string;
@@ -113,19 +115,23 @@ export type LearningAnswerPayload = LearningSessionPayload & {
   };
 };
 
+export type FlashcardRating = 'AGAIN' | 'HARD' | 'GOOD' | 'EASY';
+
+export type FlashcardReviewState = {
+  lastRating: FlashcardRating;
+  repetitions: number;
+  intervalDays: number;
+  dueAt: string;
+  lastReviewedAt: string;
+};
+
 export type Flashcard = LearningScope & {
   id: string;
   front: string;
   back: string;
   hint: string | null;
   tags: string[];
-  review: {
-    lastRating: 'AGAIN' | 'HARD' | 'GOOD' | 'EASY';
-    repetitions: number;
-    intervalDays: number;
-    dueAt: string;
-    lastReviewedAt: string;
-  } | null;
+  review: FlashcardReviewState | null;
 };
 
 export type LearningDashboardPayload = {

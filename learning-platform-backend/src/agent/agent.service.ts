@@ -22,6 +22,23 @@ const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_GROUNDED_CONTEXT_CHARACTERS = 14_000;
 
+/**
+ * Latency budget for the supplemental vector lookup. Qdrant grounding is a
+ * bonus, not a requirement: the reviewed database material is already
+ * trustworthy, so a slow or unreachable vector store must never be allowed to
+ * add seconds to a learner-facing generation call.
+ */
+const SUPPLEMENTAL_CONTEXT_TIMEOUT_MS = 1_200;
+const SUPPLEMENTAL_CACHE_TTL_MS = 5 * 60_000;
+const SUPPLEMENTAL_NEGATIVE_CACHE_TTL_MS = 60_000;
+const SUPPLEMENTAL_CACHE_MAX_ENTRIES = 200;
+
+/**
+ * Once the reviewed material is this rich, the vector lookup adds cost and
+ * latency without adding grounding value, so it is skipped entirely.
+ */
+const SUPPLEMENTAL_SKIP_THRESHOLD_CHARACTERS = 3_000;
+
 export interface GeneratedQuestion {
   question_text: string;
   options: string[];
@@ -91,6 +108,12 @@ export class AgentService {
   private readonly deepseek: OpenAI;
   private readonly qdrantClient: QdrantClient;
   private readonly collectionName = 'learning_concepts';
+  /** Process-local, non-personal grounding cache. Never holds learner data. */
+  private readonly supplementalCache = new Map<
+    string,
+    { expiresAt: number; text: string }
+  >();
+  private readonly topicNameCache = new Map<string, string>();
 
   constructor(
     private readonly configService: ConfigService,
@@ -122,13 +145,18 @@ export class AgentService {
   }
 
   private async resolveTopicName(topic: string): Promise<string> {
-    if (UUID_REGEX.test(topic)) {
-      const found = await this.topicsRepository.findOne({
-        where: { id: topic },
-      });
-      if (found) return found.name;
-      this.logger.warn(`No topic found for id ${topic}; using the raw value.`);
+    if (!UUID_REGEX.test(topic)) return topic;
+    const cached = this.topicNameCache.get(topic);
+    if (cached) return cached;
+    const found = await this.topicsRepository.findOne({
+      where: { id: topic },
+      select: { id: true, name: true },
+    });
+    if (found) {
+      this.topicNameCache.set(topic, found.name);
+      return found.name;
     }
+    this.logger.warn(`No topic found for id ${topic}; using the raw value.`);
     return topic;
   }
 
@@ -189,6 +217,11 @@ export class AgentService {
       sourceMaterial: contextText,
     });
     const question = generated[0];
+    if (!question) {
+      throw new ServiceUnavailableException(
+        'The AI could not produce a usable question for this topic.',
+      );
+    }
     return {
       question_text: question.question_text,
       options: question.options,
@@ -233,6 +266,7 @@ export class AgentService {
         '</trusted-study-material>',
       ].join('\n'),
       'You are a strict JSON-only content service. Return valid JSON without markdown fences or commentary.',
+      Math.min(4_000, 700 * request.count),
     );
     return this.parseLearningQuestionBatch(raw, request.count);
   }
@@ -271,6 +305,7 @@ export class AgentService {
         '</trusted-study-material>',
       ].join('\n'),
       'You are a strict JSON-only flashcard service. Return valid JSON without markdown fences or commentary.',
+      Math.min(3_000, 340 * request.count),
     );
     return this.parseFlashcards(raw, request.count);
   }
@@ -325,11 +360,14 @@ export class AgentService {
           ? `<recent-conversation>\n${history}\n</recent-conversation>`
           : '',
         `<learner-message>\n${context.learnerMessage}\n</learner-message>`,
-        'Keep the response under 180 words. Use clean short paragraphs and avoid long derivations unless the answer is already revealed.',
+        context.answerRevealed
+          ? 'Keep the response under 160 words across at most three short sections. Skip pleasantries and restatements of the question.'
+          : 'Keep the response under 90 words: one hint, one check question. Skip pleasantries and restatements of the question.',
       ]
         .filter(Boolean)
         .join('\n'),
       'You are a safety-conscious tutoring service. Respect answer-reveal boundaries exactly.',
+      context.answerRevealed ? 520 : 320,
     );
     return this.normalizeTutorResponse(response);
   }
@@ -353,14 +391,13 @@ export class AgentService {
     topicName: string,
     reviewedMaterial: string,
   ): Promise<string> {
-    const blocks = [reviewedMaterial.trim()];
-    try {
-      const qdrantMaterial = await this.retrieveContextFromQdrant(topicName);
-      if (qdrantMaterial) blocks.push(qdrantMaterial);
-    } catch {
-      this.logger.warn(
-        `Qdrant supplemental grounding unavailable for "${topicName}"; using reviewed database material.`,
-      );
+    const reviewed = reviewedMaterial.trim();
+    const blocks = [reviewed];
+    // Rich reviewed material already grounds the model. Skipping the vector
+    // round trip here is the single largest latency saving on a warm topic.
+    if (reviewed.length < SUPPLEMENTAL_SKIP_THRESHOLD_CHARACTERS) {
+      const supplemental = await this.retrieveSupplementalContext(topicName);
+      if (supplemental) blocks.push(supplemental);
     }
     const material = blocks
       .filter(Boolean)
@@ -374,12 +411,92 @@ export class AgentService {
     return material;
   }
 
-  private async callJsonModel(prompt: string, system: string): Promise<string> {
+  /**
+   * Best-effort supplemental grounding. Failures and slow responses are cached
+   * for a short window so a degraded vector store costs one timeout per topic
+   * instead of one per learner request.
+   */
+  private async retrieveSupplementalContext(
+    topicName: string,
+  ): Promise<string> {
+    const cached = this.supplementalCache.get(topicName);
+    if (cached && cached.expiresAt > Date.now()) return cached.text;
+
+    try {
+      const text = await this.withTimeout(
+        this.retrieveContextFromQdrant(topicName),
+        SUPPLEMENTAL_CONTEXT_TIMEOUT_MS,
+      );
+      this.rememberSupplementalContext(
+        topicName,
+        text,
+        SUPPLEMENTAL_CACHE_TTL_MS,
+      );
+      return text;
+    } catch {
+      this.logger.warn(
+        `Qdrant supplemental grounding unavailable for "${topicName}"; using reviewed database material.`,
+      );
+      this.rememberSupplementalContext(
+        topicName,
+        '',
+        SUPPLEMENTAL_NEGATIVE_CACHE_TTL_MS,
+      );
+      return '';
+    }
+  }
+
+  private rememberSupplementalContext(
+    topicName: string,
+    text: string,
+    ttlMs: number,
+  ): void {
+    if (this.supplementalCache.size >= SUPPLEMENTAL_CACHE_MAX_ENTRIES) {
+      const [oldestKey] = this.supplementalCache.keys();
+      if (typeof oldestKey === 'string') {
+        this.supplementalCache.delete(oldestKey);
+      }
+    }
+    this.supplementalCache.set(topicName, {
+      expiresAt: Date.now() + ttlMs,
+      text,
+    });
+  }
+
+  private async withTimeout<T>(
+    operation: Promise<T>,
+    timeoutMs: number,
+  ): Promise<T> {
+    let timeout: NodeJS.Timeout | undefined;
+    try {
+      return await Promise.race([
+        operation,
+        new Promise<T>((_, reject) => {
+          timeout = setTimeout(
+            () =>
+              reject(new Error(`Operation timed out after ${timeoutMs}ms.`)),
+            timeoutMs,
+          );
+        }),
+      ]);
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
+  }
+
+  private async callJsonModel(
+    prompt: string,
+    system: string,
+    maxTokens: number,
+  ): Promise<string> {
     try {
       const response = await this.deepseek.chat.completions.create({
         model:
           this.configService.get<string>('DEEPSEEK_MODEL') ?? 'deepseek-chat',
         temperature: 0.25,
+        // Output length is the dominant term in generation latency. Bounding it
+        // to the batch size keeps a slow model from stalling the study flow.
+        max_tokens: maxTokens,
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: prompt },
@@ -397,12 +514,17 @@ export class AgentService {
     }
   }
 
-  private async callTextModel(prompt: string, system: string): Promise<string> {
+  private async callTextModel(
+    prompt: string,
+    system: string,
+    maxTokens: number,
+  ): Promise<string> {
     try {
       const response = await this.deepseek.chat.completions.create({
         model:
           this.configService.get<string>('DEEPSEEK_MODEL') ?? 'deepseek-chat',
         temperature: 0.35,
+        max_tokens: maxTokens,
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: prompt },
@@ -437,19 +559,25 @@ export class AgentService {
       Array.isArray((parsed as { questions?: unknown }).questions)
         ? (parsed as { questions: unknown[] }).questions
         : [];
-    if (values.length !== expectedCount) {
-      throw new ServiceUnavailableException(
-        'The AI returned an incomplete question batch.',
-      );
-    }
 
-    const questions = values.map((value) => this.parseLearningQuestion(value));
-    const normalizedTexts = new Set(
-      questions.map((question) => question.question_text.toLocaleLowerCase()),
-    );
-    if (normalizedTexts.size !== questions.length) {
+    // A single malformed item used to fail the whole batch, which pushed the
+    // job into a minute-long retry and left the learner waiting. Invalid or
+    // duplicate items are now dropped and the valid remainder is kept; the
+    // pool top-up simply requests the shortfall on its next pass.
+    const questions: GeneratedLearningQuestionPayload[] = [];
+    const seen = new Set<string>();
+    for (const value of values) {
+      const question = this.parseLearningQuestion(value);
+      if (!question) continue;
+      const key = question.question_text.toLocaleLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      questions.push(question);
+      if (questions.length === expectedCount) break;
+    }
+    if (questions.length === 0) {
       throw new ServiceUnavailableException(
-        'The AI returned duplicate questions.',
+        'The AI returned no usable learning questions.',
       );
     }
     return questions;
@@ -457,7 +585,7 @@ export class AgentService {
 
   private parseLearningQuestion(
     value: unknown,
-  ): GeneratedLearningQuestionPayload {
+  ): GeneratedLearningQuestionPayload | null {
     const candidate = value as Partial<GeneratedLearningQuestionPayload>;
     const options = Array.isArray(candidate.options)
       ? candidate.options.map((option) =>
@@ -482,9 +610,8 @@ export class AgentService {
       conceptTags.length > 0 &&
       commonErrors.length > 0;
     if (!valid) {
-      throw new ServiceUnavailableException(
-        'The AI returned a malformed learning question.',
-      );
+      this.logger.warn('Dropped a malformed AI learning question.');
+      return null;
     }
     return {
       question_text: questionText,
@@ -515,12 +642,12 @@ export class AgentService {
       Array.isArray((parsed as { flashcards?: unknown }).flashcards)
         ? (parsed as { flashcards: unknown[] }).flashcards
         : [];
-    if (values.length !== expectedCount) {
-      throw new ServiceUnavailableException(
-        'The AI returned an unexpected number of flashcards.',
-      );
-    }
-    const flashcards = values.map((value) => {
+
+    // Partial batches are useful: the deck can start on the cards that are
+    // valid while the pool tops itself up in the background.
+    const flashcards: GeneratedFlashcardPayload[] = [];
+    const seenFronts = new Set<string>();
+    for (const value of values) {
       const candidate = value as Partial<GeneratedFlashcardPayload>;
       const front =
         typeof candidate.front === 'string' ? candidate.front.trim() : '';
@@ -528,24 +655,21 @@ export class AgentService {
         typeof candidate.back === 'string' ? candidate.back.trim() : '';
       const hint =
         typeof candidate.hint === 'string' ? candidate.hint.trim() : null;
-      if (front.length < 8 || back.length < 12) {
-        throw new ServiceUnavailableException(
-          'The AI returned an incomplete flashcard.',
-        );
-      }
-      return {
+      if (front.length < 8 || back.length < 12) continue;
+      const key = front.toLocaleLowerCase();
+      if (seenFronts.has(key)) continue;
+      seenFronts.add(key);
+      flashcards.push({
         front: front.slice(0, 600),
         back: back.slice(0, 1200),
         hint: hint ? hint.slice(0, 500) : null,
         tags: this.cleanStringArray(candidate.tags, 6),
-      };
-    });
-    const normalizedFronts = new Set(
-      flashcards.map((card) => card.front.toLocaleLowerCase()),
-    );
-    if (normalizedFronts.size !== flashcards.length) {
+      });
+      if (flashcards.length === expectedCount) break;
+    }
+    if (flashcards.length === 0) {
       throw new ServiceUnavailableException(
-        'The AI returned duplicate flashcards.',
+        'The AI returned no usable flashcards.',
       );
     }
     return flashcards;

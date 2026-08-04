@@ -115,12 +115,42 @@ describe('AdaptiveService flashcard reviews', () => {
     );
   });
 
-  it('generates grounded AI flashcards live without storing them in the database', async () => {
-    const saveFlashcards = jest.fn(async (values: Flashcard[]) => values);
+  type FlashcardDeliveryHarness = {
+    service: AdaptiveService;
+    generateFlashcards: jest.Mock;
+    saveFlashcards: jest.Mock;
+    countFlashcards: jest.Mock;
+  };
+
+  function createDeliveryService(
+    poolRows: Array<Record<string, unknown>>,
+    generated: Array<{
+      front: string;
+      back: string;
+      hint: string | null;
+      tags: string[];
+    }>,
+  ): FlashcardDeliveryHarness {
+    const saveFlashcards = jest.fn(async (values: Partial<Flashcard>[]) =>
+      values.map((value, index) => ({
+        ...value,
+        id: `saved-${index}`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })),
+    );
+    const countFlashcards = jest.fn(async () => poolRows.length);
     const flashcards = {
       create: jest.fn((value: Partial<Flashcard>) => value as Flashcard),
       save: saveFlashcards,
+      find: jest.fn(async () => []),
+      count: countFlashcards,
     } as unknown as Repository<Flashcard>;
+    const dataSource = {
+      query: jest.fn(async (_sql: string, params: unknown[]) =>
+        poolRows.slice(0, Number(params[params.length - 1])),
+      ),
+    } as unknown as DataSource;
     const questions = {
       find: jest.fn(async () => [
         {
@@ -131,19 +161,10 @@ describe('AdaptiveService flashcard reviews', () => {
         },
       ]),
     } as unknown as Repository<Question>;
-    const generateFlashcards = jest.fn(async () => [
-      {
-        front: 'What does Gauss law relate?',
-        back: 'It relates net electric flux through a closed surface to enclosed charge.',
-        hint: 'Think closed surface and charge inside.',
-        tags: ['gauss-law'],
-      },
-    ]);
-    const agent = {
-      generateFlashcards,
-    } as unknown as AgentService;
+    const generateFlashcards = jest.fn(async () => generated);
+    const agent = { generateFlashcards } as unknown as AgentService;
     const service = new AdaptiveService(
-      {} as DataSource,
+      dataSource,
       {} as AdaptiveContentService,
       {} as GenerationWorkerService,
       {} as TutorService,
@@ -155,6 +176,90 @@ describe('AdaptiveService flashcard reviews', () => {
       questions,
       {} as Repository<Topic>,
     );
+    return { service, generateFlashcards, saveFlashcards, countFlashcards };
+  }
+
+  it('serves a warm card pool without waiting on the model', async () => {
+    const { service, generateFlashcards } = createDeliveryService(
+      Array.from({ length: 8 }, (_, index) => ({
+        id: `card-${index}`,
+        subject: 'Physics',
+        chapter: 'Electrostatics',
+        topic: 'Gauss Law',
+        front: `Prompt ${index}`,
+        back: `Answer ${index}`,
+        hint: null,
+        tags: ['gauss-law'],
+        lastRating: null,
+        repetitions: null,
+        intervalDays: null,
+        dueAt: null,
+        lastReviewedAt: null,
+      })),
+      [],
+    );
+
+    const result = await service.generateFlashcards('user-id', {
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic: 'Gauss Law',
+      count: 6,
+    });
+
+    expect(generateFlashcards).not.toHaveBeenCalled();
+    expect(result).toHaveLength(6);
+    expect(result[0]).toMatchObject({ id: 'card-0', review: null });
+  });
+
+  it('skips prompts the running deck already showed', async () => {
+    const { service } = createDeliveryService(
+      Array.from({ length: 8 }, (_, index) => ({
+        id: `card-${index}`,
+        subject: 'Physics',
+        chapter: 'Electrostatics',
+        topic: 'Gauss Law',
+        front: `Prompt ${index}`,
+        back: `Answer ${index}`,
+        hint: null,
+        tags: [],
+        lastRating: null,
+        repetitions: null,
+        intervalDays: null,
+        dueAt: null,
+        lastReviewedAt: null,
+      })),
+      [],
+    );
+
+    const result = await service.generateFlashcards('user-id', {
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic: 'Gauss Law',
+      count: 3,
+      excludedPrompts: ['prompt 0', 'Prompt 1'],
+    });
+
+    expect(result.map((card) => card.id)).toEqual([
+      'card-2',
+      'card-3',
+      'card-4',
+    ]);
+  });
+
+  it('persists generated cards so ratings and later runs reuse them', async () => {
+    const { service, generateFlashcards, saveFlashcards } =
+      createDeliveryService(
+        [],
+        [
+          {
+            front: 'What does Gauss law relate?',
+            back: 'It relates net electric flux through a closed surface to enclosed charge.',
+            hint: 'Think closed surface and charge inside.',
+            tags: ['gauss-law'],
+          },
+        ],
+      );
+
     const result = await service.generateFlashcards('user-id', {
       subject: 'Physics',
       chapter: 'Electrostatics',
@@ -167,13 +272,12 @@ describe('AdaptiveService flashcard reviews', () => {
         subject: 'Physics',
         chapter: 'Electrostatics',
         topic: 'Gauss Law',
-        count: 6,
       }),
     );
-    expect(saveFlashcards).not.toHaveBeenCalled();
+    expect(saveFlashcards).toHaveBeenCalled();
     expect(result).toEqual([
       expect.objectContaining({
-        id: expect.stringMatching(/^live-/),
+        id: 'saved-0',
         front: 'What does Gauss law relate?',
         review: null,
       }),
@@ -191,8 +295,10 @@ describe('AdaptiveService second-attempt tutor routing', () => {
       relatedSessionItemId: 'item-id',
       createdAt: new Date(),
     }));
+    const markPending = jest.fn();
     const tutor = {
       createAnswerExplanation,
+      markPending,
     } as unknown as TutorService;
     const dataSource = {
       transaction: jest.fn(async (work: (manager: never) => Promise<unknown>) =>
@@ -257,6 +363,7 @@ describe('AdaptiveService second-attempt tutor routing', () => {
       selectedOption: 'B',
     });
 
+    expect(markPending).toHaveBeenCalledWith('session-id');
     expect(createAnswerExplanation).toHaveBeenCalledWith(
       'user-id',
       expect.objectContaining({ id: 'session-id' }),

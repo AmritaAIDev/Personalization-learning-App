@@ -54,8 +54,11 @@ export default function LearnPage() {
   if (searchParams.get('placement') === 'ask') {
     return <TopicPlacementGate scope={scope} tab={learningTabFromSearchParams(searchParams)} />;
   }
+  // Keying by scope gives every topic a clean workspace: an in-flight round,
+  // tutor thread, and card queue never leak across topics.
   return (
     <AdaptiveStudySession
+      key={`${scope.subject}|${scope.chapter}|${scope.topic}`}
       scope={scope}
       initialTab={learningTabFromSearchParams(searchParams)}
     />

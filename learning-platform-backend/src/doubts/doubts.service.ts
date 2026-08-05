@@ -3,11 +3,27 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AgentService } from '../agent/agent.service';
 import { TutorMessageType } from '../adaptive/adaptive.types';
+import { LearningSessionItem } from '../adaptive/learning-session-item.entity';
+import { GeneratedLearningQuestion } from '../adaptive/generated-learning-question.entity';
+import { Question } from '../question.entity';
 import type { CreateDoubtDto } from './doubts.dto';
 import { Doubt, DoubtStatus } from './doubt.entity';
 import type { DoubtCard, DoubtsResponse } from './doubts.types';
 
 const DEFAULT_LIMIT = 30;
+
+/**
+ * The question a doubt was raised from, assembled server-side so the tutor can
+ * answer "why is this wrong?" against the real item instead of the topic alone.
+ */
+interface DoubtQuestionContext {
+  questionText: string;
+  options: string[];
+  correctAnswer: string;
+  solution: string;
+  commonErrors: string[];
+  selectedOption?: string;
+}
 
 @Injectable()
 export class DoubtsService {
@@ -16,6 +32,12 @@ export class DoubtsService {
   constructor(
     @InjectRepository(Doubt)
     private readonly doubtsRepository: Repository<Doubt>,
+    @InjectRepository(LearningSessionItem)
+    private readonly sessionItemsRepository: Repository<LearningSessionItem>,
+    @InjectRepository(GeneratedLearningQuestion)
+    private readonly generatedQuestionsRepository: Repository<GeneratedLearningQuestion>,
+    @InjectRepository(Question)
+    private readonly questionsRepository: Repository<Question>,
     private readonly agentService: AgentService,
   ) {}
 
@@ -85,13 +107,28 @@ export class DoubtsService {
 
   private async tryGenerateTutorResponse(doubt: Doubt): Promise<string | null> {
     try {
+      // When the doubt was raised from a specific question, fold that question
+      // in so the answer addresses the learner's actual attempt. Resolution is
+      // best-effort: a missing reference degrades to a topic-level explanation.
+      const question = await this.resolveQuestionContext(doubt);
       return await this.agentService.generateTutorResponse({
         subject: doubt.subject,
         chapter: doubt.chapter,
         topic: doubt.topic,
         learnerMessage: doubt.message,
         mode: TutorMessageType.GENERAL,
-        answerRevealed: false,
+        // A doubt is a genuine question to teach, not a practice item whose
+        // answer must be hidden — ask for a complete, grounded explanation.
+        explanatory: true,
+        questionText: question?.questionText,
+        options: question?.options,
+        selectedOption: question?.selectedOption,
+        correctAnswer: question?.correctAnswer,
+        solution: question?.solution,
+        commonErrors: question?.commonErrors,
+        // The learner is reviewing an item they already faced, so the worked
+        // answer is theirs to see.
+        answerRevealed: Boolean(question),
       });
     } catch (error) {
       this.logger.warn(
@@ -100,6 +137,95 @@ export class DoubtsService {
       );
       return null;
     }
+  }
+
+  /**
+   * Resolves the question a doubt points at. A learning-session item is richest
+   * (it carries the learner's selected option), so it wins; otherwise a bare
+   * question id is matched against the curated bank first, then the learner's
+   * generated pool. Any lookup failure returns null and the caller falls back
+   * to a topic-level explanation.
+   */
+  private async resolveQuestionContext(
+    doubt: Doubt,
+  ): Promise<DoubtQuestionContext | null> {
+    try {
+      if (doubt.learningSessionItemId) {
+        const fromItem = await this.contextFromSessionItem(
+          doubt.learningSessionItemId,
+        );
+        if (fromItem) return fromItem;
+      }
+      if (doubt.questionId) {
+        const fromQuestionId = await this.contextFromQuestionId(
+          doubt.questionId,
+        );
+        if (fromQuestionId) return fromQuestionId;
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Could not resolve question context for doubt ${doubt.id}: ${(error as Error).message}`,
+      );
+    }
+    return null;
+  }
+
+  private async contextFromSessionItem(
+    sessionItemId: string,
+  ): Promise<DoubtQuestionContext | null> {
+    const item = await this.sessionItemsRepository.findOne({
+      where: { id: sessionItemId },
+      relations: { question: true, generatedQuestion: true, answers: true },
+    });
+    if (!item) return null;
+    const selectedOption = (item.answers ?? [])
+      .slice()
+      .sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+      )[0]?.selectedOption;
+    if (item.question) {
+      return { ...this.fromCurated(item.question), selectedOption };
+    }
+    if (item.generatedQuestion) {
+      return { ...this.fromGenerated(item.generatedQuestion), selectedOption };
+    }
+    return null;
+  }
+
+  private async contextFromQuestionId(
+    questionId: string,
+  ): Promise<DoubtQuestionContext | null> {
+    const curated = await this.questionsRepository.findOne({
+      where: { id: questionId },
+    });
+    if (curated) return this.fromCurated(curated);
+    const generated = await this.generatedQuestionsRepository.findOne({
+      where: { id: questionId },
+    });
+    if (generated) return this.fromGenerated(generated);
+    return null;
+  }
+
+  private fromCurated(question: Question): DoubtQuestionContext {
+    return {
+      questionText: question.question_text,
+      options: question.options ?? [],
+      correctAnswer: question.correct_answer,
+      solution: question.solution,
+      commonErrors: question.common_errors ?? [],
+    };
+  }
+
+  private fromGenerated(
+    question: GeneratedLearningQuestion,
+  ): DoubtQuestionContext {
+    return {
+      questionText: question.questionText,
+      options: question.options ?? [],
+      correctAnswer: question.correctAnswer,
+      solution: question.solution,
+      commonErrors: question.commonErrors ?? [],
+    };
   }
 
   private toCard(doubt: Doubt): DoubtCard {

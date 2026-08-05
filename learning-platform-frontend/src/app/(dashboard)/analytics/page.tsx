@@ -84,19 +84,18 @@ export default function AnalyticsPage() {
   }, [growth?.topics]);
 
   return (
-    <div className="min-h-screen bg-[#fbfbfd] pb-20">
+    <div className="min-h-screen bg-canvas pb-20">
       <main className="mx-auto w-full max-w-6xl px-5 pt-9 sm:px-8 lg:px-10">
         <header className="grid gap-5 lg:grid-cols-[1fr_0.42fr] lg:items-end">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
               Analytics
             </p>
-            <h1 className="mt-3 font-heading text-[2.2rem] font-semibold leading-[1.04] tracking-tight text-ink sm:text-[3rem]">
-              Learning evidence, not vanity scores.
+            <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+              How you&apos;re progressing
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-mute">
-              Topic readiness, weak areas, diagnostic history, and route
-              momentum are pulled directly from the learning database.
+            <p className="mt-2 max-w-xl text-sm leading-6 text-ink-mute">
+              Topic readiness, weak areas, and momentum at a glance.
             </p>
           </div>
           <Link

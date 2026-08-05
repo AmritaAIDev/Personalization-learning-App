@@ -19,6 +19,13 @@ import type {
 
 const DEFAULT_LIMIT = 24;
 const CONCEPT_GROUP_LIMIT = 100;
+/**
+ * A first notebook load after several new mistakes can invalidate many topic
+ * summaries at once. Bounding how many groups synthesise concurrently keeps a
+ * burst from firing a dozen parallel DeepSeek calls (cost + rate-limit) while
+ * still enriching cached/singleton groups with no real wait.
+ */
+const CONCEPT_SUMMARY_CONCURRENCY = 3;
 
 type QuestionLike = {
   id: string;
@@ -77,9 +84,7 @@ export class NotebookService {
   async getConceptGroups(userId: string): Promise<NotebookConceptsResponse> {
     const cards = await this.buildCards(userId, CONCEPT_GROUP_LIMIT);
     const groups = this.groupByTopic(cards);
-    const enriched = await Promise.all(
-      groups.map((group) => this.enrichGroup(userId, group)),
-    );
+    const enriched = await this.enrichGroupsBounded(userId, groups);
     enriched.sort((left, right) => right.mistakeCount - left.mistakeCount);
     return {
       groups: enriched,
@@ -92,6 +97,33 @@ export class NotebookService {
           .length,
       },
     };
+  }
+
+  /**
+   * Enriches every topic group with a concept summary while never running more
+   * than {@link CONCEPT_SUMMARY_CONCURRENCY} model calls at once. Order of the
+   * returned array matches the input; the caller re-sorts afterwards.
+   */
+  private async enrichGroupsBounded(
+    userId: string,
+    groups: Omit<
+      NotebookConceptGroup,
+      'conceptLabel' | 'misconceptionSummary' | 'summarySource'
+    >[],
+  ): Promise<NotebookConceptGroup[]> {
+    const results = new Array<NotebookConceptGroup>(groups.length);
+    let cursor = 0;
+    const runWorker = async (): Promise<void> => {
+      while (true) {
+        const index = cursor;
+        cursor += 1;
+        if (index >= groups.length) return;
+        results[index] = await this.enrichGroup(userId, groups[index]);
+      }
+    };
+    const workerCount = Math.min(CONCEPT_SUMMARY_CONCURRENCY, groups.length);
+    await Promise.all(Array.from({ length: workerCount }, runWorker));
+    return results;
   }
 
   private async buildCards(

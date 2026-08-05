@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Atom,
   Compass,
@@ -22,6 +22,11 @@ import {
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import type { UserRole } from "@/lib/diagnostic-types";
+import {
+  learningScopeFromSearchParams,
+  learningUrl,
+  scopeToParams,
+} from "@/lib/learning";
 import WorkspaceSelector from "@/components/WorkspaceSelector";
 
 const navigation: Array<{
@@ -40,13 +45,6 @@ const navigation: Array<{
   { label: "Content", href: "/content", icon: PenLine, roles: ["admin"] },
 ];
 
-const workspaceLabels = new Set([
-  "Learn",
-  "Practice",
-  "Tests",
-  "Notebook",
-  "Doubts",
-]);
 const overviewLabels = new Set(["Dashboard", "Journey"]);
 const planningLabels = new Set(["Content"]);
 const mobileLabels = new Set([
@@ -57,20 +55,74 @@ const mobileLabels = new Set([
   "Tests",
 ]);
 
+type CompactNavItem = {
+  key: string;
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  active: boolean;
+};
+
 export default function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { user, logout } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Focus mode: on a study surface the Overview entries (Dashboard/Journey) are
-  // hidden so the rail stays learning-only. The logo still links home as the escape hatch.
+  // Context-aware compact rail (phone bottom bar + tablet icon rail): on a study
+  // surface with a live topic it mirrors the desktop rail's scoped topic tools;
+  // everywhere else it shows the global destinations.
   const isStudySurface =
     pathname.startsWith("/learn") ||
     pathname.startsWith("/practice") ||
     pathname.startsWith("/tests");
+  const scope = learningScopeFromSearchParams(searchParams);
+  const compactItems: CompactNavItem[] =
+    isStudySurface && scope
+      ? [
+          { key: "dashboard", label: "Dashboard", href: "/", icon: Home, active: pathname === "/" },
+          { key: "journey", label: "Journey", href: "/journey", icon: Map, active: pathname.startsWith("/journey") },
+          {
+            key: "practice",
+            label: "Practice",
+            href: learningUrl(scope, { tab: "practice" }),
+            icon: SquarePen,
+            active: pathname.startsWith("/learn") && searchParams.get("tab") === "practice",
+          },
+          {
+            key: "notebook",
+            label: "Notebook",
+            href: `/notebook?${scopeToParams(scope).toString()}`,
+            icon: NotebookTabs,
+            active: pathname.startsWith("/notebook"),
+          },
+          {
+            key: "doubts",
+            label: "Doubts",
+            href: `/doubts?${scopeToParams(scope).toString()}`,
+            icon: HelpCircle,
+            active: pathname.startsWith("/doubts"),
+          },
+        ]
+      : navigation
+          .filter(
+            (item) =>
+              mobileLabels.has(item.label) &&
+              (!item.roles || item.roles.includes(user?.role ?? "student")),
+          )
+          .map((item) => ({
+            key: item.href,
+            label: item.label,
+            href: item.href,
+            icon: item.icon,
+            active:
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href),
+          }));
 
   const handleLogout = async () => {
     setError(null);
@@ -124,52 +176,32 @@ export default function Sidebar() {
         className="flex min-w-0 flex-1 items-center justify-around gap-1 md:block md:w-full md:space-y-1 lg:hidden"
         aria-label="Student navigation"
       >
-        {navigation
-          .filter(
-            (item) =>
-              mobileLabels.has(item.label) &&
-              (!isStudySurface || !overviewLabels.has(item.label)) &&
-              (!item.roles || item.roles.includes(user?.role ?? "student")),
-          )
-          .map(({ label, href, icon: Icon }) => {
-            const active =
-              href === "/" ? pathname === "/" : pathname.startsWith(href);
-            const workspaceItem = workspaceLabels.has(label);
-            return (
-              <Link
-                key={href}
-                href={href}
-                title={label}
-                className={`group flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 text-[10px] font-semibold transition-all duration-200 md:h-10 md:flex-row md:justify-center md:gap-3 md:px-2 md:text-[13.5px] lg:justify-start lg:px-3 ${workspaceItem ? "lg:hidden" : ""} ${
-                  active
-                    ? "text-primary md:bg-primary-tint"
-                    : "text-ink-mute hover:text-ink md:hover:bg-canvas"
-                }`}
-              >
-                <Icon
-                  className="h-[18px] w-[18px] shrink-0"
-                  aria-hidden="true"
-                />
-                <span className="truncate md:hidden lg:block">{label}</span>
-              </Link>
-            );
-          })}
+        {compactItems.map(({ key, label, href, icon: Icon, active }) => (
+          <Link
+            key={key}
+            href={href}
+            title={label}
+            aria-current={active ? "page" : undefined}
+            className={`group flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 text-[10px] font-semibold transition-all duration-200 md:h-10 md:flex-row md:justify-center md:gap-3 md:px-2 md:text-[13.5px] lg:justify-start lg:px-3 ${
+              active
+                ? "text-primary md:bg-primary-tint"
+                : "text-ink-mute hover:text-ink md:hover:bg-canvas"
+            }`}
+          >
+            <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+            <span className="truncate md:hidden lg:block">{label}</span>
+          </Link>
+        ))}
       </nav>
 
       <div className="hidden w-full lg:block">
-        {isStudySurface ? null : (
-          <>
-            <SidebarSection
-              title="Overview"
-              items={navigation.filter((item) =>
-                overviewLabels.has(item.label),
-              )}
-              pathname={pathname}
-              collapsed={isCollapsed}
-            />
-            <div className="my-3 border-t border-hairline" />
-          </>
-        )}
+        <SidebarSection
+          title="Overview"
+          items={navigation.filter((item) => overviewLabels.has(item.label))}
+          pathname={pathname}
+          collapsed={isCollapsed}
+        />
+        <div className="my-3 border-t border-hairline" />
         <WorkspaceSelector compact={isCollapsed} />
         {navigation.some(
           (item) =>

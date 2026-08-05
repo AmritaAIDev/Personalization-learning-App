@@ -8,21 +8,23 @@ export default function PageHero({
 }: {
   eyebrow: string;
   title: string;
-  description: string;
+  description?: string;
   action?: ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-      <div className="max-w-3xl">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.18em] text-primary">
+    <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0 max-w-2xl">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
           {eyebrow}
         </p>
-        <h1 className="mt-3 font-heading text-[2.15rem] font-semibold leading-[1.08] tracking-tight text-ink sm:text-[2.75rem]">
+        <h1 className="mt-1.5 font-heading text-xl font-bold tracking-tight text-ink sm:text-2xl">
           {title}
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft sm:text-[15px]">
-          {description}
-        </p>
+        {description ? (
+          <p className="mt-1.5 text-[13px] leading-5 text-ink-soft">
+            {description}
+          </p>
+        ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </header>

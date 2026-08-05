@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Layers, ArrowRight } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import { learningUrl } from "@/lib/learning";
+import { learningUrl, scopeToParams } from "@/lib/learning";
 import type { LearningScope } from "@/lib/learning-types";
 
 interface ConceptItem {
@@ -44,7 +44,7 @@ export default function SubtopicExplorer({ scope }: { scope: LearningScope }) {
 
   const load = useCallback(async () => {
     try {
-      const params = new URLSearchParams(scope).toString();
+      const params = scopeToParams(scope).toString();
       const next = await apiFetch<ConceptBreakdown>(
         `/api/learning/subtopics?${params}`,
       );

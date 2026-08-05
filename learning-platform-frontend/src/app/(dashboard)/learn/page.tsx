@@ -25,15 +25,13 @@ export default function LearnPage() {
               </span>
               <p className="mt-7 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-ink-mute">
                 <Compass className="h-4 w-4" aria-hidden="true" />
-                Learn workspace
+                Learn
               </p>
               <h1 className="mt-3 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-                Find a topic to open its learning cockpit.
+                Pick a topic to start.
               </h1>
               <p className="mt-4 max-w-lg text-sm leading-6 text-ink-soft">
-                Search a concept, chapter, or weak topic. The system opens the
-                topic workspace and places the student automatically from
-                backend evidence.
+                Search any concept or chapter — its workspace opens ready to go.
               </p>
               <Link
                 href="/"

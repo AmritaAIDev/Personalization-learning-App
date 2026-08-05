@@ -305,14 +305,15 @@ export default function JourneyMap() {
   const stage = STAGES[stageIndex];
   const summitY = trackHeight - 78;
 
+  // A map node opens the topic's overview — its mastery, trail, and subtopic
+  // map — so the journey stays a place to orient. Practice is one deliberate
+  // click further, inside that workspace, rather than a blind jump.
   const nodeHref = (node: PathNode) =>
-    learningUrl(
-      { subject: node.subject, chapter: node.chapter, topic: node.name },
-      {
-        tab: "practice",
-        placement: node.state === "available" ? "ask" : undefined,
-      },
-    );
+    learningUrl({
+      subject: node.subject,
+      chapter: node.chapter,
+      topic: node.name,
+    });
 
   if (journeyLoading) {
     return (

@@ -1,8 +1,10 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { Roles } from '../auth/roles.decorator';
 import { CreateTopicDto } from './create-topic.dto';
 import { TopicsService } from './topics.service';
 
+@ApiTags('Topics')
 @Controller('api/topics')
 export class TopicsController {
   constructor(private readonly topicsService: TopicsService) {}

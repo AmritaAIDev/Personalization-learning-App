@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
@@ -15,6 +16,7 @@ import {
 } from './practice.dto';
 import { PracticeService } from './practice.service';
 
+@ApiTags('Practice')
 @Controller('api/practice')
 export class PracticeController {
   constructor(private readonly practiceService: PracticeService) {}

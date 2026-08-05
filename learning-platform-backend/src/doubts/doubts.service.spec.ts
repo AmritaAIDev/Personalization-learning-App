@@ -3,6 +3,11 @@ import { TutorMessageType } from '../adaptive/adaptive.types';
 import { Doubt, DoubtStatus } from './doubt.entity';
 import { DoubtsService } from './doubts.service';
 
+/** Minimal repository stub for the question-context lookups a doubt may make. */
+function makeLookupRepo() {
+  return { findOne: jest.fn().mockResolvedValue(null) };
+}
+
 function makeDoubt(overrides: Partial<Doubt> = {}): Doubt {
   return {
     id: 'doubt-1',
@@ -46,6 +51,9 @@ describe('DoubtsService', () => {
     };
     const service = new DoubtsService(
       repository as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
       agentService as never,
     );
 
@@ -82,6 +90,68 @@ describe('DoubtsService', () => {
     expect(saved.some((d) => d.status === DoubtStatus.ANSWERED)).toBe(true);
   });
 
+  it('anchors the tutor answer to the question a doubt was raised from', async () => {
+    const created = makeDoubt({
+      learningSessionItemId: 'item-1',
+      questionId: null,
+    });
+    const repository = {
+      create: jest.fn(() => created),
+      save: jest.fn().mockResolvedValue(created),
+      find: jest.fn(),
+      findOne: jest.fn().mockResolvedValue(created),
+    };
+    const sessionItemsRepo = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 'item-1',
+        resolvedAt: new Date(),
+        question: {
+          question_text: 'Flux through a square face?',
+          options: ['q/e0', 'q/6e0', '0', 'q/2e0'],
+          correct_answer: 'q/6e0',
+          solution: 'Use cube symmetry.',
+          common_errors: ['Treats an open surface as closed.'],
+        },
+        generatedQuestion: null,
+        answers: [
+          {
+            selectedOption: 'q/e0',
+            createdAt: new Date('2026-07-20T10:00:00Z'),
+          },
+        ],
+      }),
+    };
+    const agentService = {
+      generateTutorResponse: jest.fn().mockResolvedValue('### Answer\n…'),
+    };
+    const service = new DoubtsService(
+      repository as never,
+      sessionItemsRepo as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      agentService as never,
+    );
+
+    await service.create('user-1', {
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic: 'Gauss Law',
+      message: 'Why not the full q/e0?',
+      learningSessionItemId: 'item-1',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(agentService.generateTutorResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        explanatory: true,
+        answerRevealed: true,
+        questionText: 'Flux through a square face?',
+        correctAnswer: 'q/6e0',
+        selectedOption: 'q/e0',
+      }),
+    );
+  });
+
   it('keeps a saved doubt open when tutor generation is unavailable', async () => {
     const created = makeDoubt();
     const repository = {
@@ -97,6 +167,9 @@ describe('DoubtsService', () => {
     };
     const service = new DoubtsService(
       repository as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
       agentService as never,
     );
 
@@ -129,7 +202,13 @@ describe('DoubtsService', () => {
         }),
       ]),
     };
-    const service = new DoubtsService(repository as never, {} as never);
+    const service = new DoubtsService(
+      repository as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      {} as never,
+    );
 
     const result = await service.list('user-1');
 

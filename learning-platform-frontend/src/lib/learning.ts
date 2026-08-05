@@ -15,11 +15,28 @@ export function learningScopeFromSearchParams(
   return { subject, chapter, topic };
 }
 
+/**
+ * Builds URL query params from a scope using only the three scope keys.
+ *
+ * Callers frequently hold a richer object (a full topic state, a recommendation
+ * carrying questionCount and reason). Spreading that whole object into
+ * `URLSearchParams` leaked private fields into the URL and serialised nested
+ * values as "[object Object]", so every scope→params conversion goes through
+ * this narrowing helper.
+ */
+export function scopeToParams(scope: LearningScope): URLSearchParams {
+  return new URLSearchParams({
+    subject: scope.subject,
+    chapter: scope.chapter,
+    topic: scope.topic,
+  });
+}
+
 export function learningUrl(
   scope: LearningScope,
   options?: { tab?: LearningTab; placement?: "ask" },
 ): string {
-  const params = new URLSearchParams(scope);
+  const params = scopeToParams(scope);
   if (options?.tab) params.set("tab", options.tab);
   if (options?.placement === "ask") params.set("placement", "ask");
   return `/learn?${params.toString()}`;

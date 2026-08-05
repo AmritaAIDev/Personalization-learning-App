@@ -221,13 +221,12 @@ export default function DoubtsPage() {
     <div className="min-h-screen bg-canvas pb-20">
       <main className="mx-auto w-full max-w-6xl px-5 pt-10 sm:px-8 sm:pt-16 lg:px-10">
         <PageHero
-          eyebrow="Doubt hub"
-          title="Ask from a concept, question, or saved mistake."
-          description="Doubts are saved with topic context, tutor response, and history so support stays connected to the learning path."
+          eyebrow="Doubts"
+          title="Ask a doubt, get a clear answer."
           action={
             <Link
               href="/learn"
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-ink px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-ink/90"
+              className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink/90"
             >
               Open Learn
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -238,28 +237,18 @@ export default function DoubtsPage() {
         {loading ? <DoubtsSkeleton /> : null}
 
         {!loading ? (
-          <div className="mt-9 grid gap-4 lg:grid-cols-[0.58fr_0.42fr]">
-            <section className="rounded-[1.65rem] border border-hairline bg-surface p-6 shadow-[0_14px_34px_rgba(20,20,30,0.05)]">
-              <div className="flex items-start gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary-tint text-primary">
+          <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[0.58fr_0.42fr]">
+            <section className="rounded-[1.65rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:p-6">
+              <div className="flex items-center gap-2.5">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary-tint text-primary">
                   <MessageSquareText className="h-5 w-5" aria-hidden="true" />
                 </span>
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-mute">
-                    Ask a doubt
-                  </p>
-                  <h2 className="mt-2 font-heading text-2xl font-semibold text-ink">
-                    Save the exact confusion
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-ink-soft">
-                    Add the topic and your doubt. If the tutor is available, the
-                    answer is stored immediately; if not, your doubt still stays
-                    saved.
-                  </p>
-                </div>
+                <h2 className="font-heading text-lg font-bold text-ink">
+                  Ask a doubt
+                </h2>
               </div>
 
-              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              <form onSubmit={handleSubmit} className="mt-5 space-y-4">
                 <div className="grid gap-3 sm:grid-cols-3">
                   {(["subject", "chapter", "topic"] as const).map((field) => (
                     <label key={field} className="block">

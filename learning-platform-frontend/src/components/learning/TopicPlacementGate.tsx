@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ClipboardCheck, LoaderCircle } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import { learningUrl } from "@/lib/learning";
+import { learningUrl, scopeToParams } from "@/lib/learning";
 import type { LearningScope, LearningTab } from "@/lib/learning-types";
 import type { DiagnosticAttemptPayload } from "@/lib/diagnostic-types";
 
@@ -24,7 +24,7 @@ export default function TopicPlacementGate({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const query = new URLSearchParams(scope);
+    const query = scopeToParams(scope);
     void apiFetch<PlacementStatus>(
       `/api/learning/placement?${query.toString()}`,
     )

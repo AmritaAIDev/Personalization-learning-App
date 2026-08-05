@@ -21,15 +21,14 @@ export default function PracticePage() {
             <div>
               <p className="inline-flex items-center gap-2 rounded-full bg-primary-tint px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
                 <Timer className="h-3.5 w-3.5" aria-hidden="true" />
-                Practice command
+                Practice
               </p>
-              <h1 className="mt-4 font-heading text-[2.15rem] font-semibold leading-[1.05] tracking-tight text-ink sm:text-[2.8rem]">
-                Start a reviewed practice set from a verified topic.
+              <h1 className="mt-3 font-heading text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+                Start a practice set.
               </h1>
-              <p className="mt-4 max-w-xl text-sm leading-6 text-ink-soft">
-                Search chooses the topic. The backend decides whether enough
-                reviewed questions exist and creates a secure practice attempt
-                from database content only.
+              <p className="mt-3 max-w-xl text-sm leading-6 text-ink-soft">
+                Search a topic and begin a timed set from the verified question
+                bank.
               </p>
             </div>
 
@@ -37,10 +36,10 @@ export default function PracticePage() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-ink">
-                    Find practice topic
+                    Find a topic
                   </p>
                   <p className="mt-1 text-xs leading-5 text-ink-mute">
-                    Result counts come from the question catalog API.
+                    Live counts from the question bank.
                   </p>
                 </div>
                 <Search className="h-5 w-5 text-primary" aria-hidden="true" />
@@ -64,9 +63,8 @@ export default function PracticePage() {
                   No answer keys before submission.
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-white/70">
-                  This area is for exam-style practice. Answers autosave, but
-                  scoring, solutions, weak concepts, and review appear only
-                  after the backend submits the attempt.
+                  Answers autosave. Your score, solutions, and weak concepts
+                  appear once you submit.
                 </p>
               </div>
             </div>
@@ -80,9 +78,8 @@ export default function PracticePage() {
               Use Learn for adaptive tutoring.
             </h2>
             <p className="mt-3 text-sm leading-6 text-ink-soft">
-              Practice here measures. Learn teaches. If the student needs hints,
-              wrong-answer explanations, and level movement, open the topic
-              workspace.
+              Practice measures; Learn teaches. Want hints and explanations?
+              Open the topic workspace.
             </p>
             <Link
               href="/learn"

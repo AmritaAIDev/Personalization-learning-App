@@ -4,3 +4,7 @@ tmp/
 .env*
 canva-product-screens.html
 jee-ai-professional-platform-ui.html
+
+learning-platform-frontend/frontend-run.log
+learning-platform-frontend/.claude/
+*.log

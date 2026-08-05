@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
@@ -22,6 +23,7 @@ import {
   UpdateQuestionPublicationDto,
 } from './questions.dto';
 
+@ApiTags('Questions')
 @Controller('api/questions')
 export class QuestionsController {
   constructor(

@@ -12,6 +12,7 @@ import {
   Search,
 } from "lucide-react";
 import { learningUrl } from "@/lib/learning";
+import { Stagger, StaggerItem } from "@/components/motion/MotionPrimitives";
 import type { GrowthPoint } from "@/lib/growth-types";
 import type {
   StudentDashboardAction,
@@ -66,8 +67,8 @@ export default function StudentActionCenter({
   data: StudentDashboardPayload;
 }) {
   return (
-    <section className="mt-8" aria-label="Student learning desk">
-      <article className="animate-rise grid gap-5 overflow-hidden rounded-[1.75rem] bg-ink p-5 text-white shadow-[0_18px_42px_rgba(20,20,30,0.15)] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center sm:p-6">
+    <Stagger className="mt-8" aria-label="Student learning desk">
+      <StaggerItem className="grid grid-cols-1 gap-5 overflow-hidden rounded-[1.75rem] bg-ink p-5 text-white shadow-[0_18px_42px_rgba(20,20,30,0.15)] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center sm:p-6">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-tint/80">
             Your next step
@@ -106,9 +107,9 @@ export default function StudentActionCenter({
           Open task
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
-      </article>
+      </StaggerItem>
 
-      <div className="animate-rise mt-7 grid gap-7 xl:grid-cols-[minmax(0,1fr)_18rem] [animation-delay:80ms]">
+      <StaggerItem className="mt-7 grid grid-cols-1 gap-7 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <section aria-labelledby="plan-heading">
           <div className="flex items-end justify-between border-b border-hairline pb-3">
             <div>
@@ -131,14 +132,14 @@ export default function StudentActionCenter({
               <li key={action.id}>
                 <Link
                   href={actionHref(action)}
-                  className="group flex items-center gap-4 rounded-xl py-4 transition-[background-color,padding,transform] duration-300 ease-out-soft hover:bg-canvas hover:px-3 hover:pl-5 active:scale-[0.995]"
+                  className="group flex items-center gap-4 rounded-xl px-3 py-4 transition-colors duration-300 ease-out-soft hover:bg-canvas active:scale-[0.995]"
                 >
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-hairline text-xs font-semibold text-ink-soft transition duration-300 group-hover:border-primary/30 group-hover:bg-white group-hover:text-primary">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2 text-sm font-semibold text-ink">
-                      <span className="text-primary">
+                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-ink">
+                      <span className="shrink-0 text-primary">
                         {actionIcon(action.kind)}
                       </span>
                       <span className="truncate">{action.title}</span>
@@ -188,17 +189,19 @@ export default function StudentActionCenter({
             </Link>
           </div>
         </aside>
-      </div>
+      </StaggerItem>
 
-      <SubjectCoverageExplorer subjects={data.subjectCoverage} />
+      <StaggerItem>
+        <SubjectCoverageExplorer subjects={data.subjectCoverage} />
+      </StaggerItem>
 
-      <div className="animate-rise mt-7 grid gap-8 border-t border-hairline pt-7 xl:grid-cols-[0.88fr_1.12fr] [animation-delay:150ms]">
+      <StaggerItem className="mt-7 grid grid-cols-1 gap-8 border-t border-hairline pt-7 xl:grid-cols-[0.88fr_1.12fr]">
         <section aria-labelledby="revision-heading">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2
                 id="revision-heading"
-                className="font-heading text-2xl font-bold tracking-tight text-ink"
+                className="font-heading text-xl font-bold tracking-tight text-ink"
               >
                 Review queue
               </h2>
@@ -241,7 +244,7 @@ export default function StudentActionCenter({
         <section aria-labelledby="activity-heading">
           <h2
             id="activity-heading"
-            className="font-heading text-2xl font-bold tracking-tight text-ink"
+            className="font-heading text-xl font-bold tracking-tight text-ink"
           >
             Recent learning
           </h2>
@@ -276,8 +279,8 @@ export default function StudentActionCenter({
             </p>
           )}
         </section>
-      </div>
-    </section>
+      </StaggerItem>
+    </Stagger>
   );
 }
 
@@ -298,7 +301,7 @@ function SubjectCoverageExplorer({
 
   return (
     <section
-      className="animate-rise mt-7 rounded-2xl border border-hairline bg-white p-5 shadow-[0_10px_28px_rgba(20,20,30,0.04)] sm:p-6 [animation-delay:140ms]"
+      className="mt-7 rounded-2xl border border-hairline bg-white p-5 shadow-[0_10px_28px_rgba(20,20,30,0.04)] sm:p-6"
       aria-labelledby="subject-map-heading"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -340,7 +343,7 @@ function SubjectCoverageExplorer({
         </div>
       </div>
 
-      <div className="mt-5 grid gap-7 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-center">
+      <div className="mt-5 grid grid-cols-1 gap-7 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-center">
         <div>
           <div className="flex items-end justify-between">
             <span className="font-heading text-4xl font-bold tracking-tight text-ink">
@@ -401,7 +404,7 @@ function SubjectCoverageExplorer({
           </div>
         </div>
 
-        <div className="grid gap-x-6 divide-y divide-hairline border-y border-hairline lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+        <div className="grid grid-cols-1 gap-x-6 divide-y divide-hairline border-y border-hairline lg:grid-cols-2 lg:divide-x lg:divide-y-0">
           {selected.topics.slice(0, 5).map((topic) => (
             <Link
               key={`${topic.chapter}-${topic.topic}`}
@@ -552,7 +555,7 @@ function MomentumGraph({ timeline }: { timeline: GrowthPoint[] }) {
   return (
     <svg
       viewBox="0 0 240 80"
-      className="mt-3 h-20 w-full overflow-visible"
+      className="mt-3 h-20 w-full"
       preserveAspectRatio="none"
       role="img"
       aria-label="Mastery momentum over recent completed checkpoints"

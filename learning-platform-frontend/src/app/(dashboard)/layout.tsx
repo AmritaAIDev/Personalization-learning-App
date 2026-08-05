@@ -1,6 +1,7 @@
 import React from "react";
 import Sidebar from "@/components/Sidebar";
 import DashboardAccess from "@/components/DashboardAccess";
+import PageTransition from "@/components/motion/PageTransition";
 
 export default function DashboardLayout({
   children,
@@ -12,7 +13,7 @@ export default function DashboardLayout({
       <div className="flex min-h-screen bg-canvas font-sans">
         <Sidebar />
         <main className="min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
     </DashboardAccess>

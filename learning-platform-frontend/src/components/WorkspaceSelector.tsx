@@ -15,7 +15,11 @@ import {
 import { usePathname, useSearchParams } from "next/navigation";
 import TopicPickerDialog from "@/components/search/TopicPickerDialog";
 import { apiFetch } from "@/lib/api";
-import { learningScopeFromSearchParams, learningUrl } from "@/lib/learning";
+import {
+  learningScopeFromSearchParams,
+  learningUrl,
+  scopeToParams,
+} from "@/lib/learning";
 import { practiceHref } from "@/lib/practice";
 import type {
   LearningDashboardPayload,
@@ -23,7 +27,8 @@ import type {
 } from "@/lib/learning-types";
 
 function scopedHref(path: string, scope: LearningScope) {
-  const params = new URLSearchParams(scope);
+  // scope may be a full backend topic state at runtime; narrow to scope keys.
+  const params = scopeToParams(scope);
   return `${path}?${params.toString()}`;
 }
 

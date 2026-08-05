@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
@@ -18,6 +19,7 @@ import {
 } from './diagnostic.dto';
 import { DiagnosticsService } from './diagnostics.service';
 
+@ApiTags('Diagnostics')
 @Controller('api/diagnostics')
 @Throttle({ default: { limit: 30, ttl: 60_000 } })
 export class DiagnosticsController {

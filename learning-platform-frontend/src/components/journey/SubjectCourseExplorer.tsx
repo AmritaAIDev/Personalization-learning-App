@@ -257,18 +257,13 @@ export default function SubjectCourseExplorer({
                           const status = topicStatus(topic, chapter);
                           const progress = topicProgress(topic, status);
                           const canOpen = status !== "locked";
-                          const href = learningUrl(
-                            {
-                              subject,
-                              chapter: chapter.name,
-                              topic: topic.name,
-                            },
-                            {
-                              tab: "practice",
-                              placement:
-                                status === "active" ? "ask" : undefined,
-                            },
-                          );
+                          // Open the topic overview, not a blind jump into
+                          // practice — the explorer is for choosing where to go.
+                          const href = learningUrl({
+                            subject,
+                            chapter: chapter.name,
+                            topic: topic.name,
+                          });
                           const icon =
                             status === "completed" ? (
                               <Check className="h-4 w-4" />

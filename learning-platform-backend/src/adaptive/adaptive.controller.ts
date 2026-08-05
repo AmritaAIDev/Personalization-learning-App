@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
@@ -21,6 +22,7 @@ import {
 import { AdaptiveService } from './adaptive.service';
 import { CompetencyService } from './competency.service';
 
+@ApiTags('Adaptive learning')
 @Controller('api/learning')
 export class AdaptiveController {
   constructor(

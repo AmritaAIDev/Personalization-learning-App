@@ -105,10 +105,9 @@ export default function DiagnosticStartPage() {
           <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight sm:text-3xl">
             {dashboard?.diagnostic.title ?? "Physics diagnostic"}
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70">
-            A timed, secure check of your Electrostatics. Answer one question at
-            a time; each selection autosaves. Scoring and repair areas appear
-            after you submit.
+          <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">
+            A short, timed check. Answers autosave; your score and repair areas
+            appear after you submit.
           </p>
         </div>
 

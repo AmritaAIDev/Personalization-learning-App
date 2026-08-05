@@ -51,7 +51,7 @@ export default function DashboardPage() {
   const firstName = data?.student.name.split(" ")[0] || "learner";
 
   return (
-    <div className="min-h-screen bg-[#fbfbfd] pb-20">
+    <div className="min-h-screen bg-canvas pb-20">
       <main className="mx-auto w-full max-w-6xl px-5 pt-9 sm:px-8 lg:px-10">
         <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.38fr)] lg:items-end">
           <div className="animate-rise">

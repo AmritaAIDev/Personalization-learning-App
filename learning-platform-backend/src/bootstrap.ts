@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -16,7 +17,20 @@ export async function createNestApp(options: CreateNestAppOptions = {}) {
   const app = await NestFactory.create(AppModule);
   const allowedOrigins = configuredAllowedOrigins(process.env.FRONTEND_ORIGIN);
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      // Swagger UI ships inline scripts/styles; allow them while keeping the
+      // rest of Helmet's hardening.
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "'data:'", "'unsafe-inline'"],
+        },
+      },
+    }),
+  );
   app.use(cookieParser());
   app.enableCors({
     origin: (
@@ -44,6 +58,22 @@ export async function createNestApp(options: CreateNestAppOptions = {}) {
       transformOptions: { enableImplicitConversion: false },
     }),
   );
+  // Interactive API docs at /docs (and the OpenAPI spec at /docs-json).
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('JEE AI Competency Engine API')
+    .setDescription(
+      'Secure adaptive-learning platform: diagnostics/tests, reviewed practice, ' +
+        'adaptive learning, notebook, doubts. Authenticated via a session cookie ' +
+        '(send the cookie set by /api/auth/login). See the backend README for the ' +
+        'full endpoint reference.',
+    )
+    .setVersion('1.0')
+    .addCookieAuth('session')
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('docs', app, document, {
+    swaggerOptions: { withCredentials: true },
+  });
   if (options.enableShutdownHooks ?? true) {
     app.enableShutdownHooks();
   }

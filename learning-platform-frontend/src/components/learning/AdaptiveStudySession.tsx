@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, CircleAlert } from "lucide-react";
+import { ArrowLeft, ChevronRight, CircleAlert, Map } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { learningUrl } from "@/lib/learning";
 import type {
@@ -211,11 +211,29 @@ export default function AdaptiveStudySession({
       }`}
     >
       <header className="rounded-2xl border border-hairline bg-surface px-3 py-2.5 shadow-[0_8px_22px_rgba(20,20,30,0.04)] sm:px-4">
-        <div className="flex flex-wrap items-center gap-3">
+        {/* Breadcrumb keeps the learner oriented and Journey one tap away, so the
+            topic workspace never feels like a dead end. */}
+        <nav
+          aria-label="Breadcrumb"
+          className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-ink-mute"
+        >
+          <Link
+            href="/journey"
+            className="inline-flex shrink-0 items-center gap-1 rounded-md px-1 py-0.5 font-semibold text-ink-soft transition hover:bg-primary-tint/50 hover:text-primary"
+          >
+            <Map className="h-3.5 w-3.5" aria-hidden="true" />
+            Journey
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="shrink-0 truncate">{scope.subject}</span>
+          <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 truncate">{scope.chapter}</span>
+        </nav>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
           <Link
             href="/"
             className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-xl border border-hairline px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-primary/30 hover:bg-primary-tint/40 hover:text-primary"
-            title="Back to search"
+            title="Back to dashboard"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             <span className="truncate font-heading text-sm font-bold text-ink">

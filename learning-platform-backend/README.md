@@ -40,6 +40,10 @@ Checks: `npm test` (unit), `npm run build` (production compile). Do **not** run 
 - Restrictive credentialed CORS, Helmet, origin checks for unsafe cookie requests, `@nestjs/throttler` rate limits, and role guards are global.
 - AI-generated questions land as `DRAFT`; only an admin can inspect keys and publish/archive. Learner-private generated questions never bypass the global review workflow.
 
+## Interactive API docs
+
+Swagger UI is served at [/docs](http://localhost:4000/docs) (OpenAPI JSON at /docs-json) once the API is running. Every controller is tagged (Auth, Diagnostics, Practice, Adaptive learning, Notebook, Doubts, …) and the session cookie is wired as a cookieAuth scheme, so you can try any authenticated endpoint from the UI after logging in.
+
 ## API reference
 
 All routes are authenticated via the session cookie unless noted. Bodies are JSON; responses are wrapped in `{ data: ... }`.

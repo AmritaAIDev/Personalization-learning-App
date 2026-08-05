@@ -51,6 +51,18 @@ export interface PerformanceRow {
   status: "strong" | "average" | "weak";
 }
 
+export type ConfidenceCalibration =
+  | "overconfident"
+  | "underconfident"
+  | "calibrated";
+
+export interface IntegritySignal {
+  guessingSuspected: boolean;
+  fastWrongCount: number;
+  dominantOptionShare: number;
+  note: string | null;
+}
+
 export interface DiagnosticAnalysis {
   total: number;
   correct: number;
@@ -60,6 +72,10 @@ export interface DiagnosticAnalysis {
   topicPerformance: PerformanceRow[];
   bloomPerformance: PerformanceRow[];
   weakTopics: string[];
+  /** Deterministic one-line recap built from topic performance. */
+  recap?: string;
+  /** Admin-only guessing heuristic; redacted to a null note for students. */
+  integrity?: IntegritySignal;
   calculatedAt: string;
 }
 
@@ -130,6 +146,8 @@ export interface RecommendationsPayload {
 
 export interface DiagnosticReviewItem {
   position: number;
+  /** Internal question UUID used to target the explain endpoint. */
+  id: string;
   questionId: string;
   topic: string;
   difficulty: string;
@@ -141,6 +159,22 @@ export interface DiagnosticReviewItem {
   correctOption: string;
   isCorrect: boolean;
   solution: string;
+  confidence: number | null;
+  calibration: ConfidenceCalibration | null;
+}
+
+export type ExplanationDepth = "concise" | "step-by-step" | "from-scratch";
+
+export interface Citation {
+  title: string;
+  topic: string;
+  chapter: string;
+}
+
+export interface ExplanationResponse {
+  explanation: string;
+  grounded: boolean;
+  sources: Citation[];
 }
 
 export interface DiagnosticReviewPayload {

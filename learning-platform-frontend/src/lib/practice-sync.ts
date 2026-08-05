@@ -2,6 +2,8 @@ export type PracticeAnswerDraft = {
   questionId: string;
   selectedOption: string;
   elapsedSeconds: number;
+  /** Optional pre-answer confidence (1–3); omitted when the learner didn't rate. */
+  confidence?: number;
 };
 
 export type PracticeSyncState = {

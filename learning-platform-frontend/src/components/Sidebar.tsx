@@ -223,7 +223,7 @@ export default function Sidebar() {
 
       <div className="mt-auto hidden w-full shrink-0 border-t border-hairline pt-2.5 md:block">
         {error && (
-          <p className="mb-3 hidden text-xs text-primary lg:block" role="alert">
+          <p className="mb-3 hidden text-xs text-rose-600 lg:block" role="alert">
             {error}
           </p>
         )}

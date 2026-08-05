@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AgentService } from '../agent/agent.service';
+import { AgentService, RetrievedSource } from '../agent/agent.service';
 import { TutorMessageType } from '../adaptive/adaptive.types';
+import { toCitations } from '../citation.util';
 import { LearningSessionItem } from '../adaptive/learning-session-item.entity';
 import { GeneratedLearningQuestion } from '../adaptive/generated-learning-question.entity';
 import { Question } from '../question.entity';
@@ -94,6 +95,13 @@ export class DoubtsService {
       const tutorResponse = await this.tryGenerateTutorResponse(doubt);
       if (!tutorResponse) return;
       doubt.assistantResponse = tutorResponse;
+      // Grounding is best-effort; a missing/slow vector store just means no
+      // citations, never a failed or delayed answer.
+      const sources = await this.agentService
+        .retrieveSupplementalSources(doubt.topic)
+        .catch(() => [] as RetrievedSource[]);
+      const citations = toCitations(sources);
+      doubt.sources = citations.length > 0 ? citations : null;
       doubt.status = DoubtStatus.ANSWERED;
       doubt.answeredAt = new Date();
       await this.doubtsRepository.save(doubt);
@@ -236,6 +244,7 @@ export class DoubtsService {
       topic: doubt.topic,
       message: doubt.message,
       assistantResponse: doubt.assistantResponse,
+      sources: doubt.sources ?? [],
       status: doubt.status,
       questionId: doubt.questionId,
       learningSessionId: doubt.learningSessionId,

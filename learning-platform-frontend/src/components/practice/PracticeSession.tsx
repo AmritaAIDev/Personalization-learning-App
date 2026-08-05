@@ -48,6 +48,7 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
   const started = useRef(false);
   const [payload, setPayload] = useState<PracticeAttemptPayload | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [confidence, setConfidence] = useState<Record<string, number>>({});
   const [marked, setMarked] = useState<Set<string>>(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -60,6 +61,12 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
   const queueRef = useRef<PracticeAnswerQueue | null>(null);
   /** When the current question came on screen, for per-question timing. */
   const questionOpenedAtRef = useRef(0);
+  // Mirrors `confidence` so the keyboard-answer path (whose handler closure is
+  // only refreshed per question) always reads the latest rating, not a stale one.
+  const confidenceRef = useRef<Record<string, number>>({});
+  useEffect(() => {
+    confidenceRef.current = confidence;
+  }, [confidence]);
 
   const createOrResume = useCallback(async () => {
     setLoading(true);
@@ -121,6 +128,7 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
             body: JSON.stringify({
               selectedOption: draft.selectedOption,
               elapsedSeconds: draft.elapsedSeconds,
+              confidence: draft.confidence,
             }),
           },
         ).then(() => undefined),
@@ -175,7 +183,26 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
       selectedOption,
       // Per-question time, which is what the analytics actually mean.
       elapsedSeconds: elapsedPracticeSeconds(questionOpenedAtRef.current),
+      confidence: confidenceRef.current[question.id],
     });
+  };
+
+  // A pre-answer self-rating. If a choice is already made, resend it so the
+  // confidence lands on the same answer row; otherwise it is remembered and
+  // attached when the learner picks an option.
+  const rate = (level: number) => {
+    const question = questions[currentIndex];
+    if (!question || submitting) return;
+    setConfidence((current) => ({ ...current, [question.id]: level }));
+    const selectedOption = answers[question.id];
+    if (selectedOption) {
+      queueRef.current?.enqueue({
+        questionId: question.id,
+        selectedOption,
+        elapsedSeconds: elapsedPracticeSeconds(questionOpenedAtRef.current),
+        confidence: level,
+      });
+    }
   };
 
   const goTo = useCallback(
@@ -346,6 +373,11 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
             <StudyMarkdown className="font-heading text-xl font-bold leading-8 text-ink sm:text-2xl">
               {question.questionText}
             </StudyMarkdown>
+            <ConfidenceSelector
+              value={confidence[question.id] ?? null}
+              onRate={rate}
+              disabled={submitting}
+            />
             <div
               className="mt-6 space-y-3"
               role="radiogroup"
@@ -560,6 +592,55 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
           onConfirm={() => void submit()}
         />
       ) : null}
+    </div>
+  );
+}
+
+const CONFIDENCE_LEVELS: Array<{ level: number; label: string }> = [
+  { level: 1, label: "Unsure" },
+  { level: 2, label: "Maybe" },
+  { level: 3, label: "Confident" },
+];
+
+/**
+ * Optional pre-answer self-rating. It captures how sure the learner feels
+ * before committing, which the review screen turns into over/under-confidence
+ * feedback. Skipping it never blocks answering.
+ */
+function ConfidenceSelector({
+  value,
+  onRate,
+  disabled,
+}: {
+  value: number | null;
+  onRate: (level: number) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border border-dashed border-hairline bg-canvas/60 px-3 py-2.5">
+      <span className="text-xs font-bold text-ink-mute">How sure are you?</span>
+      <div className="flex gap-1.5" role="group" aria-label="Confidence rating">
+        {CONFIDENCE_LEVELS.map((item) => {
+          const selected = value === item.level;
+          return (
+            <button
+              key={item.level}
+              type="button"
+              aria-pressed={selected}
+              disabled={disabled}
+              onClick={() => onRate(item.level)}
+              className={`min-h-8 rounded-lg px-3 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                selected
+                  ? "bg-primary text-white"
+                  : "border border-hairline bg-surface text-ink-soft hover:border-primary/40 hover:text-primary"
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+      <span className="text-[11px] text-ink-mute">Optional</span>
     </div>
   );
 }

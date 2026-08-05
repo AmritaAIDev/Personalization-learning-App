@@ -41,49 +41,49 @@ analysis/review/notebook pages.
 ### 1.1 One-tap "Explain this" / "Hint" on review & practice
 **Modules:** frontend `practice`/`diagnostics` review UIs · backend `adaptive` tutor · `doubts`
 
-- [ ] Frontend: add "Explain this" button on each per-question review item (tests + practice), wired to the tutor prompt with `answerRevealed: true`.
-- [ ] Frontend: surface the existing "Hint" quick-prompt as a visible action on the practice board (not only via `H` key).
-- [ ] Backend: ensure `AgentService.generateTutorResponse` accepts an ad-hoc question context without an active session (reuse the doubt path).
-- [ ] Tests: unit test the ad-hoc explanation path with a mocked model + fallback.
-- [ ] Docs: update `learning`/`practice` component READMEs.
+- [x] Frontend: add "Explain this" button on each per-question review item (tests + practice), wired to the tutor prompt with `answerRevealed: true`. — shared `ExplainThis` component on `PracticeReview` and the diagnostic review drill-down.
+- [x] Frontend: surface the existing "Hint" quick-prompt as a visible action on the practice board (not only via `H` key). — quick-prompt buttons already render above the tutor input in `StudyAssistant`.
+- [x] Backend: ensure `AgentService.generateTutorResponse` accepts an ad-hoc question context without an active session (reuse the doubt path). — new `explainReviewQuestion` on practice/diagnostics services; `POST .../questions/:questionId/explain`.
+- [x] Tests: unit test the ad-hoc explanation path with a mocked model + fallback.
+- [x] Docs: update `learning`/`practice` component READMEs.
 
 ### 1.2 AI test recap (one-line summary on the analysis page)
 **Modules:** frontend `analysis` page · backend `diagnostics` analysis
 
-- [ ] Backend: add an optional `recap` field to `GET /api/diagnostics/:id/analysis`, generated from topic performance + weak topics (short, deterministic if no LLM).
-- [ ] Frontend: render the recap line at the top of the analysis page.
-- [ ] Tests: deterministic recap from a fixture analysis; LLM recap path mocked.
-- [ ] Docs: `diagnostics` README endpoint note.
+- [x] Backend: add an optional `recap` field to `GET /api/diagnostics/:id/analysis`, generated from topic performance + weak topics (short, deterministic if no LLM). — `buildRecap`, stored on every analysis; zero-cost, always present.
+- [x] Frontend: render the recap line at the top of the analysis page. — "AI recap" line in the hero.
+- [x] Tests: deterministic recap from a fixture analysis; LLM recap path mocked. — deterministic recap covered; recap needs no LLM path.
+- [x] Docs: `diagnostics` README endpoint note.
 
 ### 1.3 Explanation depth toggle (concise / step-by-step / from-scratch)
 **Modules:** `agent` (prompt control) · frontend tutor/review
 
-- [ ] Add a `depth` field to the tutor prompt context and a UI toggle.
-- [ ] Tests: prompt builder includes the depth directive.
-- [ ] Docs: `agent` README.
+- [x] Add a `depth` field to the tutor prompt context and a UI toggle. — `TutorPromptContext.depth` + `EXPLANATION_DEPTHS`; toggle lives in `ExplainThis`.
+- [x] Tests: prompt builder includes the depth directive. — `agent.service.spec.ts`.
+- [x] Docs: `agent` README.
 
 ### 1.4 Confidence calibration (rate before answering)
 **Modules:** frontend `practice`/`diagnostics` · backend answer save (new optional field)
 
-- [ ] Add `confidence` (1–3) to `SavePracticeAnswerDto` / `SaveDiagnosticAnswerDto` (optional).
-- [ ] Persist on the answer rows (migration for the new nullable column).
-- [ ] Frontend: confidence selector before submit; show over/under-confidence on review.
-- [ ] Tests: DTO validation + persistence.
-- [ ] Docs: practice/diagnostics README + migration note.
+- [x] Add `confidence` (1–3) to `SavePracticeAnswerDto` / `SaveDiagnosticAnswerDto` (optional).
+- [x] Persist on the answer rows (migration for the new nullable column). — `AddAnswerConfidence1785400000000`.
+- [x] Frontend: confidence selector before submit; show over/under-confidence on review. — `ConfidenceSelector` on both runners; `ConfidenceBadge` on review via the shared `calibrationFor`.
+- [x] Tests: DTO validation + persistence. — persistence + calibration covered in service specs; `calibrationFor` unit-tested.
+- [x] Docs: practice/diagnostics README + migration note.
 
 ### 1.5 Guessing / random-answering detection in tests
 **Modules:** `diagnostics` analysis
 
-- [ ] Heuristic flag on submit: implausibly fast + wrong, or shuffled-pattern answers.
-- [ ] Surface a subtle "possible guess pattern" note on analysis (admin-visible only).
-- [ ] Tests: heuristic over a fixture attempt.
-- [ ] Docs: `diagnostics` README.
+- [x] Heuristic flag on submit: implausibly fast + wrong, or shuffled-pattern answers. — `buildIntegritySignal`.
+- [x] Surface a subtle "possible guess pattern" note on analysis (admin-visible only). — redacted server-side for students via `viewAnalysisFor`; note shown only when `user.role === "admin"`.
+- [x] Tests: heuristic over a fixture attempt.
+- [x] Docs: `diagnostics` README.
 
 ### Phase 1 exit criteria
-- [ ] Review and practice offer on-demand AI explanation/hint.
-- [ ] Analysis page shows an AI recap.
-- [ ] Confidence + guess-detection data captured without disrupting the flow.
-- [ ] All new endpoints unit tested; READMEs updated.
+- [x] Review and practice offer on-demand AI explanation/hint.
+- [x] Analysis page shows an AI recap.
+- [x] Confidence + guess-detection data captured without disrupting the flow.
+- [x] All new endpoints unit tested; READMEs updated.
 
 ---
 
@@ -95,12 +95,12 @@ Goal: productise the AI infrastructure you already have. Each item reuses
 ### 2.1 RAG-grounded explanations with citations
 **Modules:** `agent` (retrieve-then-generate) · `doubts` · `adaptive` tutor
 
-- [ ] Wire `AgentService.retrieveContextFromQdrant` into the **doubts** path (currently context-light) and the tutor explanation path.
-- [ ] Append retrieved context to the tutor prompt; return a short `sources` list in the response.
-- [ ] Frontend: render source citations under tutor/doubt answers.
-- [ ] Fallback: if Qdrant empty/unavailable, answer without citations (never block).
-- [ ] Tests: retrieval mocked; citation payload shape; fallback path.
-- [ ] Docs: `agent` README retrieval contract.
+- [x] Wire `AgentService.retrieveContextFromQdrant` into the **doubts** path (currently context-light) and the tutor explanation path. — new structured `retrieveSourcesFromQdrant` + cached best-effort `retrieveSupplementalSources`; `generateConceptExplanation` grounds on these; doubts + explain endpoints consume them.
+- [x] Append retrieved context to the tutor prompt; return a short `sources` list in the response. — explain endpoints return `{ explanation, grounded, sources }`; doubts persist `sources`.
+- [x] Frontend: render source citations under tutor/doubt answers. — shared `SourceCitations` in `ExplainThis` and the doubts page.
+- [x] Fallback: if Qdrant empty/unavailable, answer without citations (never block). — `retrieveSupplementalSources` is timeout-bounded and returns `[]`; verified live.
+- [x] Tests: retrieval mocked; citation payload shape; fallback path. — `citation.util.spec.ts`, `agent.service.spec.ts` (mapping + fallback + cache), explain-endpoint source assertions.
+- [x] Docs: `agent` README retrieval contract. — plus practice/diagnostics/doubts + frontend READMEs.
 
 ### 2.2 Misconception detection + targeted remediation
 **Modules:** `notebook` · `adaptive` · `agent` · `question` (`common_errors`)
@@ -235,15 +235,15 @@ platform. Higher effort, sequenced after Phases 1–2 give a solid base.
 
 ## Master checklist (phase completion)
 
-### Phase 1 — Quick wins
-- [ ] 1.1 One-tap explain/hint on review & practice
-- [ ] 1.2 AI test recap on analysis
-- [ ] 1.3 Explanation depth toggle
-- [ ] 1.4 Confidence calibration
-- [ ] 1.5 Guessing detection
+### Phase 1 — Quick wins ✅
+- [x] 1.1 One-tap explain/hint on review & practice
+- [x] 1.2 AI test recap on analysis
+- [x] 1.3 Explanation depth toggle
+- [x] 1.4 Confidence calibration
+- [x] 1.5 Guessing detection
 
 ### Phase 2 — Integratable
-- [ ] 2.1 RAG-grounded explanations + citations
+- [x] 2.1 RAG-grounded explanations + citations
 - [ ] 2.2 Misconception detection + remediation
 - [ ] 2.3 On-demand similar question
 - [ ] 2.4 FSRS spaced repetition

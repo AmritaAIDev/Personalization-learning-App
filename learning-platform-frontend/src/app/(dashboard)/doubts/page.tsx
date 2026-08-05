@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import PageHero from "@/components/product/PageHero";
 import StudyMarkdown from "@/components/learning/StudyMarkdown";
+import SourceCitations from "@/components/learning/SourceCitations";
 import { ApiError, apiFetch } from "@/lib/api";
 import type {
   CreateDoubtPayload,
@@ -86,9 +87,12 @@ function DoubtHistoryCard({ doubt }: { doubt: DoubtCard }) {
         {doubt.message}
       </h3>
       {doubt.assistantResponse ? (
-        <StudyMarkdown className="mt-4 rounded-2xl border border-hairline bg-white p-4 text-sm leading-6 text-ink-soft">
-          {doubt.assistantResponse}
-        </StudyMarkdown>
+        <div className="mt-4 rounded-2xl border border-hairline bg-white p-4">
+          <StudyMarkdown className="text-sm leading-6 text-ink-soft">
+            {doubt.assistantResponse}
+          </StudyMarkdown>
+          <SourceCitations sources={doubt.sources} />
+        </div>
       ) : (
         <p className="mt-4 flex items-center gap-2 rounded-2xl border border-dashed border-hairline bg-white p-4 text-sm leading-6 text-ink-mute">
           <Loader2

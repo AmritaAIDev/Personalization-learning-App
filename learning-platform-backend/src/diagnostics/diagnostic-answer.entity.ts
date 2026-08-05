@@ -41,6 +41,13 @@ export class DiagnosticAnswer {
   @Column({ name: 'elapsed_seconds', type: 'int', nullable: true })
   elapsedSeconds: number | null;
 
+  /**
+   * Optional pre-answer self-rated confidence (1 = unsure, 3 = certain). Drives
+   * calibration feedback on review; nullable so it never blocks answering.
+   */
+  @Column({ name: 'confidence', type: 'smallint', nullable: true })
+  confidence: number | null;
+
   @Column({ name: 'is_correct', type: 'boolean', nullable: true })
   isCorrect: boolean | null;
 

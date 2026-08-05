@@ -212,7 +212,7 @@ export default function AnalyticsPage() {
                             {subject.score}%
                           </span>
                         </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-[#ececf0]">
+                        <div className="h-2 overflow-hidden rounded-full bg-hairline">
                           <div
                             className={`h-full rounded-full ${scoreTone(subject.score)}`}
                             style={{ width: `${subject.score}%` }}

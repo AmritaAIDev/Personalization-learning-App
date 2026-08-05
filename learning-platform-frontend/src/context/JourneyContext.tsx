@@ -8,7 +8,7 @@ import React, {
   useState,
   type ReactNode,
 } from "react";
-import { apiFetch, LEARNING_DATA_UPDATED_EVENT } from "@/lib/api";
+import { ApiError, apiFetch, LEARNING_DATA_UPDATED_EVENT } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import type { AuthenticatedUser } from "@/lib/diagnostic-types";
 
@@ -36,6 +36,8 @@ interface JourneyContextType {
   journeyNodes: JourneyNode[];
   user: UserStats | null;
   loading: boolean;
+  /** Set when the journey fetch fails, so views can distinguish it from "no data". */
+  error: string | null;
   refreshJourney: () => Promise<void>;
 }
 
@@ -44,6 +46,7 @@ const JourneyContext = createContext<JourneyContextType | undefined>(undefined);
 export function JourneyProvider({ children }: { children: ReactNode }) {
   const [journeyNodes, setJourneyNodes] = useState<JourneyNode[]>([]);
   const [journeyLoading, setJourneyLoading] = useState(false);
+  const [journeyError, setJourneyError] = useState<string | null>(null);
   const { user, loading: authLoading } = useAuth();
 
   const fetchJourney = useCallback(
@@ -52,6 +55,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       if (!user) {
         setJourneyNodes([]);
         setJourneyLoading(false);
+        setJourneyError(null);
         return;
       }
       setJourneyLoading(true);
@@ -61,9 +65,15 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
           force ? {} : { memoryCacheTtlMs: 45_000 },
         );
         setJourneyNodes(Array.isArray(journeyData) ? journeyData : []);
+        setJourneyError(null);
       } catch (error) {
-        console.error("Failed to fetch the learner journey.", error);
-        setJourneyNodes([]);
+        // Surface the failure instead of showing an empty journey as if the
+        // learner simply had no data yet.
+        setJourneyError(
+          error instanceof ApiError
+            ? error.message
+            : "Your learning journey could not be loaded.",
+        );
       } finally {
         setJourneyLoading(false);
       }
@@ -97,6 +107,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         journeyNodes: user ? journeyNodes : [],
         user,
         loading: authLoading || journeyLoading,
+        error: user ? journeyError : null,
         refreshJourney: () => fetchJourney(true),
       }}
     >

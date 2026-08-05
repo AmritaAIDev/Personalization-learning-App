@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -253,36 +253,31 @@ export default function NotebookPage() {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<"mistakes" | "due">("mistakes");
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadConcepts() {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await apiFetch<NotebookConceptsResponse>(
-          "/api/notebook/concepts",
-        );
-        if (!cancelled) setConcepts(data);
-      } catch (caught) {
-        if (!cancelled) {
-          setError(
-            caught instanceof ApiError
-              ? caught.message
-              : "Unable to load the notebook right now.",
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  const loadConcepts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch<NotebookConceptsResponse>(
+        "/api/notebook/concepts",
+      );
+      setConcepts(data);
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "Unable to load the notebook right now.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    void loadConcepts();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    const loadInitialConcepts = async () => {
+      await loadConcepts();
+    };
+    void loadInitialConcepts();
+  }, [loadConcepts]);
 
   const stats = useMemo(() => {
     if (!concepts) return null;
@@ -362,6 +357,14 @@ export default function NotebookPage() {
               <div>
                 <h2 className="font-semibold">Notebook could not load</h2>
                 <p className="mt-1 text-sm leading-6">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => void loadConcepts()}
+                  className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-bold text-white transition hover:bg-rose-700"
+                >
+                  <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                  Try again
+                </button>
               </div>
             </div>
           </div>

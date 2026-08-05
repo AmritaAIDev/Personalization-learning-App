@@ -218,6 +218,14 @@ function diagnosticAnalysis(): DiagnosticAnalysis {
       row('Analyze', 0, 3),
     ],
     weakTopics: ['Gauss Law', 'Capacitance basics'],
+    recap:
+      'You scored 47% — average. Focus next on Gauss Law and Capacitance basics.',
+    integrity: {
+      guessingSuspected: false,
+      fastWrongCount: 0,
+      dominantOptionShare: 0,
+      note: null,
+    },
     calculatedAt: daysAgo(1).toISOString(),
   };
 }

@@ -1,5 +1,11 @@
 export type DoubtStatus = "OPEN" | "ANSWERED";
 
+export type DoubtSource = {
+  title: string;
+  topic: string;
+  chapter: string;
+};
+
 export type DoubtCard = {
   id: string;
   subject: string;
@@ -7,6 +13,7 @@ export type DoubtCard = {
   topic: string;
   message: string;
   assistantResponse: string | null;
+  sources: DoubtSource[];
   status: DoubtStatus;
   questionId: string | null;
   learningSessionId: string | null;

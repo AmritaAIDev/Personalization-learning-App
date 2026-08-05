@@ -24,7 +24,7 @@ function generateSpiralLayout(nodes: Subtopic[], spacing: number = 200) {
 }
 
 export default function ExplorerBubblePage() {
-  const { journeyNodes, loading } = useJourney();
+  const { journeyNodes, loading, error, refreshJourney } = useJourney();
   const router = useRouter();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -66,6 +66,29 @@ export default function ExplorerBubblePage() {
     return (
       <div className="p-8 flex justify-center text-[#86868b] bg-[#020617] h-[calc(100vh-3.5rem)] items-center">
         Igniting Universe...
+      </div>
+    );
+  }
+
+  if (layoutedNodes.length === 0) {
+    return (
+      <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-4 bg-[#020617] px-6 text-center">
+        <p className="text-lg font-semibold text-white">
+          {error ? "The universe could not be charted" : "Your universe is empty"}
+        </p>
+        <p className="max-w-md text-sm text-slate-400">
+          {error ??
+            "Complete a diagnostic or a learning session and your topics will appear here."}
+        </p>
+        {error ? (
+          <button
+            type="button"
+            onClick={() => void refreshJourney()}
+            className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600"
+          >
+            Try again
+          </button>
+        ) : null}
       </div>
     );
   }

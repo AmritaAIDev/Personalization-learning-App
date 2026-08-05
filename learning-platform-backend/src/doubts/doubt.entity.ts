@@ -64,6 +64,14 @@ export class Doubt {
   @Column({ name: 'assistant_response', type: 'text', nullable: true })
   assistantResponse: string | null;
 
+  /**
+   * Reviewed concept notes (title/topic/chapter) the answer was grounded on.
+   * Null for doubts answered before RAG citations, or when the vector store had
+   * nothing to cite.
+   */
+  @Column({ name: 'sources', type: 'jsonb', nullable: true })
+  sources: Array<{ title: string; topic: string; chapter: string }> | null;
+
   @Column({ type: 'varchar', length: 20, default: DoubtStatus.OPEN })
   status: DoubtStatus;
 

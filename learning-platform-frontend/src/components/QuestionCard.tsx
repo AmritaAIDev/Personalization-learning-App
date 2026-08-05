@@ -23,10 +23,10 @@ export default function QuestionCard({
 }) {
   return (
     <section
-      className={`rounded-[1.4rem] border border-[#ececf0] bg-white shadow-[0_12px_28px_rgba(20,20,30,0.05)] ${compact ? "p-4 sm:p-5" : "p-5 sm:p-7"}`}
+      className={`rounded-[1.4rem] border border-hairline bg-white shadow-[0_12px_28px_rgba(20,20,30,0.05)] ${compact ? "p-4 sm:p-5" : "p-5 sm:p-7"}`}
     >
       <h2
-        className={`font-heading font-bold text-[#1a1a1f] ${compact ? "text-lg leading-7 sm:text-xl sm:leading-8" : "text-xl leading-8 sm:text-2xl"}`}
+        className={`font-heading font-bold text-ink ${compact ? "text-lg leading-7 sm:text-xl sm:leading-8" : "text-xl leading-8 sm:text-2xl"}`}
       >
         {questionText}
       </h2>
@@ -45,11 +45,11 @@ export default function QuestionCard({
               aria-checked={selected}
               disabled={disabled}
               onClick={() => onSelect(option)}
-              className={`flex w-full items-center justify-between rounded-xl border text-left text-sm font-medium transition ${compact ? "min-h-11 px-3 py-2.5" : "rounded-2xl p-4 sm:p-5"} ${selected ? "border-[#3f6f57] bg-[#eef3f0] text-[#2c4c3d] ring-1 ring-[#3f6f57]" : "border-[#ececf0] text-[#1a1a1f] hover:border-[#3f6f57]/45 hover:bg-[#f7faf8]"} disabled:cursor-not-allowed disabled:opacity-60`}
+              className={`flex w-full items-center justify-between rounded-xl border text-left text-sm font-medium transition ${compact ? "min-h-11 px-3 py-2.5" : "rounded-2xl p-4 sm:p-5"} ${selected ? "border-primary bg-primary-tint text-primary-strong ring-1 ring-primary" : "border-hairline text-ink hover:border-primary/45 hover:bg-primary-tint/40"} disabled:cursor-not-allowed disabled:opacity-60`}
             >
               {option}
               {selected && (
-                <Check className="h-5 w-5 text-[#3f6f57]" aria-hidden="true" />
+                <Check className="h-5 w-5 text-primary" aria-hidden="true" />
               )}
             </button>
           );

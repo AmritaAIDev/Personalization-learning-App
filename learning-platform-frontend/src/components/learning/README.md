@@ -39,3 +39,13 @@ The queue rules live in `src/lib/flashcard-session.ts` as pure functions and are
 Hints and explanations are written in the background after an answer. The board shows a live "writing" state driven by the `pending` flag from the conversation endpoint and polls with backoff (`src/lib/tutor-polling.ts`) until the reply lands. A learner's own message is echoed immediately rather than after the round trip, and the thread only auto-scrolls when the learner is already reading the newest message.
 
 The shared `src/lib/learning-types.ts` mirrors the server payloads, while `src/lib/learning.ts` handles route scope, workspace tab selection, and the round-outcome copy. All learner-specific values are fetched from the database-backed API.
+
+The tutor board already surfaces the **Hint / Explain / Why wrong?** quick prompts as visible buttons above the input, so a hint is one tap (not only the `H` shortcut).
+
+## ExplainThis
+
+`ExplainThis` is a shared one-tap "Explain this" control used on the practice and diagnostic review screens. Given an `endpoint` (the backend explain URL), it POSTs the selected **depth** (`Concise` / `Step by step` / `From scratch`) and renders the returned explanation through `StudyMarkdown`. The answer is already revealed at review time, so the tutor teaches it in full. A `Regenerate` action re-runs at a different depth, and when the backend serves its deterministic fallback (`grounded: false`) the panel labels it as an offline explanation. All content comes from the backend; nothing is generated client-side.
+
+## SourceCitations (RAG)
+
+`SourceCitations` renders the reviewed concept notes an AI answer was grounded on — the `sources` array (`title`/`topic`/`chapter`) returned by the explain endpoints and stored on answered doubts. It shows a compact "Sources" strip and renders nothing when the list is empty (Qdrant empty/unavailable), so an ungrounded answer simply carries no citations. Used by `ExplainThis` and the doubts page.

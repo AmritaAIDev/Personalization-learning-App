@@ -26,10 +26,15 @@ export default function DiagnosticAttemptPage() {
   const attemptId = params.attemptId;
   const [payload, setPayload] = useState<DiagnosticAttemptPayload | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [confidence, setConfidence] = useState<Record<string, number>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [loading, setLoading] = useState(true);
-  const [savingQuestionId, setSavingQuestionId] = useState<string | null>(null);
+  // Questions with a save in flight. A Set (not a single id) lets answers save
+  // concurrently, so a slow save never blocks answering the next question.
+  const [savingIds, setSavingIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const [submitting, setSubmitting] = useState(false);
   const [confirmingSubmit, setConfirmingSubmit] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,13 +118,24 @@ export default function DiagnosticAttemptPage() {
     }
   }, [payload, remainingSeconds, router, submitAttempt]);
 
+  const markSaving = (questionId: string, saving: boolean) =>
+    setSavingIds((current) => {
+      const next = new Set(current);
+      if (saving) next.add(questionId);
+      else next.delete(questionId);
+      return next;
+    });
+
   const saveSelection = async (selectedOption: string) => {
     const question = payload?.questions[currentIndex];
-    if (!payload || !question || savingQuestionId || submitting) return;
+    // Answering is never blocked by an in-flight save: the selection lands
+    // locally at once and its own write drains in the background.
+    if (!payload || !question || submitting) return;
 
     const previousOption = answers[question.id];
+    if (previousOption === selectedOption) return;
     setAnswers((current) => ({ ...current, [question.id]: selectedOption }));
-    setSavingQuestionId(question.id);
+    markSaving(question.id, true);
     setError(null);
 
     const startedAt = new Date(payload.attempt.startedAt).getTime();
@@ -137,11 +153,18 @@ export default function DiagnosticAttemptPage() {
         `/api/diagnostics/${payload.attempt.id}/answers/${question.id}`,
         {
           method: "PATCH",
-          body: JSON.stringify({ selectedOption, elapsedSeconds }),
+          body: JSON.stringify({
+            selectedOption,
+            elapsedSeconds,
+            confidence: confidence[question.id],
+          }),
         },
       );
     } catch (reason) {
+      // Roll back only if a newer selection has not since replaced this one, so
+      // a late failure never clobbers a choice the learner already changed.
       setAnswers((current) => {
+        if (current[question.id] !== selectedOption) return current;
         const restored = { ...current };
         if (previousOption === undefined) delete restored[question.id];
         else restored[question.id] = previousOption;
@@ -153,8 +176,31 @@ export default function DiagnosticAttemptPage() {
           : "Your answer could not be saved.",
       );
     } finally {
-      setSavingQuestionId(null);
+      markSaving(question.id, false);
     }
+  };
+
+  // Pre-answer self-rating. Persisted with the answer once an option exists (the
+  // save endpoint requires a selection); until then it is just remembered.
+  const rateConfidence = (level: number) => {
+    const question = payload?.questions[currentIndex];
+    if (!payload || !question || submitting) return;
+    setConfidence((current) => ({ ...current, [question.id]: level }));
+    const selectedOption = answers[question.id];
+    if (!selectedOption) return;
+    const startedAt = new Date(payload.attempt.startedAt).getTime();
+    const elapsedSeconds = Math.max(0, Math.floor((now - startedAt) / 1000));
+    void apiFetch(
+      `/api/diagnostics/${payload.attempt.id}/answers/${question.id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          selectedOption,
+          elapsedSeconds,
+          confidence: level,
+        }),
+      },
+    ).catch(() => undefined);
   };
 
   const goTo = useCallback(
@@ -247,7 +293,7 @@ export default function DiagnosticAttemptPage() {
   const progressPercent = Math.round(
     (answeredCount / Math.max(1, payload.questions.length)) * 100,
   );
-  const isSavingCurrent = savingQuestionId === question.id;
+  const isSavingCurrent = savingIds.has(question.id);
   const lowTime = remainingSeconds <= 60;
 
   return (
@@ -329,6 +375,41 @@ export default function DiagnosticAttemptPage() {
             <StudyMarkdown className="font-heading text-lg font-bold leading-7 text-ink sm:text-xl sm:leading-8">
               {question.questionText}
             </StudyMarkdown>
+            <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-hairline bg-canvas/60 px-3 py-2">
+              <span className="text-xs font-bold text-ink-mute">
+                How sure are you?
+              </span>
+              <div
+                className="flex gap-1.5"
+                role="group"
+                aria-label="Confidence rating"
+              >
+                {[
+                  { level: 1, label: "Unsure" },
+                  { level: 2, label: "Maybe" },
+                  { level: 3, label: "Confident" },
+                ].map((item) => {
+                  const active = confidence[question.id] === item.level;
+                  return (
+                    <button
+                      key={item.level}
+                      type="button"
+                      aria-pressed={active}
+                      disabled={submitting}
+                      onClick={() => rateConfidence(item.level)}
+                      className={`min-h-8 rounded-lg px-3 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                        active
+                          ? "bg-primary text-white"
+                          : "border border-hairline bg-surface text-ink-soft hover:border-primary/40 hover:text-primary"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-[11px] text-ink-mute">Optional</span>
+            </div>
             <div
               className="mt-4 space-y-2.5"
               role="radiogroup"
@@ -399,7 +480,7 @@ export default function DiagnosticAttemptPage() {
               <button
                 type="button"
                 onClick={() => setConfirmingSubmit(true)}
-                disabled={submitting || savingQuestionId !== null}
+                disabled={submitting}
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20,20,30,0.22)] transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? (
@@ -482,7 +563,7 @@ export default function DiagnosticAttemptPage() {
           <button
             type="button"
             onClick={() => setConfirmingSubmit(true)}
-            disabled={submitting || savingQuestionId !== null}
+            disabled={submitting}
             className="mt-5 inline-flex w-full min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? (

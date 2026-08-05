@@ -15,6 +15,7 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 import {
   ClearDiagnosticHistoryDto,
   CreateDiagnosticDto,
+  ExplainQuestionDto,
   SaveDiagnosticAnswerDto,
 } from './diagnostic.dto';
 import { DiagnosticsService } from './diagnostics.service';
@@ -79,7 +80,11 @@ export class DiagnosticsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('attemptId', ParseUUIDPipe) attemptId: string,
   ) {
-    return this.diagnosticsService.submitAttempt(user.id, attemptId);
+    return this.diagnosticsService.submitAttempt(
+      user.id,
+      attemptId,
+      user.role === 'admin',
+    );
   }
 
   @Get(':attemptId/review')
@@ -95,7 +100,11 @@ export class DiagnosticsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('attemptId', ParseUUIDPipe) attemptId: string,
   ) {
-    return this.diagnosticsService.getAnalysis(user.id, attemptId);
+    return this.diagnosticsService.getAnalysis(
+      user.id,
+      attemptId,
+      user.role === 'admin',
+    );
   }
 
   @Get(':attemptId/recommendations')
@@ -104,5 +113,22 @@ export class DiagnosticsController {
     @Param('attemptId', ParseUUIDPipe) attemptId: string,
   ) {
     return this.diagnosticsService.getRecommendations(user.id, attemptId);
+  }
+
+  @Post(':attemptId/questions/:questionId/explain')
+  async explainQuestion(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('attemptId', ParseUUIDPipe) attemptId: string,
+    @Param('questionId', ParseUUIDPipe) questionId: string,
+    @Body() body: ExplainQuestionDto,
+  ) {
+    return {
+      data: await this.diagnosticsService.explainReviewQuestion(
+        user.id,
+        attemptId,
+        questionId,
+        body,
+      ),
+    };
   }
 }

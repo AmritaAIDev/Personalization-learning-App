@@ -15,6 +15,8 @@ import {
   Target,
 } from "lucide-react";
 import StudyMarkdown from "@/components/learning/StudyMarkdown";
+import ExplainThis from "@/components/learning/ExplainThis";
+import ConfidenceBadge from "@/components/diagnostic/ConfidenceBadge";
 import { apiFetch } from "@/lib/api";
 import { learningUrl } from "@/lib/learning";
 import { practiceHref } from "@/lib/practice";
@@ -357,9 +359,12 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-medium text-ink-mute">
-                      Question {result.position} · {result.difficulty} ·{" "}
-                      {result.bloomLevel}
+                    <span className="flex flex-wrap items-center gap-2 text-xs font-medium text-ink-mute">
+                      <span>
+                        Question {result.position} · {result.difficulty} ·{" "}
+                        {result.bloomLevel}
+                      </span>
+                      <ConfidenceBadge calibration={result.calibration} />
                     </span>
                     <span className="mt-1 block text-sm font-bold leading-6 text-ink">
                       {result.questionText}
@@ -437,6 +442,9 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
                         ) : null}
                       </div>
                     ) : null}
+                    <ExplainThis
+                      endpoint={`/api/practice/sessions/${attemptId}/questions/${result.id}/explain`}
+                    />
                   </div>
                 ) : null}
               </article>

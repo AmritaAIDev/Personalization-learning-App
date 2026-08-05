@@ -35,3 +35,15 @@ screen, so the stored answer time is meaningful for analytics.
 filtered to incorrect or correct answers, and renders solutions through the
 shared `StudyMarkdown` renderer so formulas display properly. It offers both
 "practice again" and a route into the tutor-led workspace for the same topic.
+
+Each reviewed question also shows an `ExplainThis` control (on-demand AI
+explanation with a depth toggle) and, when the learner rated their confidence, a
+`ConfidenceBadge` (over/under-confident/well-calibrated). Both are backend-driven.
+
+## Confidence rating
+
+During a session, `ConfidenceSelector` offers an optional "How sure are you?"
+(Unsure / Maybe / Confident) rating above the options. It is captured before
+answering and attached to the autosave draft (`src/lib/practice-sync.ts`), so
+the confidence lands on the same answer row. Skipping it never blocks answering,
+and it never affects scoring — only the review's calibration feedback.

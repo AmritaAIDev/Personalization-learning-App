@@ -12,11 +12,16 @@ import {
   LoaderCircle,
   NotebookTabs,
   RotateCcw,
+  ShieldAlert,
+  Sparkles,
   Target,
   TrendingUp,
 } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import StudyMarkdown from "@/components/learning/StudyMarkdown";
+import ExplainThis from "@/components/learning/ExplainThis";
+import ConfidenceBadge from "@/components/diagnostic/ConfidenceBadge";
 import type {
   AnalysisPayload,
   DiagnosticReviewItem,
@@ -92,6 +97,7 @@ function AnalysisSkeleton() {
 
 export default function AnalysisPage() {
   const params = useParams<{ attemptId: string }>();
+  const { user } = useAuth();
   const [result, setResult] = useState<AnalysisPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -184,6 +190,18 @@ export default function AnalysisPage() {
                 {analysis.correct} correct · {analysis.incorrect} incorrect ·{" "}
                 {analysis.total} total
               </p>
+              {analysis.recap ? (
+                <p className="mt-4 flex items-start gap-2 rounded-2xl bg-white/8 px-4 py-3 text-sm font-medium leading-6 text-white/85">
+                  <Sparkles
+                    className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    <span className="font-bold text-white">AI recap:</span>{" "}
+                    {analysis.recap}
+                  </span>
+                </p>
+              ) : null}
             </div>
             <div className="self-start rounded-2xl bg-white/8 px-4 py-3 text-xs font-semibold text-white/70">
               Submitted {formatDateTime(attempt.submittedAt)}
@@ -284,8 +302,24 @@ export default function AnalysisPage() {
             </section>
           </div>
         </section>
+        {user?.role === "admin" && analysis.integrity?.guessingSuspected ? (
+          <section
+            className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5"
+            aria-label="Admin integrity signal"
+          >
+            <p className="flex items-center gap-2 text-sm font-bold text-amber-900">
+              <ShieldAlert className="h-4 w-4" aria-hidden="true" />
+              Possible guess pattern (admin only)
+            </p>
+            <p className="mt-2 text-sm leading-6 text-amber-900/90">
+              {analysis.integrity.note}
+            </p>
+            <p className="mt-2 text-xs text-amber-800/80">
+              Heuristic signal, not a certainty — never shown to the learner.
+            </p>
+          </section>
+        ) : null}
         <ReviewSection attemptId={attempt.id} />
-        `n`n{" "}
         <section className="mt-5 rounded-2xl border border-hairline bg-surface p-6 shadow-[0_8px_22px_rgba(20,20,30,0.04)]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -449,6 +483,7 @@ function ReviewSection({ attemptId }: { attemptId: string }) {
                           ? "Incorrect"
                           : "Unanswered"}
                     </span>
+                    <ConfidenceBadge calibration={item.calibration} />
                   </div>
                   <StudyMarkdown className="mt-2 text-sm font-semibold leading-6 text-ink">
                     {item.questionText}
@@ -485,6 +520,9 @@ function ReviewSection({ attemptId }: { attemptId: string }) {
                       {item.solution}
                     </StudyMarkdown>
                   </details>
+                  <ExplainThis
+                    endpoint={`/api/diagnostics/${attemptId}/questions/${item.id}/explain`}
+                  />
                 </li>
               ))}
             </ol>

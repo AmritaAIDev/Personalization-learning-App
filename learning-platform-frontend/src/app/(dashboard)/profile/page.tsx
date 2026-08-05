@@ -217,12 +217,19 @@ export default function ProfilePage() {
     )
       return;
     setClearing(true);
+    setError(null);
     try {
       await apiFetch<{ clearedAttempts: number }>("/api/diagnostics/history", {
         method: "DELETE",
         body: JSON.stringify({ confirmation: "DELETE" }),
       });
       setHistory([]);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Your history could not be cleared. Please try again.",
+      );
     } finally {
       setClearing(false);
     }
@@ -241,9 +248,19 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-6xl p-4 pb-24 sm:p-8 lg:p-10">
       {error ? (
-        <p className="mb-5 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-          {error}
-        </p>
+        <div
+          className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
+          role="alert"
+        >
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1 text-xs font-bold text-white transition hover:bg-rose-700"
+          >
+            Try again
+          </button>
+        </div>
       ) : null}
 
       {/* Identity hero */}

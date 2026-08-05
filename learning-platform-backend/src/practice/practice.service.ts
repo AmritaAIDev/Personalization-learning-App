@@ -9,12 +9,20 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { randomInt } from 'node:crypto';
 import { In, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/auth.types';
-import { BLOOM_LEVELS, normalizeBloomLevel } from '../adaptive/adaptive.types';
+import {
+  BLOOM_LEVELS,
+  normalizeBloomLevel,
+  TutorMessageType,
+} from '../adaptive/adaptive.types';
+import { AgentService, RetrievedSource } from '../agent/agent.service';
+import { calibrationFor } from '../confidence.util';
+import { ExplanationResult, toCitations } from '../citation.util';
 import { Question, QuestionPublicationStatus } from '../question.entity';
 import { PracticeAnswer } from './practice-answer.entity';
 import { PracticeAttempt } from './practice-attempt.entity';
 import {
   CreatePracticeSessionDto,
+  ExplainQuestionDto,
   SavePracticeAnswerDto,
 } from './practice.dto';
 import {
@@ -70,6 +78,7 @@ export class PracticeService {
     private readonly answersRepository: Repository<PracticeAnswer>,
     @InjectRepository(Question)
     private readonly questionsRepository: Repository<Question>,
+    private readonly agentService: AgentService,
   ) {}
 
   async createOrResume(
@@ -188,6 +197,7 @@ export class PracticeService {
         questionId,
         selectedOption: input.selectedOption,
         elapsedSeconds: input.elapsedSeconds ?? null,
+        confidence: input.confidence ?? null,
         isCorrect: null,
       },
       { conflictPaths: ['attemptId', 'questionId'] },
@@ -286,22 +296,118 @@ export class PracticeService {
       analysis: attempt.analysis,
       results: questions.map((question, index) => {
         const answer = answerByQuestion.get(question.id);
+        const isCorrect = answer?.isCorrect ?? false;
         return {
           position: index + 1,
+          id: question.id,
           questionId: question.question_id,
           questionText: question.question_text,
           options: question.options,
           selectedOption: answer?.selectedOption ?? null,
           correctOption: question.correct_answer,
-          isCorrect: answer?.isCorrect ?? false,
+          isCorrect,
           solution: question.solution,
           conceptTags: question.concept_tags ?? [],
           commonErrors: question.common_errors ?? [],
           difficulty: question.difficulty,
           bloomLevel: question.bloom_level,
+          confidence: answer?.confidence ?? null,
+          calibration: calibrationFor(answer?.confidence ?? null, isCorrect),
         };
       }),
     };
+  }
+
+  /**
+   * On-demand "Explain this" for a single reviewed question. The attempt is
+   * already submitted, so the answer key is the learner's to see — the tutor is
+   * asked to teach it fully at the requested depth. If the model is
+   * unavailable, it degrades to the reviewed stored solution so the button
+   * never dead-ends.
+   */
+  async explainReviewQuestion(
+    userId: string,
+    attemptId: string,
+    questionId: string,
+    input: ExplainQuestionDto,
+  ): Promise<ExplanationResult> {
+    const attempt = await this.getOwnedAttempt(userId, attemptId, true);
+    if (
+      attempt.status !== PracticeAttemptStatus.SUBMITTED ||
+      !attempt.analysis
+    ) {
+      throw new ConflictException(
+        'Submit this practice session before requesting an explanation.',
+      );
+    }
+    if (!attempt.questionIds.includes(questionId)) {
+      throw new NotFoundException(
+        'Question is not part of this practice session.',
+      );
+    }
+    const question = await this.questionsRepository.findOne({
+      where: { id: questionId },
+    });
+    if (!question) {
+      throw new NotFoundException('Question not found.');
+    }
+    const answer = (attempt.answers ?? []).find(
+      (candidate) => candidate.questionId === questionId,
+    );
+
+    // Citations are best-effort and never block: retrieval degrades to [].
+    const sources = await this.agentService
+      .retrieveSupplementalSources(question.topic)
+      .catch(() => [] as RetrievedSource[]);
+
+    try {
+      const explanation = await this.agentService.generateTutorResponse({
+        subject: question.subject,
+        chapter: question.chapter,
+        topic: question.topic,
+        learnerMessage:
+          'Explain this question: why the correct answer is right and where the tempting choices go wrong.',
+        mode: TutorMessageType.ANSWER_EXPLANATION,
+        questionText: question.question_text,
+        options: question.options,
+        selectedOption: answer?.selectedOption ?? undefined,
+        correctAnswer: question.correct_answer,
+        solution: question.solution,
+        commonErrors: question.common_errors ?? [],
+        answerRevealed: true,
+        explanatory: true,
+        depth: input.depth,
+      });
+      return { explanation, grounded: true, sources: toCitations(sources) };
+    } catch {
+      return {
+        explanation: this.fallbackExplanation(
+          question,
+          answer?.selectedOption ?? null,
+        ),
+        grounded: false,
+        sources: toCitations(sources),
+      };
+    }
+  }
+
+  /** Deterministic explanation used when the model is unavailable. */
+  private fallbackExplanation(
+    question: Question,
+    selectedOption: string | null,
+  ): string {
+    const misconception = (question.common_errors ?? [])[0];
+    const lines = ['### Correct answer', `**${question.correct_answer}**`];
+    if (selectedOption && selectedOption !== question.correct_answer) {
+      lines.push(
+        '### Where your choice went wrong',
+        misconception
+          ? `A common cause of “${selectedOption}” is: ${misconception}`
+          : `Compare “${selectedOption}” against the governing relationship for this topic.`,
+      );
+    }
+    lines.push('### Worked reasoning', question.solution);
+    return lines.join('\n\n');
   }
 
   private async getOwnedAttempt(

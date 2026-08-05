@@ -18,14 +18,14 @@ export default function PerformanceBars({
   rows: PerformanceRow[];
 }) {
   return (
-    <section className="rounded-2xl border border-[#ececf0] bg-white p-5 shadow-[0_8px_22px_rgba(20, 20, 30,0.04)] sm:p-6">
-      <h2 className="font-heading text-lg font-bold text-[#1a1a1f]">{title}</h2>
-      <p className="mt-1 text-sm leading-6 text-[#52525b]">{description}</p>
+    <section className="rounded-2xl border border-hairline bg-white p-5 shadow-[0_8px_22px_rgba(20,20,30,0.04)] sm:p-6">
+      <h2 className="font-heading text-lg font-bold text-ink">{title}</h2>
+      <p className="mt-1 text-sm leading-6 text-ink-soft">{description}</p>
       <div className="mt-6 space-y-5">
         {rows.map((row) => (
           <div key={row.label}>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-              <p className="font-semibold text-[#1a1a1f]">{row.label}</p>
+              <p className="font-semibold text-ink">{row.label}</p>
               <span
                 className={`rounded-full px-2.5 py-1 text-xs font-bold capitalize ${statusStyles[row.status]}`}
               >

@@ -48,6 +48,7 @@ describe('DoubtsService', () => {
       generateTutorResponse: jest
         .fn()
         .mockResolvedValue('### Hint\nUse symmetry.'),
+      retrieveSupplementalSources: jest.fn().mockResolvedValue([]),
     };
     const service = new DoubtsService(
       repository as never,
@@ -123,6 +124,7 @@ describe('DoubtsService', () => {
     };
     const agentService = {
       generateTutorResponse: jest.fn().mockResolvedValue('### Answer\n…'),
+      retrieveSupplementalSources: jest.fn().mockResolvedValue([]),
     };
     const service = new DoubtsService(
       repository as never,
@@ -164,6 +166,7 @@ describe('DoubtsService', () => {
       generateTutorResponse: jest
         .fn()
         .mockRejectedValue(new ServiceUnavailableException('LLM unavailable')),
+      retrieveSupplementalSources: jest.fn().mockResolvedValue([]),
     };
     const service = new DoubtsService(
       repository as never,

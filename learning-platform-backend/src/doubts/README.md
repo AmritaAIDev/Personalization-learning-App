@@ -29,6 +29,16 @@ doubt's status becomes `ANSWERED` (≈3s cadence, ~2 min cap).
 This matches the in-session tutor's `pending` pattern: the request never blocks
 on the model, so a slow DeepSeek call cannot hang the doubt form.
 
+## RAG citations
+
+When the background task answers a doubt it also fetches
+`AgentService.retrieveSupplementalSources(topic)` and persists the reduced
+citation list on `doubts.sources` (jsonb, nullable; migration
+`AddDoubtSources1785500000000`). Each `DoubtCard` returns `sources: Citation[]`
+(empty when Qdrant had nothing or was unavailable), which the doubts page renders
+as a "Sources" strip under the answer. Retrieval is best-effort — a missing or
+slow vector store just yields no citations, never a failed or delayed answer.
+
 ## Data strategy & safety
 
 Doubts are student-authored records persisted in the `doubts` table. The browser

@@ -18,12 +18,12 @@ export default function DashboardAccess({ children }: { children: ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen flex-1 items-center justify-center bg-[#fbfbfd]">
+      <div className="flex min-h-screen flex-1 items-center justify-center bg-canvas">
         <div
-          className="flex items-center gap-3 text-sm font-semibold text-[#52525b]"
+          className="flex items-center gap-3 text-sm font-semibold text-ink-soft"
           role="status"
         >
-          <LoaderCircle className="h-5 w-5 animate-spin text-[#3f6f57]" />
+          <LoaderCircle className="h-5 w-5 animate-spin text-primary" />
           Loading your learning workspace…
         </div>
       </div>

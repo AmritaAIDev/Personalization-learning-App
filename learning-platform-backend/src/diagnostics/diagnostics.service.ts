@@ -11,13 +11,21 @@ import { In, Repository } from 'typeorm';
 import { Question, QuestionPublicationStatus } from '../question.entity';
 import { LearningTopicState } from '../adaptive/learning-topic-state.entity';
 import { LearningTopicStatus } from '../adaptive/adaptive.types';
-import { BLOOM_LEVELS, normalizeBloomLevel } from '../adaptive/adaptive.types';
+import {
+  BLOOM_LEVELS,
+  normalizeBloomLevel,
+  TutorMessageType,
+} from '../adaptive/adaptive.types';
+import { AgentService, RetrievedSource } from '../agent/agent.service';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import { calibrationFor } from '../confidence.util';
+import { ExplanationResult, toCitations } from '../citation.util';
 import { DiagnosticAnswer } from './diagnostic-answer.entity';
 import { DiagnosticAttempt } from './diagnostic-attempt.entity';
 import {
   ClearDiagnosticHistoryDto,
   CreateDiagnosticDto,
+  ExplainQuestionDto,
   SaveDiagnosticAnswerDto,
 } from './diagnostic.dto';
 import { LearningResource } from './learning-resource.entity';
@@ -27,6 +35,7 @@ import {
   DiagnosticAttemptStatus,
   DiagnosticReviewItem,
   DiagnosticReviewPayload,
+  IntegritySignal,
   DIAGNOSTIC_DURATION_MINUTES,
   DIAGNOSTIC_QUESTION_COUNT,
   DIAGNOSTIC_QUESTIONS_PER_DIFFICULTY,
@@ -61,6 +70,7 @@ export class DiagnosticsService {
     private readonly resourcesRepository: Repository<LearningResource>,
     @InjectRepository(LearningTopicState)
     private readonly topicStatesRepository: Repository<LearningTopicState>,
+    private readonly agentService: AgentService,
   ) {}
 
   async createAttempt(user: AuthenticatedUser, input: CreateDiagnosticDto) {
@@ -190,11 +200,13 @@ export class DiagnosticsService {
         questionId,
         selectedOption: input.selectedOption,
         elapsedSeconds: input.elapsedSeconds ?? null,
+        confidence: input.confidence ?? null,
         isCorrect: null,
       });
     } else {
       answer.selectedOption = input.selectedOption;
       answer.elapsedSeconds = input.elapsedSeconds ?? answer.elapsedSeconds;
+      answer.confidence = input.confidence ?? answer.confidence;
     }
     await this.answersRepository.save(answer);
 
@@ -211,20 +223,20 @@ export class DiagnosticsService {
     };
   }
 
-  async submitAttempt(userId: string, attemptId: string) {
+  async submitAttempt(userId: string, attemptId: string, isAdmin = false) {
     const attempt = await this.getOwnedAttempt(userId, attemptId, true);
     if (attempt.analysis) {
-      return { data: this.toAnalysisPayload(attempt) };
+      return { data: this.toAnalysisPayload(attempt, isAdmin) };
     }
 
     await this.finalizeAttempt(
       attempt,
       attempt.expiresAt.getTime() <= Date.now(),
     );
-    return { data: this.toAnalysisPayload(attempt) };
+    return { data: this.toAnalysisPayload(attempt, isAdmin) };
   }
 
-  async getAnalysis(userId: string, attemptId: string) {
+  async getAnalysis(userId: string, attemptId: string, isAdmin = false) {
     const attempt = await this.getOwnedAttempt(userId, attemptId, true);
     if (!attempt.analysis && attempt.expiresAt.getTime() <= Date.now()) {
       await this.finalizeAttempt(attempt, true);
@@ -234,7 +246,7 @@ export class DiagnosticsService {
         'Submit the diagnostic before viewing its analysis.',
       );
     }
-    return { data: this.toAnalysisPayload(attempt) };
+    return { data: this.toAnalysisPayload(attempt, isAdmin) };
   }
 
   async getReview(
@@ -254,10 +266,7 @@ export class DiagnosticsService {
       questions.map((question) => [question.id, question]),
     );
     const answers = new Map(
-      (attempt.answers ?? []).map((answer) => [
-        answer.questionId,
-        answer.selectedOption,
-      ]),
+      (attempt.answers ?? []).map((answer) => [answer.questionId, answer]),
     );
     const review: DiagnosticReviewItem[] = attempt.questionIds.map(
       (questionId, index) => {
@@ -267,10 +276,12 @@ export class DiagnosticsService {
             'A diagnostic question is no longer available.',
           );
         }
-        const selectedOption = answers.get(questionId) ?? null;
+        const answer = answers.get(questionId);
+        const selectedOption = answer?.selectedOption ?? null;
         const isCorrect = selectedOption === question.correct_answer;
         return {
           position: index + 1,
+          id: question.id,
           questionId: question.question_id,
           topic: question.topic,
           difficulty: question.difficulty,
@@ -282,6 +293,8 @@ export class DiagnosticsService {
           correctOption: question.correct_answer,
           isCorrect,
           solution: question.solution,
+          confidence: answer?.confidence ?? null,
+          calibration: calibrationFor(answer?.confidence ?? null, isCorrect),
         };
       },
     );
@@ -296,6 +309,92 @@ export class DiagnosticsService {
       },
     };
   }
+  /**
+   * On-demand "Explain this" for a single reviewed diagnostic question. The
+   * attempt is submitted, so the answer key is the learner's to see; the tutor
+   * teaches it fully at the requested depth, degrading to the stored solution
+   * if the model is unavailable.
+   */
+  async explainReviewQuestion(
+    userId: string,
+    attemptId: string,
+    questionId: string,
+    input: ExplainQuestionDto,
+  ): Promise<ExplanationResult> {
+    const attempt = await this.getOwnedAttempt(userId, attemptId, true);
+    if (!attempt.analysis) {
+      throw new ConflictException(
+        'Submit the diagnostic before requesting an explanation.',
+      );
+    }
+    if (!attempt.questionIds.includes(questionId)) {
+      throw new NotFoundException('Question is not part of this diagnostic.');
+    }
+    const question = await this.questionsRepository.findOne({
+      where: { id: questionId },
+    });
+    if (!question) {
+      throw new NotFoundException('Question not found.');
+    }
+    const answer = (attempt.answers ?? []).find(
+      (candidate) => candidate.questionId === questionId,
+    );
+
+    // Citations are best-effort and never block: retrieval degrades to [].
+    const sources = await this.agentService
+      .retrieveSupplementalSources(question.topic)
+      .catch(() => [] as RetrievedSource[]);
+
+    try {
+      const explanation = await this.agentService.generateTutorResponse({
+        subject: question.subject,
+        chapter: question.chapter,
+        topic: question.topic,
+        learnerMessage:
+          'Explain this question: why the correct answer is right and where the tempting choices go wrong.',
+        mode: TutorMessageType.ANSWER_EXPLANATION,
+        questionText: question.question_text,
+        options: question.options,
+        selectedOption: answer?.selectedOption ?? undefined,
+        correctAnswer: question.correct_answer,
+        solution: question.solution,
+        commonErrors: question.common_errors ?? [],
+        answerRevealed: true,
+        explanatory: true,
+        depth: input.depth,
+      });
+      return { explanation, grounded: true, sources: toCitations(sources) };
+    } catch {
+      return {
+        explanation: this.fallbackExplanation(
+          question,
+          answer?.selectedOption ?? null,
+        ),
+        grounded: false,
+        sources: toCitations(sources),
+      };
+    }
+  }
+
+  /** Deterministic explanation used when the model is unavailable. */
+  private fallbackExplanation(
+    question: Question,
+    selectedOption: string | null,
+  ): string {
+    const misconception = (question.common_errors ?? [])[0];
+    const lines = ['### Correct answer', `**${question.correct_answer}**`];
+    if (selectedOption && selectedOption !== question.correct_answer) {
+      lines.push(
+        '### Where your choice went wrong',
+        misconception
+          ? `A common cause of “${selectedOption}” is: ${misconception}`
+          : `Compare “${selectedOption}” against the governing relationship for this topic.`,
+      );
+    }
+    lines.push('### Worked reasoning', question.solution);
+    return lines.join('\n\n');
+  }
+
   async getRecommendations(userId: string, attemptId: string) {
     const attempt = await this.getOwnedAttempt(userId, attemptId, false);
     if (!attempt.analysis) {
@@ -720,27 +819,149 @@ export class DiagnosticsService {
       blooms.has(level),
     ).map((level) => makePerformance(level, blooms.get(level)!));
 
+    const grade: DiagnosticAnalysis['grade'] =
+      scorePercent >= 80
+        ? 'Excellent'
+        : scorePercent >= 60
+          ? 'Good'
+          : scorePercent >= 40
+            ? 'Average'
+            : 'Needs work';
+    const weakTopics = topicPerformance
+      .filter((performance) => performance.total >= 2 && performance.score < 50)
+      .map((performance) => performance.label);
+
     return {
       total: questions.length,
       correct: correctCount,
       incorrect: questions.length - correctCount,
       scorePercent,
-      grade:
-        scorePercent >= 80
-          ? 'Excellent'
-          : scorePercent >= 60
-            ? 'Good'
-            : scorePercent >= 40
-              ? 'Average'
-              : 'Needs work',
+      grade,
       topicPerformance,
       bloomPerformance,
-      weakTopics: topicPerformance
-        .filter(
-          (performance) => performance.total >= 2 && performance.score < 50,
-        )
-        .map((performance) => performance.label),
+      weakTopics,
+      recap: this.buildRecap(scorePercent, grade, topicPerformance, weakTopics),
+      integrity: this.buildIntegritySignal(questions, answers),
       calculatedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * A deterministic, one-line summary of the attempt. It reads like an AI
+   * recap but is assembled purely from the computed performance rows, so it is
+   * instant, free, and always available — the "fallback-first" default the AI
+   * roadmap asks for. No model call is made here.
+   */
+  private buildRecap(
+    scorePercent: number,
+    grade: DiagnosticAnalysis['grade'],
+    topicPerformance: PerformanceRow[],
+    weakTopics: string[],
+  ): string {
+    const strongest = (topicPerformance ?? [])
+      .filter((row) => row.status === 'strong')
+      .sort((left, right) => right.score - left.score)
+      .slice(0, 2)
+      .map((row) => row.label);
+
+    const gradeText = grade ? grade.toLowerCase() : 'scored';
+    const parts = [`You scored ${scorePercent ?? 0}% — ${gradeText}.`];
+    if (strongest.length > 0) {
+      parts.push(`Strongest on ${this.joinReadable(strongest)}.`);
+    }
+    if (weakTopics.length > 0) {
+      parts.push(`Focus next on ${this.joinReadable(weakTopics.slice(0, 3))}.`);
+    } else if (topicPerformance.length > 0) {
+      parts.push(
+        'No topic fell below the repair line — keep consolidating with mixed practice.',
+      );
+    }
+    return parts.join(' ');
+  }
+
+  private joinReadable(items: string[]): string {
+    if (items.length <= 1) return items[0] ?? '';
+    if (items.length === 2) return `${items[0]} and ${items[1]}`;
+    return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+  }
+
+  /**
+   * Heuristic guess-detection for admins. Two independent signals: a burst of
+   * implausibly fast wrong answers, and a lopsided reuse of one option slot
+   * (the classic "all C" pattern). Deliberately conservative — it only flags,
+   * never penalises, and the result is admin-visible only.
+   */
+  private buildIntegritySignal(
+    questions: Question[],
+    answers: Map<string, DiagnosticAnswer>,
+  ): IntegritySignal {
+    const FAST_ANSWER_SECONDS = 5;
+    const MIN_ANSWERED_FOR_SIGNAL = 5;
+    const FAST_WRONG_RATIO_THRESHOLD = 0.4;
+    const DOMINANT_OPTION_THRESHOLD = 0.8;
+
+    let answeredCount = 0;
+    let fastWrongCount = 0;
+    const optionSlotCounts = new Map<number, number>();
+
+    for (const question of questions) {
+      const answer = answers.get(question.id);
+      if (!answer || answer.selectedOption == null) continue;
+      answeredCount += 1;
+      const correct = answer.selectedOption === question.correct_answer;
+      if (
+        answer.elapsedSeconds != null &&
+        answer.elapsedSeconds > 0 &&
+        answer.elapsedSeconds <= FAST_ANSWER_SECONDS &&
+        !correct
+      ) {
+        fastWrongCount += 1;
+      }
+      const slot = Array.isArray(question.options)
+        ? question.options.indexOf(answer.selectedOption)
+        : -1;
+      if (slot >= 0) {
+        optionSlotCounts.set(slot, (optionSlotCounts.get(slot) ?? 0) + 1);
+      }
+    }
+
+    const dominantCount =
+      optionSlotCounts.size > 0
+        ? Math.max(...optionSlotCounts.values())
+        : 0;
+    const dominantOptionShare =
+      answeredCount > 0 ? dominantCount / answeredCount : 0;
+    const fastWrongRatio =
+      answeredCount > 0 ? fastWrongCount / answeredCount : 0;
+
+    const enoughData = answeredCount >= MIN_ANSWERED_FOR_SIGNAL;
+    const fastWrongFlag =
+      enoughData && fastWrongRatio >= FAST_WRONG_RATIO_THRESHOLD;
+    const patternFlag =
+      enoughData && dominantOptionShare >= DOMINANT_OPTION_THRESHOLD;
+    const guessingSuspected = fastWrongFlag || patternFlag;
+
+    let note: string | null = null;
+    if (guessingSuspected) {
+      const reasons: string[] = [];
+      if (fastWrongFlag) {
+        reasons.push(
+          `${fastWrongCount} of ${answeredCount} answers were both very fast (≤${FAST_ANSWER_SECONDS}s) and wrong`,
+        );
+      }
+      if (patternFlag) {
+        reasons.push(
+          `${Math.round(dominantOptionShare * 100)}% of answers reused the same option position`,
+        );
+      }
+      note = `Possible guess pattern: ${reasons.join('; ')}.`;
+    }
+
+    return {
+      guessingSuspected,
+      fastWrongCount,
+      dominantOptionShare: Math.round(dominantOptionShare * 100) / 100,
+      note,
     };
   }
 
@@ -806,15 +1027,51 @@ export class DiagnosticsService {
     };
   }
 
-  private toAnalysisPayload(attempt: DiagnosticAttempt) {
+  private toAnalysisPayload(attempt: DiagnosticAttempt, isAdmin = false) {
     return {
       attempt: {
         id: attempt.id,
         status: attempt.status,
         submittedAt: attempt.submittedAt,
       },
-      analysis: attempt.analysis,
+      analysis: this.viewAnalysisFor(attempt.analysis, isAdmin),
     };
+  }
+
+  /**
+   * Prepares a stored analysis for the wire. Two concerns:
+   *
+   *  1. **Recap backfill.** The recap is deterministic and derived purely from
+   *     rows the analysis already carries, so attempts finalized before the
+   *     recap existed get one computed on read — the AI recap then shows on
+   *     every historical attempt, not only new ones.
+   *  2. **Integrity redaction.** The guessing heuristic is admin-only, so it is
+   *     stripped before a student's own analysis leaves the server. The raw
+   *     signal stays in storage; only the outward view is gated.
+   */
+  private viewAnalysisFor(
+    analysis: DiagnosticAnalysis | null,
+    isAdmin: boolean,
+  ): DiagnosticAnalysis | null {
+    if (!analysis) return analysis;
+    const recap =
+      analysis.recap ??
+      this.buildRecap(
+        analysis.scorePercent,
+        analysis.grade,
+        analysis.topicPerformance ?? [],
+        analysis.weakTopics ?? [],
+      );
+    const integrity =
+      isAdmin || !analysis.integrity
+        ? analysis.integrity
+        : {
+            guessingSuspected: false,
+            fastWrongCount: 0,
+            dominantOptionShare: 0,
+            note: null,
+          };
+    return { ...analysis, recap, integrity };
   }
 
   private toHistoryItem(attempt: DiagnosticAttempt) {

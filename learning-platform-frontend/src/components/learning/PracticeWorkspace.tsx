@@ -411,12 +411,21 @@ function RoundOutcome({
   const outcome = describeRoundOutcome(transition);
   const advancedRef = useRef(false);
 
+  // `onContinue` is a fresh closure on every parent render (e.g. when the
+  // dashboard refresh that fires on round completion resolves). Reading it from
+  // a ref keeps the auto-continue effect's deps stable, so an unrelated
+  // re-render can't cancel the pending timer and leave the round hanging.
+  const onContinueRef = useRef(onContinue);
+  useEffect(() => {
+    onContinueRef.current = onContinue;
+  }, [onContinue]);
+
   useEffect(() => {
     if (!continuable || loading || advancedRef.current) return;
     advancedRef.current = true;
-    const timer = window.setTimeout(() => onContinue(), 2000);
+    const timer = window.setTimeout(() => onContinueRef.current(), 2000);
     return () => window.clearTimeout(timer);
-  }, [continuable, loading, onContinue]);
+  }, [continuable, loading]);
 
   const tone = outcome.tone;
   const Icon = mastered
@@ -483,14 +492,16 @@ function RoundOutcome({
             <Layers3 className="h-4 w-4" aria-hidden="true" />
             {outcome.continueLabel}
           </button>
-        ) : continuable && error ? (
+        ) : continuable ? (
+          // Always available, so the learner can skip the short auto-continue
+          // wait and can never be stranded if it does not fire.
           <button
             type="button"
             onClick={onContinue}
             disabled={loading}
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Preparing…" : "Try again"}
+            {loading ? "Preparing…" : error ? "Try again" : "Continue now"}
           </button>
         ) : null}
         <button

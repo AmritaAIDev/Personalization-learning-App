@@ -75,6 +75,8 @@ export interface PracticeReviewPayload {
   analysis: PracticeAnalysis;
   results: Array<{
     position: number;
+    /** Internal question UUID used to target the explain endpoint. */
+    id: string;
     questionId: string;
     questionText: string;
     options: string[];
@@ -86,5 +88,19 @@ export interface PracticeReviewPayload {
     commonErrors: string[];
     difficulty: string;
     bloomLevel: string;
+    confidence: number | null;
+    calibration: ConfidenceCalibration | null;
   }>;
+}
+
+export type ConfidenceCalibration =
+  | "overconfident"
+  | "underconfident"
+  | "calibrated";
+
+export type ExplanationDepth = "concise" | "step-by-step" | "from-scratch";
+
+export interface ExplanationResponse {
+  explanation: string;
+  grounded: boolean;
 }

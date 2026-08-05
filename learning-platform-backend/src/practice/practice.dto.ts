@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -7,6 +8,10 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import {
+  EXPLANATION_DEPTHS,
+  type ExplanationDepth,
+} from '../agent/agent.service';
 
 export class CreatePracticeSessionDto {
   @IsString()
@@ -35,4 +40,18 @@ export class SavePracticeAnswerDto {
   @Min(0)
   @Max(60 * 60)
   elapsedSeconds?: number;
+
+  /** Pre-answer self-rated confidence: 1 (unsure) to 3 (certain). */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(3)
+  confidence?: number;
+}
+
+export class ExplainQuestionDto {
+  /** Optional depth for the on-demand explanation; defaults to step-by-step. */
+  @IsOptional()
+  @IsIn(EXPLANATION_DEPTHS)
+  depth?: ExplanationDepth;
 }

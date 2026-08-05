@@ -1,4 +1,5 @@
 import type { DoubtStatus } from './doubt.entity';
+import type { Citation } from '../citation.util';
 
 export interface DoubtCard {
   id: string;
@@ -7,6 +8,8 @@ export interface DoubtCard {
   topic: string;
   message: string;
   assistantResponse: string | null;
+  /** Reviewed concept notes the answer cited; empty when none were available. */
+  sources: Citation[];
   status: DoubtStatus;
   questionId: string | null;
   learningSessionId: string | null;

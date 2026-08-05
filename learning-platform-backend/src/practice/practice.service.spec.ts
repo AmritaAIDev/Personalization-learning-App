@@ -59,10 +59,15 @@ describe('PracticeService', () => {
     find: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
+    upsert: jest.fn(),
   };
   const questionsRepository = {
     find: jest.fn(),
     findOne: jest.fn(),
+  };
+  const agentService = {
+    generateTutorResponse: jest.fn(),
+    retrieveSupplementalSources: jest.fn(),
   };
   let service: PracticeService;
 
@@ -84,7 +89,9 @@ describe('PracticeService', () => {
       attemptsRepository as never,
       answersRepository as never,
       questionsRepository as never,
+      agentService as never,
     );
+    agentService.retrieveSupplementalSources.mockResolvedValue([]);
   });
 
   it('creates a 15-question practice session with five questions in each tier', async () => {
@@ -240,5 +247,114 @@ describe('PracticeService', () => {
     await expect(
       service.getReview('student-1', 'attempt-1'),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('persists the optional pre-answer confidence when saving', async () => {
+    attemptsRepository.findOne.mockResolvedValue({
+      id: 'attempt-1',
+      userId: 'student-1',
+      questionIds: ['question-1'],
+      status: PracticeAttemptStatus.IN_PROGRESS,
+    });
+    questionsRepository.findOne.mockResolvedValue(
+      makeQuestion('question-1', 'Easy', 0),
+    );
+    answersRepository.upsert.mockResolvedValue(undefined);
+
+    await service.saveAnswer('student-1', 'attempt-1', 'question-1', {
+      selectedOption: 'A',
+      confidence: 3,
+    });
+
+    expect(answersRepository.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ confidence: 3 }),
+      expect.anything(),
+    );
+  });
+
+  it('flags an overconfident wrong answer on review', async () => {
+    const question = makeQuestion('question-1', 'Easy', 0);
+    attemptsRepository.findOne.mockResolvedValue({
+      id: 'attempt-1',
+      userId: 'student-1',
+      questionIds: ['question-1'],
+      status: PracticeAttemptStatus.SUBMITTED,
+      analysis: { scorePercent: 0 },
+      answers: [
+        {
+          questionId: 'question-1',
+          selectedOption: 'B',
+          isCorrect: false,
+          confidence: 3,
+        },
+      ],
+    });
+    questionsRepository.find.mockResolvedValue([question]);
+
+    const review = await service.getReview('student-1', 'attempt-1');
+
+    expect(review.results[0].confidence).toBe(3);
+    expect(review.results[0].calibration).toBe('overconfident');
+  });
+
+  it('explains a reviewed question through the tutor when the model is available', async () => {
+    const question = makeQuestion('question-1', 'Easy', 0);
+    attemptsRepository.findOne.mockResolvedValue({
+      id: 'attempt-1',
+      userId: 'student-1',
+      questionIds: ['question-1'],
+      status: PracticeAttemptStatus.SUBMITTED,
+      analysis: { scorePercent: 50 },
+      answers: [{ questionId: 'question-1', selectedOption: 'B' }],
+    });
+    questionsRepository.findOne.mockResolvedValue(question);
+    agentService.generateTutorResponse.mockResolvedValue('### Grounded answer');
+    agentService.retrieveSupplementalSources.mockResolvedValue([
+      { title: "Gauss's Law", topic: 'Gauss Law', chapter: 'EF', snippet: 'x' },
+      { title: "Gauss's Law", topic: 'Gauss Law', chapter: 'EF', snippet: 'y' },
+    ]);
+
+    const result = await service.explainReviewQuestion(
+      'student-1',
+      'attempt-1',
+      'question-1',
+      { depth: 'concise' },
+    );
+
+    expect(result.grounded).toBe(true);
+    expect(result.explanation).toContain('Grounded answer');
+    expect(agentService.generateTutorResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ answerRevealed: true, depth: 'concise' }),
+    );
+    // Citations are de-duplicated by title and never leak the raw snippet.
+    expect(result.sources).toEqual([
+      { title: "Gauss's Law", topic: 'Gauss Law', chapter: 'EF' },
+    ]);
+  });
+
+  it('falls back to the stored solution when the tutor is unavailable', async () => {
+    const question = makeQuestion('question-1', 'Easy', 0);
+    attemptsRepository.findOne.mockResolvedValue({
+      id: 'attempt-1',
+      userId: 'student-1',
+      questionIds: ['question-1'],
+      status: PracticeAttemptStatus.SUBMITTED,
+      analysis: { scorePercent: 50 },
+      answers: [{ questionId: 'question-1', selectedOption: 'B' }],
+    });
+    questionsRepository.findOne.mockResolvedValue(question);
+    agentService.generateTutorResponse.mockRejectedValue(
+      new Error('model down'),
+    );
+
+    const result = await service.explainReviewQuestion(
+      'student-1',
+      'attempt-1',
+      'question-1',
+      {},
+    );
+
+    expect(result.grounded).toBe(false);
+    expect(result.explanation).toContain(question.solution);
   });
 });

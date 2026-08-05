@@ -8,10 +8,12 @@ import {
   Post,
   Put,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import {
   CreatePracticeSessionDto,
+  ExplainQuestionDto,
   SavePracticeAnswerDto,
 } from './practice.dto';
 import { PracticeService } from './practice.service';
@@ -73,6 +75,26 @@ export class PracticeController {
   ) {
     return {
       data: await this.practiceService.getReview(user.id, attemptId),
+    };
+  }
+
+  // Synchronous model call; bounded so a review page cannot become a
+  // generation firehose. A cached/fallback path keeps it responsive.
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
+  @Post('sessions/:attemptId/questions/:questionId/explain')
+  async explainQuestion(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('attemptId', ParseUUIDPipe) attemptId: string,
+    @Param('questionId', ParseUUIDPipe) questionId: string,
+    @Body() body: ExplainQuestionDto,
+  ) {
+    return {
+      data: await this.practiceService.explainReviewQuestion(
+        user.id,
+        attemptId,
+        questionId,
+        body,
+      ),
     };
   }
 }

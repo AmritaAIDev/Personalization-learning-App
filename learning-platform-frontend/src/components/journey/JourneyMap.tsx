@@ -7,9 +7,11 @@ import {
   Atom,
   Calculator,
   Check,
+  CircleAlert,
   Flame,
   FlaskConical,
   Lock,
+  RotateCcw,
   Star,
   TrendingUp,
   Trophy,
@@ -146,7 +148,12 @@ function StatChip({
 
 export default function JourneyMap() {
   const { user } = useAuth();
-  const { journeyNodes, loading: journeyLoading } = useJourney();
+  const {
+    journeyNodes,
+    loading: journeyLoading,
+    error: journeyError,
+    refreshJourney,
+  } = useJourney();
   const [growth, setGrowth] = useState<GrowthPayload | null>(null);
   const [subject, setSubject] = useState<string | null>(null);
   const [coursePanelOpen, setCoursePanelOpen] = useState(false);
@@ -331,6 +338,28 @@ export default function JourneyMap() {
             <div className="h-72 rounded-3xl skeleton" />
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // A load failure is shown as such (with a retry) rather than as an empty map,
+  // which would wrongly read as "you haven't started your journey yet".
+  if (journeyError && journeyNodes.length === 0) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-5 py-10 text-center">
+        <CircleAlert className="h-9 w-9 text-rose-600" aria-hidden="true" />
+        <h1 className="mt-4 font-heading text-2xl font-bold text-ink">
+          Your journey could not be loaded
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-ink-soft">{journeyError}</p>
+        <button
+          type="button"
+          onClick={() => void refreshJourney()}
+          className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:bg-primary-strong"
+        >
+          <RotateCcw className="h-4 w-4" aria-hidden="true" />
+          Try again
+        </button>
       </div>
     );
   }

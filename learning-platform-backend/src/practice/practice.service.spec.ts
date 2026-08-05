@@ -1,4 +1,8 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import {
   Question,
   QuestionPublicationStatus,
@@ -127,6 +131,83 @@ describe('PracticeService', () => {
     expect(JSON.stringify(payload.questions)).not.toContain('solution');
   });
 
+  it('builds the largest balanced set it can when a tier has fewer than five', async () => {
+    const thinBank = [
+      ...Array.from({ length: 2 }, (_, index) =>
+        makeQuestion('easy-' + index, 'Easy', index),
+      ),
+      ...Array.from({ length: 2 }, (_, index) =>
+        makeQuestion('medium-' + index, 'Medium', index + 5),
+      ),
+      ...Array.from({ length: 2 }, (_, index) =>
+        makeQuestion('hard-' + index, 'Hard', index + 10),
+      ),
+    ];
+    attemptsRepository.findOne.mockResolvedValue(null);
+    questionsRepository.find.mockResolvedValue(thinBank);
+    attemptsRepository.create.mockImplementation((input) => ({
+      id: 'attempt-thin',
+      ...input,
+    }));
+    attemptsRepository.save.mockImplementation(async (input) => input);
+
+    const payload = await service.createOrResume(
+      {
+        id: 'student-1',
+        name: 'Student',
+        email: 'student@example.invalid',
+        role: 'student',
+        xp: 0,
+        level: 1,
+        streak: 0,
+      },
+      {
+        subject: 'Physics',
+        chapter: 'Electric Charges and Fields',
+        topic: "Coulomb's Law and Charge",
+      },
+    );
+
+    expect(payload.questions).toHaveLength(6);
+    expect(payload.attempt.totalQuestions).toBe(6);
+  });
+
+  it('still rejects a topic that is missing an entire difficulty tier', async () => {
+    const noHardBank = [
+      ...Array.from({ length: 3 }, (_, index) =>
+        makeQuestion('easy-' + index, 'Easy', index),
+      ),
+      ...Array.from({ length: 3 }, (_, index) =>
+        makeQuestion('medium-' + index, 'Medium', index + 5),
+      ),
+    ];
+    attemptsRepository.findOne.mockResolvedValue(null);
+    questionsRepository.find.mockResolvedValue(noHardBank);
+    attemptsRepository.create.mockImplementation((input) => ({
+      id: 'attempt-no-hard',
+      ...input,
+    }));
+    attemptsRepository.save.mockImplementation(async (input) => input);
+
+    await expect(
+      service.createOrResume(
+        {
+          id: 'student-1',
+          name: 'Student',
+          email: 'student@example.invalid',
+          role: 'student',
+          xp: 0,
+          level: 1,
+          streak: 0,
+        },
+        {
+          subject: 'Physics',
+          chapter: 'Electric Charges and Fields',
+          topic: "Coulomb's Law and Charge",
+        },
+      ),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
   it('rejects a choice that is not one of the stored answer options', async () => {
     attemptsRepository.findOne.mockResolvedValue({
       id: 'attempt-1',

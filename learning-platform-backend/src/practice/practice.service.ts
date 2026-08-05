@@ -20,7 +20,6 @@ import {
 import {
   PRACTICE_DIFFICULTIES,
   PRACTICE_PER_DIFFICULTY,
-  PRACTICE_QUESTION_COUNT,
   PracticeAnalysis,
   PracticeAttemptStatus,
   PracticePerformanceRow,
@@ -121,7 +120,7 @@ export class PracticeService {
       title: input.topic + ' practice set',
       questionIds: questions.map((question) => question.id),
       status: PracticeAttemptStatus.IN_PROGRESS,
-      totalQuestions: PRACTICE_QUESTION_COUNT,
+      totalQuestions: questions.length,
       correctCount: 0,
       scorePercent: 0,
       analysis: null,
@@ -341,24 +340,22 @@ export class PracticeService {
   }
 
   private selectBalancedQuestionSet(candidates: Question[]): Question[] {
+    // Adaptive sizing: aim for five per difficulty, but degrade gracefully to
+    // the largest balanced set the topic actually has (minimum one per tier) so
+    // a topic with a thinner bank still opens instead of 503-ing. Well-stocked
+    // topics still get the full 15-question set.
     const selected: Question[] = [];
     for (const difficulty of PRACTICE_DIFFICULTIES) {
       const tier = candidates.filter(
         (question) => question.difficulty === difficulty,
       );
-      if (tier.length < PRACTICE_PER_DIFFICULTY) {
+      if (tier.length === 0) {
         throw new ServiceUnavailableException(
-          'This topic needs at least five published Easy, Medium, and Hard questions before practice can start.',
+          'This topic needs at least one published Easy, Medium, and Hard question before practice can start.',
         );
       }
-      selected.push(
-        ...this.pickDiverseQuestions(tier, PRACTICE_PER_DIFFICULTY),
-      );
-    }
-    if (selected.length !== PRACTICE_QUESTION_COUNT) {
-      throw new ServiceUnavailableException(
-        'The practice question bank could not build a balanced set.',
-      );
+      const target = Math.min(PRACTICE_PER_DIFFICULTY, tier.length);
+      selected.push(...this.pickDiverseQuestions(tier, target));
     }
     return this.shuffle(selected);
   }

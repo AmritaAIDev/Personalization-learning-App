@@ -1,5 +1,6 @@
 function normalizeApiUrl(value: string): string {
   const trimmed = value.trim().replace(/\/$/, "");
+  if (!trimmed || trimmed === "same-origin") return "";
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   if (trimmed.includes("localhost") || trimmed.startsWith("127.0.0.1")) {
     return `http://${trimmed}`;
@@ -7,9 +8,17 @@ function normalizeApiUrl(value: string): string {
   return `https://${trimmed}`;
 }
 
-const API_URL = normalizeApiUrl(
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000",
-);
+function isProductionFrontendHost(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.location.hostname === "personalization-learning-app.vercel.app";
+}
+
+function resolveApiUrl(): string {
+  if (isProductionFrontendHost()) return "";
+  return normalizeApiUrl(
+    process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000",
+  );
+}
 
 type ApiEnvelope<T> = { data: T };
 
@@ -77,7 +86,8 @@ export async function apiFetch<T>(
   const { memoryCacheTtlMs, ...requestOptions } = options;
   const method = requestOptions.method?.toUpperCase() ?? "GET";
   const isRead = method === "GET";
-  const requestKey = `${method}:${API_URL}${path}`;
+  const apiUrl = resolveApiUrl();
+  const requestKey = `${method}:${apiUrl}${path}`;
   const now = Date.now();
 
   const cacheTtlMs = isRead
@@ -97,7 +107,7 @@ export async function apiFetch<T>(
     : undefined;
   if (activeRequest) return activeRequest as Promise<T>;
 
-  const request = requestApi<T>(path, requestOptions);
+  const request = requestApi<T>(apiUrl, path, requestOptions);
   if (isRead) inFlightReadRequests.set(requestKey, request);
 
   try {
@@ -121,7 +131,11 @@ export async function apiFetch<T>(
   }
 }
 
-async function requestApi<T>(path: string, options: RequestInit): Promise<T> {
+async function requestApi<T>(
+  apiUrl: string,
+  path: string,
+  options: RequestInit,
+): Promise<T> {
   const headers = new Headers(options.headers);
   const hasJsonBody =
     options.body !== undefined &&
@@ -133,7 +147,7 @@ async function requestApi<T>(path: string, options: RequestInit): Promise<T> {
 
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(`${apiUrl}${path}`, {
       ...options,
       headers,
       credentials: "include",

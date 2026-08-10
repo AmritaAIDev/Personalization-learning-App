@@ -32,6 +32,24 @@ describe("apiFetch", () => {
     expect((options.headers as Headers).get("Accept")).toBe("application/json");
   });
 
+  it("uses the same-origin API proxy on the production frontend host", async () => {
+    vi.stubGlobal("window", {
+      location: { hostname: "personalization-learning-app.vercel.app" },
+    });
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ data: { id: "student-1" } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await apiFetch<{ id: string }>("/api/auth/me");
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/auth/me");
+    expect(options.credentials).toBe("include");
+  });
+
   it("sets JSON content type for a JSON mutation body", async () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ data: { saved: true } }), { status: 200 }),

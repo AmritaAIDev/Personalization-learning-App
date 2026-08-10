@@ -135,7 +135,7 @@ export default function TopicPickerDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center overflow-hidden bg-ink/45 p-3 backdrop-blur-md sm:p-8"
+      className="fixed inset-0 z-[80] flex items-end justify-center overflow-hidden bg-ink/45 p-0 backdrop-blur-md sm:items-center sm:p-8"
       role="dialog"
       aria-modal="true"
       aria-label="Find a learning topic"
@@ -146,20 +146,20 @@ export default function TopicPickerDialog({
         onClick={onClose}
         aria-label="Close topic search"
       />
-      <section className="relative z-10 flex h-[min(44rem,calc(100dvh-1.5rem))] w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] border border-white/75 bg-white shadow-[0_28px_90px_rgba(20,20,30,0.28)] sm:h-[min(44rem,calc(100dvh-4rem))] sm:rounded-[1.75rem]">
+      <section className="relative z-10 flex h-[min(42rem,calc(100dvh-0.75rem))] w-full max-w-3xl flex-col overflow-hidden rounded-t-[1.5rem] border border-white/75 bg-white shadow-[0_28px_90px_rgba(20,20,30,0.28)] sm:h-[min(44rem,calc(100dvh-4rem))] sm:rounded-[1.75rem]">
         <div
           className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-primary/10 blur-3xl"
           aria-hidden="true"
         />
-        <header className="relative flex shrink-0 items-start justify-between gap-4 border-b border-hairline bg-white/95 px-4 py-4 sm:px-7 sm:py-5">
-          <div>
+        <header className="relative flex shrink-0 items-start justify-between gap-3 border-b border-hairline bg-white/95 px-4 py-3 sm:gap-4 sm:px-7 sm:py-5">
+          <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
               Topic finder
             </p>
-            <h2 className="mt-1 font-heading text-2xl font-bold tracking-tight text-ink">
+            <h2 className="mt-1 font-heading text-xl font-bold tracking-tight text-ink sm:text-2xl">
               Choose a workspace
             </h2>
-            <p className="mt-1 text-xs leading-5 text-ink-mute">
+            <p className="mt-1 hidden text-xs leading-5 text-ink-mute sm:block">
               Search once, then use the same topic across Learn, Practice,
               Notebook, and Doubts.
             </p>
@@ -174,7 +174,7 @@ export default function TopicPickerDialog({
           </button>
         </header>
 
-        <div className="relative flex min-h-0 flex-1 flex-col bg-white p-4 sm:p-7">
+        <div className="relative flex min-h-0 flex-1 flex-col bg-white p-3 sm:p-7">
           <label className="relative block shrink-0">
             <span className="sr-only">Search topics and chapters</span>
             <Search
@@ -187,12 +187,12 @@ export default function TopicPickerDialog({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search a topic or chapter"
-              className="h-13 w-full rounded-2xl border border-hairline bg-white pl-12 pr-4 text-[15px] font-semibold text-ink shadow-[0_10px_28px_rgba(20,20,30,0.045)] outline-none transition placeholder:font-medium placeholder:text-ink-mute focus:border-primary/55 focus:bg-white focus:shadow-[0_12px_34px_rgba(63,111,87,0.12)]"
+              className="h-12 w-full rounded-2xl border border-hairline bg-white pl-12 pr-4 text-[16px] font-semibold text-ink shadow-[0_10px_28px_rgba(20,20,30,0.045)] outline-none transition placeholder:font-medium placeholder:text-ink-mute focus:border-primary/55 focus:bg-white focus:shadow-[0_12px_34px_rgba(63,111,87,0.12)] sm:h-13 sm:text-[15px]"
             />
           </label>
 
           <div
-            className="mt-5 flex shrink-0 items-center justify-between gap-4"
+            className="mt-3 flex shrink-0 items-center justify-between gap-3 sm:mt-5 sm:gap-4"
             aria-live="polite"
           >
             <div>
@@ -210,7 +210,7 @@ export default function TopicPickerDialog({
             ) : null}
           </div>
 
-          <div className="mt-4 min-h-0 flex-1 overflow-hidden rounded-[1.25rem] border border-hairline bg-canvas/70 p-2">
+          <div className="mt-3 min-h-0 flex-1 overflow-hidden rounded-[1.25rem] border border-hairline bg-canvas/70 p-2 sm:mt-4">
             <div className="h-full overflow-y-auto overscroll-contain pr-1 custom-scrollbar">
             {error ? (
               <div
@@ -226,7 +226,7 @@ export default function TopicPickerDialog({
             ) : null}
 
             {loading && catalog.length === 0 ? (
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 min-[560px]:grid-cols-2">
                 {[0, 1, 2, 3].map((item) => (
                   <div key={item} className="h-24 rounded-2xl skeleton" />
                 ))}
@@ -240,7 +240,7 @@ export default function TopicPickerDialog({
             ) : null}
 
             {results.length > 0 ? (
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 min-[560px]:grid-cols-2">
                 {results.map((entry) => {
                   const scope = scopeFor(entry);
                   const state = states.get(topicKey(scope));
@@ -280,12 +280,12 @@ function TopicResult({
     <button
       type="button"
       onClick={onOpen}
-      className="group rounded-2xl border border-hairline bg-white p-4 text-left transition duration-300 ease-out-soft hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary-tint/35 hover:shadow-[0_10px_24px_rgba(20,20,30,0.06)]"
+      className="group rounded-2xl border border-hairline bg-white p-3 text-left transition duration-300 ease-out-soft hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary-tint/35 hover:shadow-[0_10px_24px_rgba(20,20,30,0.06)] sm:p-4"
     >
       <div className="flex items-start justify-between gap-3">
         <span className="min-w-0">
           <span className="flex min-w-0 items-center gap-2">
-            <span className="block truncate text-[15px] font-bold text-ink">
+            <span className="block truncate text-sm font-bold text-ink sm:text-[15px]">
               {entry.topic}
             </span>
             {state ? (
@@ -296,7 +296,7 @@ function TopicResult({
               </span>
             ) : null}
           </span>
-          <span className="mt-1 block truncate text-xs text-ink-mute">
+          <span className="mt-1 block truncate text-[11px] text-ink-mute sm:text-xs">
             {entry.subject} / {entry.chapter}
           </span>
         </span>
@@ -306,9 +306,9 @@ function TopicResult({
         />
       </div>
       {state && progress !== null ? (
-        <div className="mt-4">
-          <div className="flex justify-between gap-3 text-[11px] font-semibold text-ink-soft">
-            <span>
+        <div className="mt-3 sm:mt-4">
+          <div className="flex justify-between gap-3 text-[10.5px] font-semibold text-ink-soft sm:text-[11px]">
+            <span className="min-w-0 truncate">
               Level {state.currentLevel} · {state.currentCoordinate.bloomLevel}{" "}
               · {state.currentCoordinate.difficulty}
             </span>

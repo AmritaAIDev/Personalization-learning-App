@@ -311,7 +311,7 @@ export default function FlashcardDeck({
                 <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Recall
                 space
               </p>
-              <h2 className="mt-1 truncate font-heading text-xl font-bold tracking-tight text-ink sm:text-2xl">
+              <h2 className="mt-1 truncate font-heading text-lg font-bold tracking-tight text-ink sm:text-2xl">
                 {topic}
               </h2>
             </div>
@@ -361,7 +361,7 @@ export default function FlashcardDeck({
           ) : null}
         </header>
 
-        <div className="flex min-h-0 flex-1 flex-col p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-7">
+        <div className="flex min-h-0 flex-1 flex-col p-3 pb-[calc(0.85rem+env(safe-area-inset-bottom))] sm:p-7">
           {view === "loading" ? <DeckSkeleton /> : null}
 
           {view === "error" ? (
@@ -432,11 +432,11 @@ export default function FlashcardDeck({
                     flipped ? "is-flipped" : ""
                   }`}
                 >
-                  <div className="flip-face flex flex-col overflow-y-auto overscroll-contain rounded-[1.75rem] border border-[#e7ebe8] bg-white p-6 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:p-9">
+                  <div className="flip-face flex flex-col overflow-y-auto overscroll-contain rounded-[1.35rem] border border-[#e7ebe8] bg-white p-4 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:rounded-[1.75rem] sm:p-9">
                     <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-mute">
                       Prompt
                     </span>
-                    <div className="my-auto py-6 text-xl font-semibold leading-8 text-ink sm:text-2xl sm:leading-10">
+                    <div className="my-auto py-4 text-[1.08rem] font-semibold leading-7 text-ink sm:py-6 sm:text-2xl sm:leading-10">
                       <StudyMarkdown>{card.front}</StudyMarkdown>
                     </div>
                     {card.hint && hintVisible ? (
@@ -471,11 +471,11 @@ export default function FlashcardDeck({
                     </div>
                   </div>
 
-                  <div className="flip-face flip-face--back flex flex-col overflow-y-auto overscroll-contain rounded-[1.75rem] border border-[#d6e8dc] bg-[#eff8f2] p-6 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:p-9">
+                  <div className="flip-face flip-face--back flex flex-col overflow-y-auto overscroll-contain rounded-[1.35rem] border border-[#d6e8dc] bg-[#eff8f2] p-4 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:rounded-[1.75rem] sm:p-9">
                     <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
                       Answer
                     </span>
-                    <div className="my-auto py-6 text-[15px] leading-7 text-ink sm:text-base sm:leading-8">
+                    <div className="my-auto py-4 text-sm leading-6 text-ink sm:py-6 sm:text-base sm:leading-8">
                       <StudyMarkdown>{card.back}</StudyMarkdown>
                     </div>
                     {card.hint ? (
@@ -493,7 +493,7 @@ export default function FlashcardDeck({
 
               {flipped ? (
                 <div
-                  className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"
+                  className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:grid-cols-4"
                   aria-label="Rate flashcard recall"
                 >
                   {RATINGS.map((rating) => (
@@ -501,7 +501,7 @@ export default function FlashcardDeck({
                       key={rating.value}
                       type="button"
                       onClick={() => submitRating(rating.value)}
-                      className={`min-h-12 rounded-xl border px-3 py-2 text-xs font-bold transition ${rating.className}`}
+                      className={`min-h-11 rounded-xl border px-3 py-2 text-xs font-bold transition sm:min-h-12 ${rating.className}`}
                     >
                       <span className="block">{rating.label}</span>
                       <span className="mt-0.5 block text-[10px] font-semibold opacity-70">
@@ -532,7 +532,7 @@ export default function FlashcardDeck({
 function DeckSkeleton() {
   return (
     <div
-      className="mx-auto my-auto w-full max-w-2xl rounded-[1.75rem] border border-[#e7ebe8] bg-white p-6 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:p-9"
+      className="mx-auto my-auto w-full max-w-2xl rounded-[1.35rem] border border-[#e7ebe8] bg-white p-5 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:rounded-[1.75rem] sm:p-9"
       aria-label="Loading flashcard"
     >
       <div className="h-3 w-20 rounded-full skeleton" />
@@ -557,7 +557,7 @@ function RunSummary({
   onClose: () => void;
 }) {
   return (
-    <div className="mx-auto my-auto w-full max-w-xl rounded-[1.75rem] border border-[#e7ebe8] bg-white p-6 text-center shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:p-9">
+    <div className="mx-auto my-auto w-full max-w-xl rounded-[1.35rem] border border-[#e7ebe8] bg-white p-5 text-center shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:rounded-[1.75rem] sm:p-9">
       <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary-tint text-primary">
         <CheckCheck className="h-7 w-7" aria-hidden="true" />
       </span>
@@ -571,7 +571,7 @@ function RunSummary({
       </p>
 
       {reviewed > 0 ? (
-        <dl className="mt-6 grid grid-cols-4 gap-2 text-center">
+        <dl className="mt-6 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
           {summary.map((item) => (
             <div key={item.value} className="rounded-2xl bg-canvas px-2 py-3">
               <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-mute">

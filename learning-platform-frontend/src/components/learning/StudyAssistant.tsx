@@ -262,21 +262,21 @@ export default function StudyAssistant({
       aria-label={title}
       className={
         variant === "panel"
-          ? "flex h-full max-h-[70dvh] min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-hairline bg-white shadow-[0_16px_40px_rgba(20,20,30,0.06)] xl:max-h-none"
-          : "mb-3 flex h-[min(39rem,calc(100vh-9rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-[1.75rem] border border-hairline bg-white shadow-[0_24px_70px_rgba(20,20,30,0.24)]"
+          ? "flex h-full max-h-[68dvh] min-h-0 flex-col overflow-hidden rounded-[1.25rem] border border-hairline bg-white shadow-[0_16px_40px_rgba(20,20,30,0.06)] sm:rounded-[1.5rem] xl:max-h-none"
+          : "mb-3 flex h-[min(38rem,calc(100dvh-8.5rem))] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-[1.35rem] border border-hairline bg-white shadow-[0_24px_70px_rgba(20,20,30,0.24)] sm:rounded-[1.75rem]"
       }
     >
       <header
-        className={`flex items-center justify-between gap-3 border-b border-hairline px-4 py-3 ${
+        className={`flex items-center justify-between gap-3 border-b border-hairline px-3 py-2.5 sm:px-4 sm:py-3 ${
           variant === "panel" ? "bg-primary-tint text-ink" : "bg-ink text-white"
         }`}
       >
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-white shadow-[0_8px_18px_rgba(20,20,30,0.18)]">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary text-white shadow-[0_8px_18px_rgba(20,20,30,0.18)] sm:h-9 sm:w-9">
             <GraduationCap className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <h3 className="truncate font-heading text-base font-bold">
+            <h3 className="truncate font-heading text-sm font-bold sm:text-base">
               {title}
             </h3>
             <p
@@ -315,7 +315,7 @@ export default function StudyAssistant({
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,#fff,#fcfbfb)] p-3 custom-scrollbar"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,#fff,#fcfbfb)] p-2.5 custom-scrollbar sm:p-3"
       >
         {loading && visibleMessages.length === 0 ? (
           <div
@@ -400,7 +400,7 @@ export default function StudyAssistant({
         <div ref={endRef} />
       </div>
 
-      <form onSubmit={send} className="border-t border-hairline bg-white p-3">
+      <form onSubmit={send} className="border-t border-hairline bg-white p-2.5 sm:p-3">
         <div className="mb-2 flex flex-wrap gap-1.5">
           {QUICK_PROMPTS.map(({ label, prompt, Icon }) => (
             <button
@@ -427,7 +427,7 @@ export default function StudyAssistant({
             rows={2}
             maxLength={1200}
             placeholder="Ask for a hint or explain the idea..."
-            className="max-h-20 min-h-9 flex-1 resize-none bg-transparent px-2 py-1 text-[13px] text-ink outline-none placeholder:text-ink-mute"
+            className="max-h-20 min-h-9 flex-1 resize-none bg-transparent px-2 py-1 text-[16px] text-ink outline-none placeholder:text-ink-mute sm:text-[13px]"
           />
           <button
             type="submit"
@@ -452,7 +452,7 @@ export default function StudyAssistant({
   if (variant === "panel") return panel;
 
   return (
-    <div className="fixed bottom-[88px] right-4 z-50 sm:bottom-6 sm:right-6">
+    <div className="fixed bottom-[88px] right-3 z-50 sm:bottom-6 sm:right-6">
       {panel}
       <button
         type="button"

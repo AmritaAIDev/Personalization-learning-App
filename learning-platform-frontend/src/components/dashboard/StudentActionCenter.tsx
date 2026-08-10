@@ -93,15 +93,15 @@ export default function StudentActionCenter({
 
   return (
     <Stagger className="mt-8" aria-label="Student learning desk">
-      <StaggerItem className="grid grid-cols-1 gap-5 overflow-hidden rounded-[1.75rem] bg-[radial-gradient(circle_at_top_right,rgba(63,111,87,0.32),transparent_34%),linear-gradient(135deg,#17171d,#222228)] p-5 text-white shadow-[0_18px_42px_rgba(20,20,30,0.15)] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center sm:p-6">
+      <StaggerItem className="grid grid-cols-1 gap-5 overflow-hidden rounded-[1.5rem] bg-[radial-gradient(circle_at_top_right,rgba(63,111,87,0.32),transparent_34%),linear-gradient(135deg,#17171d,#222228)] p-4 text-white shadow-[0_18px_42px_rgba(20,20,30,0.15)] sm:rounded-[1.75rem] sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
         <div className="min-w-0">
           <p className="inline-flex rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary-tint/90 ring-1 ring-white/10">
             Next best action
           </p>
-          <h2 className="mt-3 truncate font-heading text-2xl font-bold tracking-tight text-white">
+          <h2 className="mt-3 line-clamp-2 font-heading text-[1.6rem] font-bold leading-tight tracking-tight text-white sm:truncate sm:text-2xl">
             {data.today.primary.title}
           </h2>
-          <p className="mt-1 truncate text-sm text-white/65">
+          <p className="mt-1 line-clamp-2 text-sm text-white/65 sm:truncate">
             {data.today.primary.detail}
           </p>
           <div className="mt-4 max-w-md">
@@ -117,7 +117,7 @@ export default function StudentActionCenter({
             </div>
           </div>
         </div>
-        <dl className="flex items-center gap-5 border-y border-white/10 py-3 lg:border-x lg:border-y-0 lg:px-5 lg:py-0">
+        <dl className="grid grid-cols-2 gap-3 border-y border-white/10 py-3 min-[420px]:grid-cols-4 lg:flex lg:items-center lg:gap-5 lg:border-x lg:border-y-0 lg:px-5 lg:py-0">
           <DeskStat
             label="Streak"
             value={`${data.student.streak}d`}
@@ -149,7 +149,7 @@ export default function StudentActionCenter({
         </dl>
         <Link
           href={actionHref(data.today.primary)}
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-ink transition hover:-translate-y-0.5 hover:bg-primary-tint"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-ink transition hover:-translate-y-0.5 hover:bg-primary-tint sm:w-auto"
         >
           Open task
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -161,7 +161,7 @@ export default function StudentActionCenter({
           aria-labelledby="plan-heading"
           className="rounded-[1.5rem] border border-hairline bg-surface p-5 shadow-[0_10px_28px_rgba(20,20,30,0.035)]"
         >
-          <div className="flex items-end justify-between border-b border-hairline pb-3">
+          <div className="flex items-end justify-between gap-3 border-b border-hairline pb-3">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
                 Today
@@ -219,7 +219,7 @@ export default function StudentActionCenter({
               Signals
             </h2>
           </div>
-          <div className="mt-5 grid grid-cols-3 gap-2">
+          <div className="mt-5 grid grid-cols-1 gap-2 min-[430px]:grid-cols-3">
             <SignalCircle
               label="Mastery"
               value={data.growth.overall.score}
@@ -491,7 +491,7 @@ function SubjectCoverageExplorer({
             <Link
               key={`${topic.chapter}-${topic.topic}`}
               href={learningUrl(topic, { tab: "practice" })}
-              className="group flex min-w-0 items-center gap-3 py-3 transition-colors duration-300 hover:bg-canvas lg:px-3"
+              className="group flex min-w-0 items-center gap-3 py-3 transition-colors duration-300 hover:bg-canvas sm:px-2 lg:px-3"
             >
               <span
                 className={`h-2.5 w-2.5 shrink-0 rounded-full ${coverageTone(topic.status)}`}
@@ -568,15 +568,15 @@ function DeskStat({
               ? "text-white/55"
               : "text-ink-mute";
   return (
-    <div>
+    <div className="min-w-0">
       <dt
-        className={`flex items-center gap-1 text-[10px] font-semibold ${toneClass}`}
+        className={`flex min-w-0 items-center gap-1 text-[10px] font-semibold ${toneClass}`}
       >
         {icon}
-        {label}
+        <span className="truncate">{label}</span>
       </dt>
       <dd
-        className={`mt-1 text-base font-semibold ${inverse ? "text-white" : "text-ink"}`}
+        className={`mt-1 truncate text-base font-semibold ${inverse ? "text-white" : "text-ink"}`}
       >
         {value}
       </dd>
@@ -599,11 +599,11 @@ function SignalCircle({
   const circumference = 226.2;
   return (
     <div
-      className="group relative rounded-2xl border border-hairline bg-canvas px-2 py-3 text-center transition duration-300 ease-out-soft hover:-translate-y-1 hover:border-primary/25 hover:bg-white hover:shadow-[0_12px_28px_rgba(20,20,30,0.07)] focus-within:-translate-y-1"
+      className="group relative rounded-2xl border border-hairline bg-canvas px-3 py-3 text-center transition duration-300 ease-out-soft hover:-translate-y-1 hover:border-primary/25 hover:bg-white hover:shadow-[0_12px_28px_rgba(20,20,30,0.07)] focus-within:-translate-y-1 min-[430px]:px-2"
       title={detail}
     >
       <div
-        className="relative mx-auto h-[4.7rem] w-[4.7rem]"
+        className="relative mx-auto h-[4.35rem] w-[4.35rem] sm:h-[4.7rem] sm:w-[4.7rem]"
         role="img"
         aria-label={`${label}: ${center}`}
       >

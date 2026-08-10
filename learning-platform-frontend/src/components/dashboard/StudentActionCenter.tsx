@@ -11,8 +11,6 @@ import {
   Flame,
   GraduationCap,
   Search,
-  Target,
-  TrendingUp,
 } from "lucide-react";
 import { learningUrl } from "@/lib/learning";
 import { Stagger, StaggerItem } from "@/components/motion/MotionPrimitives";
@@ -124,24 +122,28 @@ export default function StudentActionCenter({
             label="Streak"
             value={`${data.student.streak}d`}
             icon={<Flame className="h-3.5 w-3.5" />}
+            tone="streak"
             inverse
           />
           <DeskStat
             label="Mastery"
             value={`${data.growth.overall.score}%`}
             icon={<GraduationCap className="h-3.5 w-3.5" />}
+            tone="mastery"
             inverse
           />
           <DeskStat
             label="Reviewed"
             value={`${data.courseProgress.masteredTopics}`}
             icon={<CircleCheck className="h-3.5 w-3.5" />}
+            tone="reviewed"
             inverse
           />
           <DeskStat
             label="XP"
             value={`${data.student.xp}`}
             icon={<Award className="h-3.5 w-3.5" />}
+            tone="xp"
             inverse
           />
         </dl>
@@ -216,27 +218,21 @@ export default function StudentActionCenter({
             <h2 className="font-heading text-xl font-bold tracking-tight text-ink">
               Signals
             </h2>
-            <p className="mt-1 text-xs leading-5 text-ink-mute">
-              Three live indicators from your learning evidence.
-            </p>
           </div>
           <div className="mt-5 grid grid-cols-3 gap-2">
             <SignalCircle
-              icon={<GraduationCap className="h-3.5 w-3.5" />}
               label="Mastery"
               value={data.growth.overall.score}
               center={`${data.growth.overall.score}%`}
               detail={`${data.growth.overall.band}. Based on completed topic checkpoints.`}
             />
             <SignalCircle
-              icon={<TrendingUp className="h-3.5 w-3.5" />}
               label="Momentum"
               value={momentumHealth}
-              center={`${data.growth.overall.momentum > 0 ? "+" : ""}${data.growth.overall.momentum}`}
-              detail="Direction of recent mastery movement across completed checkpoints."
+              center={`${data.growth.overall.momentum > 0 ? "+" : ""}${data.growth.overall.momentum}%`}
+              detail={`Recent movement: ${data.growth.overall.momentum > 0 ? "+" : ""}${data.growth.overall.momentum} points across the latest checkpoints.`}
             />
             <SignalCircle
-              icon={<Target className="h-3.5 w-3.5" />}
               label="Coverage"
               value={data.courseProgress.percent}
               center={`${data.courseProgress.percent}%`}
@@ -257,6 +253,9 @@ export default function StudentActionCenter({
               <span className="text-xs font-semibold text-ink">
                 Momentum curve
               </span>
+              <span className="text-[11px] font-semibold text-ink-mute">
+                {data.growth.timeline.slice(-1)[0]?.masteryPercent ?? 0}% latest
+              </span>
             </div>
             <MomentumGraph timeline={data.growth.timeline} />
           </div>
@@ -270,13 +269,11 @@ export default function StudentActionCenter({
       <StaggerItem className="mt-7 grid grid-cols-1 gap-5 xl:grid-cols-[0.88fr_1.12fr]">
         <section
           aria-labelledby="revision-heading"
-          className="rounded-[1.5rem] border border-orange-100 bg-[linear-gradient(135deg,#fff,#fff8f1)] p-5"
+          className="relative overflow-hidden rounded-[1.65rem] border border-hairline bg-white p-5 shadow-[0_18px_40px_rgba(20,20,30,0.045)]"
         >
+          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-ink/[0.035] blur-3xl" />
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-orange-600">
-                Repair
-              </p>
               <h2
                 id="revision-heading"
                 className="mt-1 font-heading text-xl font-bold tracking-tight text-ink"
@@ -297,9 +294,9 @@ export default function StudentActionCenter({
                 <Link
                   key={`${topic.subject}-${topic.chapter}-${topic.topic}`}
                   href="/notebook"
-                  className="group flex items-center gap-3 rounded-2xl bg-white/80 p-3 ring-1 ring-orange-100 transition duration-300 ease-out-soft hover:-translate-y-0.5 hover:ring-primary/25"
+                  className="group flex items-center gap-3 rounded-[1.25rem] border border-hairline bg-canvas/70 p-3 transition duration-300 ease-out-soft hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_12px_26px_rgba(20,20,30,0.06)]"
                 >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-orange-100 text-orange-700">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-white text-ink-soft shadow-sm">
                     <BookOpenCheck className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -324,12 +321,9 @@ export default function StudentActionCenter({
 
         <section
           aria-labelledby="activity-heading"
-          className="rounded-[1.5rem] border border-hairline bg-white p-5"
+          className="rounded-[1.65rem] border border-hairline bg-[linear-gradient(180deg,#ffffff,#fbfbfd)] p-5 shadow-[0_18px_40px_rgba(20,20,30,0.04)]"
         >
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-              Evidence
-            </p>
             <h2
               id="activity-heading"
               className="mt-1 font-heading text-xl font-bold tracking-tight text-ink"
@@ -338,13 +332,12 @@ export default function StudentActionCenter({
             </h2>
           </div>
           {data.activity.length > 0 ? (
-            <ol className="mt-5 space-y-0 border-l border-hairline pl-5">
+            <ol className="mt-5 grid gap-2">
               {data.activity.map((item) => (
                 <li
                   key={item.id}
-                  className="relative border-b border-hairline py-3 transition-colors duration-300 hover:bg-canvas last:border-b-0 first:pt-0"
+                  className="relative rounded-2xl border border-hairline bg-white px-4 py-3 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(20,20,30,0.05)]"
                 >
-                  <span className="absolute -left-[1.65rem] top-4 h-2.5 w-2.5 rounded-full border-2 border-white bg-primary first:top-0" />
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-ink">
@@ -553,17 +546,31 @@ function DeskStat({
   label,
   value,
   icon,
+  tone = "default",
   inverse = false,
 }: {
   label: string;
   value: string;
   icon: ReactNode;
+  tone?: "default" | "streak" | "mastery" | "reviewed" | "xp";
   inverse?: boolean;
 }) {
+  const toneClass =
+    tone === "streak"
+      ? "text-red-300"
+      : tone === "xp"
+        ? "text-amber-300"
+        : tone === "reviewed"
+          ? "text-emerald-300"
+          : tone === "mastery"
+            ? "text-sky-300"
+            : inverse
+              ? "text-white/55"
+              : "text-ink-mute";
   return (
     <div>
       <dt
-        className={`flex items-center gap-1 text-[10px] font-semibold ${inverse ? "text-white/55" : "text-ink-mute"}`}
+        className={`flex items-center gap-1 text-[10px] font-semibold ${toneClass}`}
       >
         {icon}
         {label}
@@ -578,13 +585,11 @@ function DeskStat({
 }
 
 function SignalCircle({
-  icon,
   label,
   center,
   value,
   detail,
 }: {
-  icon: ReactNode;
   label: string;
   center: string;
   value: number;
@@ -625,8 +630,7 @@ function SignalCircle({
           />
         </svg>
         <span className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-primary">{icon}</span>
-          <span className="mt-0.5 font-heading text-[15px] font-bold leading-none text-ink">
+          <span className="font-heading text-[16px] font-bold leading-none text-ink">
             {center}
           </span>
         </span>

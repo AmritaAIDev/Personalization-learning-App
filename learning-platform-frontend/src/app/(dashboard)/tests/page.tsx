@@ -156,9 +156,6 @@ export default function TestsPage() {
             <h1 className="font-heading text-xl font-bold tracking-tight text-ink sm:text-2xl">
               Test centre
             </h1>
-            <p className="mt-1 text-[13px] leading-5 text-ink-soft">
-              A secure, timed check that turns into a focused repair plan.
-            </p>
           </div>
           <button
             type="button"

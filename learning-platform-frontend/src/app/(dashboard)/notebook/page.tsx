@@ -338,11 +338,6 @@ export default function NotebookPage() {
             <h1 className="mt-1 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               Repair what actually broke.
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
-              {routeScope
-                ? `Showing repair cards for ${routeScope.topic}.`
-                : "Wrong answers are grouped by concept so review feels like repair, not punishment."}
-            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {routeScope ? (
@@ -438,7 +433,7 @@ export default function NotebookPage() {
                       <h2 className="mt-2 font-heading text-xl font-semibold leading-7">
                         {priority.conceptLabel}
                       </h2>
-                      <p className="mt-2 text-sm leading-6 text-white/65">
+                      <p className="mt-2 line-clamp-3 text-sm leading-6 text-white/65">
                         {priority.misconceptionSummary}
                       </p>
                       <Link

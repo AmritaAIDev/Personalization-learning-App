@@ -1,70 +1,31 @@
 # JEE AI Working Document
 
-This document is the practical product logic reference. It explains what the platform stores, what each tab shows, what updates learner state, and how one area affects another.
+This is the practical product logic reference for the platform. It explains the state model, tab behavior, learning algorithms, XP rules, and how the main UI areas connect to backend data.
 
-## Product inspiration map
+## Product inspiration
 
-The platform is not copied from any one product. These are only the main ideas that inspired a few product features.
+The platform is original, but a few product ideas are inspired by proven learning patterns:
 
-| Reference platform | Main inspired feature |
+| Inspiration | Used for |
 | --- | --- |
-| Embibe | Weak-topic repair, practice evidence, and test analysis. |
-| Khan Academy | Topic mastery, skill progress, and next-step learning. |
-| Vedantu | Topic-linked doubt support. |
-| Toppr-style practice flows | Practice-to-review flow with explanations and retry. |
-| Modern productivity dashboards | One clear next action with compact progress signals. |
+| Embibe | Weak-topic repair, practice evidence, test analysis |
+| Khan Academy | Topic mastery, skill progress, next-step learning |
+| Vedantu | Topic-linked doubt support |
+| Toppr-style flows | Practice, review, retry, explanations |
+| Modern productivity dashboards | One clear next action with compact signals |
 
-## UI reference screenshots
-
-These screenshots are captured from the live local app using the demo learner account. They are included as visual references for the exact components described in this working document.
-
-### Dashboard study plan
-
-Shows the current "next step", action rail, signals, and course coverage components described in the Dashboard section.
-
-![Dashboard study plan UI reference](docs/ui-references/dashboard-study-plan.png)
-
-### Continue Learning topic workspace
-
-Shows the selected topic workspace where adaptive learning, topic trail, accuracy, and tutor flow are presented.
-
-![Continue Learning topic workspace UI reference](docs/ui-references/continue-learning-topic-workspace.png)
-
-### Notebook repair workspace
-
-Shows the topic-linked repair cockpit for mistakes, due reviews, and concept repair cards.
-
-![Notebook repair workspace UI reference](docs/ui-references/notebook-repair-workspace.png)
-
-### Doubts topic thread
-
-Shows the workspace-aware doubt thread where subject/chapter/topic are inherited from the selected topic instead of being re-entered every time.
-
-![Doubts topic thread UI reference](docs/ui-references/doubts-topic-thread.png)
-
-### Profile skill and taxonomy view
-
-Shows the profile-level XP/level state, skill summary, milestones, and Bloom taxonomy visibility.
-
-![Profile skill and taxonomy UI reference](docs/ui-references/profile-skill-taxonomy.png)
-
-## 1. State dictionary
-
-These are the main state groups used across the app. Other sections refer back to these names.
+## 1. Core state model
 
 ### User profile state
 
-Stored mainly on the user/profile side.
-
-| Field | Meaning | Main source |
+| Field | Meaning | Source |
 | --- | --- | --- |
 | `user.id` | Unique learner identity | Auth/session |
-| `user.name` | Learner display name | User table |
-| `user.email` | Login email | User table |
-| `user.xp` | Total experience points | User table, currently updated by Learn correct answers |
-| `user.level` | Overall gamified profile level | Derived from XP for display |
+| `user.name`, `user.email` | Display and login identity | User table |
+| `user.xp` | Total experience points | User table |
+| `user.level` | Overall gamified level | Derived/resynced from XP |
 | `user.streak` | Consecutive active days | User table |
-| tier name | Rookie, Riser, etc. | Derived from `user.level` |
+| tier name | Rookie/Riser/etc. | Derived from `user.level` |
 
 Current profile level rule:
 
@@ -77,133 +38,89 @@ Minimum level = 1
 
 Stored per user + subject + chapter + topic.
 
-| Field | Meaning | Used by |
-| --- | --- | --- |
-| `subject` | Physics/Chemistry/Math | Dashboard, Journey, Learn |
-| `chapter` | Chapter name | Sidebar workspace, Journey |
-| `topic` | Topic name | Learn, Practice, Notebook |
-| `currentLevel` | Current adaptive topic level, 1-12 | Learn, Journey, topic workspace |
-| `status` | Active, mastered, paused, etc. | Dashboard next step, Journey |
-| `totalAnswered` | Total adaptive answers for this topic | Accuracy, competency |
-| `totalCorrect` | Total correct adaptive answers for this topic | Accuracy, competency |
-| `streakCounter` | Current in-topic correct streak | Learn routing |
-| `lastActivityAt` | Last time topic was worked on | Dashboard/recent learning |
-| `masteredAt` | When topic was mastered | Journey/profile |
-
-### Learning session state
-
-Stored for each adaptive Learn round.
-
 | Field | Meaning |
 | --- | --- |
-| `session.level` | Level used for that 5-question round |
-| `currentSequence` | Which question is active |
-| `totalQuestions` | Usually 5 |
-| `status` | Active, completed, routed |
-| `transition` | Advanced, reinforced, demoted, mastered, prerequisite |
-| `completedAt` | When round ended |
+| `currentLevel` | Adaptive topic level, 1-12 |
+| `status` | Active, mastered, paused, etc. |
+| `totalAnswered` | Total adaptive answers for the topic |
+| `totalCorrect` | Total correct adaptive answers for the topic |
+| `streakCounter` | Current in-topic correct streak |
+| `lastActivityAt` | Latest topic activity |
+| `masteredAt` | When the topic was mastered |
 
-### Answer state
-
-Stored for each submitted adaptive answer.
-
-| Field | Meaning |
-| --- | --- |
-| `selectedOption` | What learner selected |
-| `isCorrect` | Server-graded correctness |
-| `attemptNumber` | First or second attempt |
-| `elapsedSeconds` | Optional answer time |
-
-### Growth/competency state
-
-Calculated from topic states, learning sessions, and answer aggregates.
-
-| Field | Meaning |
-| --- | --- |
-| `overall.score` | Weighted competency score |
-| `overall.momentum` | Growth movement across completed checkpoints |
-| `overall.positiveStreak` | Recent non-regressing checkpoint count |
-| `topicsTracked` | Number of topics with state |
-| `mastered` | Number of mastered topics |
-
-### Review/notebook state
-
-Created from mistakes and due-review logic.
-
-| Field | Meaning |
-| --- | --- |
-| review card | A mistake/concept to repair |
-| `reviewState` | Due/upcoming/etc. |
-| concept summary | AI or backend-generated repair note |
-| source | Learn, Practice, Test, Diagnostic, Doubt |
-
-### AI/tutor state
-
-Stored per learning session or doubt.
-
-| Field | Meaning |
-| --- | --- |
-| tutor conversation | One assistant thread linked to a Learn session |
-| tutor messages | Learner/assistant messages |
-| pending | Whether assistant is still writing |
-| sources | Reviewed concept sources used for grounding |
-
-## 2. XP and user level
-
-### Current implemented XP behavior
-
-Right now, XP is stored as:
+Clean rule:
 
 ```txt
-user.xp
+Topic state is changed by Learn/adaptive practice, not by frontend UI state.
 ```
 
-Current implemented award:
+### Learning session and answer state
 
-| Action | XP added now |
-| --- | ---: |
-| Correct adaptive Learn answer | +10 XP |
+| State | Meaning |
+| --- | --- |
+| Learning session | One adaptive 5-question round for a topic level |
+| Session transition | Advanced, reinforced, demoted, mastered, prerequisite |
+| Answer record | Selected option, correctness, attempt number, elapsed time |
 
-When XP changes after a correct Learn answer:
+### Growth, review, and AI state
+
+| State | Meaning |
+| --- | --- |
+| Growth/competency | Calculated from topic states, answer aggregates, level, speed, consistency |
+| Review/notebook | Mistake and due-review cards created from wrong answers |
+| Tutor/AI | Session-linked tutor messages, doubt answers, citations/sources |
+
+### Frontend cache and refresh
+
+The backend database is authoritative. The frontend only keeps short-lived, in-memory cache for speed.
 
 ```txt
-user.xp increases by 10
-stored user.level is resynced
-frontend auth/dashboard/profile/journey refresh
-+XP toast appears from real backend XP change
+mutation succeeds -> backend state changes -> frontend invalidates local view state -> fresh read
+```
+
+Used frontend helpers:
+
+- optional in-memory read cache
+- in-flight GET dedupe
+- shared learning-data refresh event after workspace-affecting mutations
+
+## 2. XP, user level, and tiers
+
+### Current implemented XP
+
+| Action | XP |
+| --- | ---: |
+| Correct adaptive Learn answer | +10 |
+
+When XP changes:
+
+```txt
+user.xp increases
+user.level is resynced
+auth/dashboard/profile/journey refresh
++XP toast appears from real backend state
 ```
 
 ### Intended complete XP model
 
-This is the clean final scoring model to implement through an `xp_events` table.
+This should later move into an `xp_events` table.
 
 | Action | Suggested XP |
 | --- | ---: |
-| Correct Learn answer on first try | +10 |
+| Correct Learn answer first try | +10 |
 | Correct Learn answer after hint | +5 |
-| Complete a 5-question Learn checkpoint | +20 |
-| Advance one topic level | +30 |
-| Master a topic | +100 |
+| Complete Learn checkpoint | +20 |
+| Advance topic level | +30 |
+| Master topic | +100 |
 | Submit Practice set | +20 |
-| Practice score bonus | `scorePercent / 5`, max +20 |
+| Practice score bonus | max +20 |
 | Submit Test | +30 |
-| Test score bonus | `scorePercent / 4`, max +25 |
-| Review one due notebook item | +5 |
-| Clear a review queue for the day | +20 |
+| Test score bonus | max +25 |
+| Review due notebook item | +5 |
+| Clear daily review queue | +20 |
 | Daily streak activity | +10 |
-| Flashcard review | 0 or very small, recommended 0 for now |
-| Doubt asked/resolved | 0 or small support XP, recommended 0 for now |
-
-Recommended event format:
-
-| Field | Meaning |
-| --- | --- |
-| `userId` | Who earned XP |
-| `sourceType` | Learn, Practice, Test, Notebook, Streak |
-| `sourceId` | Session/attempt/review ID |
-| `points` | XP earned |
-| `reason` | Why XP was earned |
-| `createdAt` | When it happened |
+| Flashcards | 0 for now |
+| Doubts | 0 for now |
 
 Clean rule:
 
@@ -212,9 +129,7 @@ XP controls overall user level.
 XP does not control topic level.
 ```
 
-## 3. User tier names
-
-Tier names are based on overall user level.
+### Tier names
 
 ```txt
 Level 1+  -> Rookie
@@ -231,11 +146,11 @@ Example:
 Level 4 user -> Rookie
 ```
 
-This is separate from topic level.
+## 3. Dashboard tab
 
-## 4. Dashboard tab
+Dashboard answers one question: **what should the learner do next?**
 
-Dashboard is the learner’s study plan.
+![Dashboard study plan UI reference](docs/ui-references/dashboard-study-plan.png)
 
 ### Your next step
 
@@ -251,200 +166,66 @@ active diagnostic
 -> choose a topic
 ```
 
-Reads from:
-
-- user profile state
-- topic state
-- review/notebook state
-- diagnostic/practice evidence
-
-Updates:
-
-- no direct state update
-- only routes the learner to the right place
-
 ### Today / action rail
 
-Shows short tasks for the day in a compact action rail.
-
-Reads from:
-
-- active topic state
-- review due items
-- recent diagnostic/practice/test evidence
-
-Updates:
-
-- no direct state update
-- completed actions update their own modules
+Shows short actionable tasks for the day. It should stay compact and route the learner, not explain the whole system.
 
 ### Signals
 
-Shows compact learner signals with hover/inline explanations.
+Shows compact learner signals with hover/inline explanation.
 
-Competency:
-
-```txt
-weighted topic score across tracked topics
-```
-
-Uses:
-
-- topic accuracy
-- current topic difficulty
-- Bloom level
-- answer speed
-- consistency
-
-Momentum:
-
-```txt
-latest timeline mastery percent - earliest timeline mastery percent
-```
-
-Other signals:
-
-```txt
-On track = recent non-regressing checkpoint streak
-Coverage = mastered tracked topics / tracked topics
-Review = notebook repair cards due now
-```
-
-Reads from:
-
-- growth/competency state
-- learning sessions
-- topic states
-
-Updates:
-
-- changes after Learn sessions/answers create new evidence
+| Signal | Meaning |
+| --- | --- |
+| Competency | Weighted topic score across tracked topics |
+| Momentum | Latest timeline mastery percent - earliest timeline mastery percent |
+| On track | Recent non-regressing checkpoint streak |
+| Coverage | Mastered tracked topics / tracked topics |
+| Review | Notebook repair cards due now |
 
 ### Course coverage
 
-Shows subject/chapter/topic coverage.
+Shows tracked subject/chapter/topic coverage from the catalog plus topic states:
 
-Reads from:
-
-- question catalog
-- topic states
-- growth data
-
-Shows:
-
-- tracked topics
-- weak/medium/strong areas
+- weak/medium/strong topics
 - current coverage
-
-Updates:
-
-- changes when topic states change or more catalog data exists
+- chapter/topic progress
 
 ### Review queue
 
-Shows mistakes/concepts due for repair.
-
-Reads from:
-
-- notebook/review state
-- wrong answers
-- weak concepts
-
-Updates:
-
-- reviewing items should update review state
-- final XP model can award review XP
+Shows mistakes or concepts due for repair. It comes from notebook/review state, not random dashboard data.
 
 ### Recent learning
 
-Shows latest activity.
+Shows latest meaningful activity: Learn sessions, diagnostic attempts, practice/test records, notebook work, and doubt activity when included.
 
-Reads from:
+Major records are permanent. Feed-style history can be limited to recent items.
 
-- learning sessions
-- diagnostic attempts
-- practice/test records
-- notebook/doubt activity if included
-
-Persistence:
-
-- major records should remain permanent
-- feed-style records can be limited to recent history
-
-## 5. Journey tab
+## 4. Journey tab
 
 Journey shows route and growth summary.
 
-### XP earned
+| Metric | Meaning |
+| --- | --- |
+| XP earned | `user.xp` |
+| Competency | Weighted learning score across tracked topics |
+| On track | Recent non-regressing checkpoint streak |
+| Steps cleared | Completed nodes in the selected route map |
 
-Reads:
-
-```txt
-user.xp
-```
-
-Current implemented XP source:
-
-```txt
-Correct adaptive Learn answer -> +10 XP
-```
-
-Future complete source:
+Important distinction:
 
 ```txt
-XP events from Learn, Practice, Test, Notebook, Streak
+Journey = where the learner is moving
+Profile = who the learner is becoming
+Dashboard = what the learner should do next
 ```
 
-### Competency
+## 5. Continue Learning / Learn tab
 
-Reads:
+Learn is the main adaptive engine. It is the only area that directly changes topic level.
 
-- growth/competency state
-- topic states
-- answer aggregates
-
-Meaning:
-
-```txt
-overall weighted learning score across tracked topics
-```
-
-### On track
-
-Reads:
-
-- completed learning sessions
-- session transitions
-
-Meaning:
-
-```txt
-recent non-regressing checkpoint streak
-```
-
-It stops counting when a demotion or prerequisite routing appears.
-
-### Steps cleared
-
-Reads:
-
-- selected Journey route nodes
-
-Meaning:
-
-```txt
-completed nodes in the currently selected Journey map
-```
-
-It is route-specific, not global.
-
-## 6. Continue Learning / Learn tab
-
-Learn is the main adaptive engine.
+![Continue Learning topic workspace UI reference](docs/ui-references/continue-learning-topic-workspace.png)
 
 ### Topic level structure
-
-There are 12 topic levels.
 
 ```txt
 1  Recall · Easy
@@ -463,16 +244,14 @@ There are 12 topic levels.
 
 ### Baseline / placement
 
-Reads:
+Placement reads prior evidence:
 
-- same chapter answered count
-- same chapter accuracy
+- same chapter answered count and accuracy
 - same chapter mastered topics
-- same subject answered count
-- same subject accuracy
+- same subject answered count and accuracy
 - same subject mastered topics
 - prerequisite mastery
-- peer/topic level signal
+- peer/topic signal
 
 Placement mapping:
 
@@ -495,178 +274,65 @@ resume saved topic level
 
 Each adaptive round has 5 questions.
 
-Advance:
-
 ```txt
-4/5 or 5/5 first-try correct -> move up one topic level
-```
-
-Reinforce:
-
-```txt
+4/5 or 5/5 first-try correct -> advance one topic level
 0/5 to 3/5 first-try correct -> stay same topic level
-```
-
-Demote:
-
-```txt
-second failure on a question -> move down one topic level
-```
-
-Prerequisite:
-
-```txt
+second failure on a question -> move down one level
 Level 1 + second failure + prerequisite exists -> route to prerequisite
+clear Level 12 -> topic mastered
 ```
 
-Master:
-
-```txt
-clear Level 12 -> topic becomes mastered
-```
-
-### Topic trail
-
-Reads:
-
-- topic state
-- learning sessions
-- Journey route
-
-Meaning:
-
-```txt
-the learner’s saved progress inside the selected topic route
-```
-
-### Accuracy
-
-Reads:
-
-- `topicState.totalAnswered`
-- `topicState.totalCorrect`
-
-Formula:
-
-```txt
-accuracy = totalCorrect / totalAnswered
-```
-
-Example:
-
-```txt
-8 correct / 12 answered = 67%
-```
-
-### What Learn updates
+### Learn updates
 
 Learn updates:
 
-- topic current level
-- topic status
-- total answered
-- total correct
+- topic current level and status
+- total answered/correct
 - streak counter
 - learning session transition
 - tutor messages
 - XP for correct answers
 - profile level sync after XP
 
-Learn does not depend on frontend temporary data.
+## 6. Tutor behavior
 
-## 7. Tutor behavior
-
-Tutor is linked to the current adaptive Learn session.
-
-### First wrong answer
+Tutor is linked to the current adaptive Learn question.
 
 ```txt
-first wrong attempt
--> Socratic hint
--> correct answer remains hidden
+first wrong attempt -> hint only, correct answer hidden
+second wrong attempt -> full explanation allowed
+manual chat before reveal -> hint only
+manual chat after reveal -> full explanation allowed
 ```
 
-The correct answer is not sent to the tutor prompt.
+The correct answer is not sent to the tutor prompt before it is allowed to be revealed.
 
-### Second wrong answer
+## 7. Flashcards
+
+Flashcards are recall support, not grading.
+
+Current rule:
 
 ```txt
-second wrong attempt
--> explanation allowed
--> tutor can explain why wrong and why correct
+Flashcards do not update topic level, mastery, competency, or user level.
 ```
 
-### Manual tutor chat
+They may use AI-generated cards and optional recall ratings, but the recommended XP is `0` for now.
 
-```txt
-answer not revealed -> hint only
-answer resolved/revealed -> full explanation allowed
-```
-
-Stored in:
-
-- tutor conversations
-- tutor messages
-
-## 8. Flashcards
-
-Flashcards are a recall tool.
-
-Reads:
-
-- selected topic
-- AI-generated flashcard content
-- optional review/rating state
-
-Can store:
-
-- topic
-- card content
-- user rating
-- reviewed count
-- next due date, if spaced repetition is enabled
-
-Does not update:
-
-- topic level
-- mastery
-- competency
-- user level
-
-Recommended XP:
-
-```txt
-Flashcards -> 0 XP for now
-```
-
-Reason:
-
-Flashcards are for recall support, not the main grading engine.
-
-## 9. Practice tab
+## 8. Practice tab
 
 Practice is for training and review evidence.
 
-Reads:
-
-- selected topic/chapter
-- question catalog
-- practice attempts
-- answer records
-
-Updates:
+It updates:
 
 - practice history
 - score
 - weak concepts
 - review/notebook items
 - recommendations
-- XP in future XP-event model
+- future XP event model
 
-Does not directly update:
-
-- topic level
-- topic mastery
+It does not directly update topic level.
 
 Clean rule:
 
@@ -675,17 +341,11 @@ Practice creates evidence.
 Learn changes topic level.
 ```
 
-## 10. Test tab
+## 9. Test tab
 
-Test is for exam-style assessment.
+Test is exam-style assessment.
 
-Reads:
-
-- question catalog
-- selected topic/chapter/subject
-- test configuration
-
-Updates:
+It updates:
 
 - test history
 - score
@@ -693,46 +353,25 @@ Updates:
 - analytics
 - notebook/review queue
 - recommendations
-- XP in future XP-event model
+- future XP event model
 
-Does not directly update:
+It does not directly promote or demote topic level because test performance includes timing, mixed-topic pressure, and exam behavior.
 
-- topic level
-
-Reason:
-
-Test performance can be affected by timing, mixed topics, pressure, and exam behavior. It should influence evidence and recommendations, not directly promote/demote topic level.
-
-## 11. Notebook tab
+## 10. Notebook tab
 
 Notebook is the repair cockpit.
 
-Reads:
+![Notebook repair workspace UI reference](docs/ui-references/notebook-repair-workspace.png)
 
-- wrong answers
-- due review cards
-- weak concepts
-- AI explanations
-- concept summaries
+It shows:
 
-Updates:
+- due repair cards
+- wrong-answer cards
+- weak concept groups
+- AI concept summaries
+- rendered questions/solutions through markdown + KaTeX
 
-- review state
-- due/upcoming repair queue
-- dashboard next step
-- possible XP in future XP-event model
-
-Does not directly update:
-
-- topic level
-
-Current UI behavior:
-
-- if opened with a workspace scope, it filters to that topic
-- shows repair concepts, mistake cards, and due-now count
-- highlights the top repair priority
-- groups mistakes by concept
-- renders questions, answers, and solutions through `StudyMarkdown` with KaTeX
+It updates review state and dashboard next step. It does not directly update topic level.
 
 Current source truth:
 
@@ -741,165 +380,112 @@ Notebook cards currently come from Learn/adaptive and Practice mistake flows.
 Test mistakes should be wired into the same notebook source path when backend support is added.
 ```
 
-## 12. Doubts tab
+## 11. Doubts tab
 
-Doubts is for learner questions inside or outside a workspace.
+Doubts is a topic chat for learner questions.
 
-Reads:
+![Doubts topic thread UI reference](docs/ui-references/doubts-topic-thread.png)
 
-- learner question
-- selected topic/chapter when available
-- reviewed concept sources when available
+In a selected workspace:
 
-Stores:
+- subject/chapter/topic are inherited automatically
+- learner only types the doubt
+- messages are grouped into continuing threads
+- each message remains a backend record linked to `doubt_threads`
 
-- doubt question/title
-- AI response
-- status
-- sources/citations
-
-Does not directly update:
-
-- topic level
-- mastery
-- user level
-
-Current UI behavior:
-
-- if opened from a selected topic workspace, subject/chapter/topic are carried automatically
-- the learner only types the doubt
-- previous doubts for that topic are shown as one continuing topic thread
-- each saved doubt remains a backend record, but the UI presents it like a chat
-- if opened without workspace scope, subject/chapter/topic inputs are still shown
-
-AI behavior:
+AI flow:
 
 ```txt
-question -> backend doubt record -> grounded AI answer -> saved answer + sources
+question -> backend doubt record -> AI answer -> saved answer + sources
 ```
 
-This is not the same as the Learn tutor session. Learn tutor is tied to a live adaptive question; Doubts are standalone concept questions.
+Failure flow:
 
-## 13. Profile tab
+```txt
+AI unavailable -> deterministic backend fallback answer -> status becomes ANSWERED
+```
+
+Doubts do not directly update topic level, mastery, or user level.
+
+## 12. Profile tab
 
 Profile owns identity, gamification, and skill shape.
 
-Reads:
+![Profile skill and taxonomy UI reference](docs/ui-references/profile-skill-taxonomy.png)
 
-- user profile state
-- growth/competency state
-- subject coverage
-- diagnostic history
-- recent activity
-
-Shows:
+It shows:
 
 - user level, XP, streak
 - XP/tier progress
 - activity heatmap
 - competency radar
-- Bloom taxonomy web
+- Bloom taxonomy view
 - subject mastery
 - compact milestones
 
-Important separation:
+Achievements are secondary. They should support motivation, not become the main measurement system.
+
+## 13. What affects what
+
+| Area | Affected by | Not directly affected by |
+| --- | --- | --- |
+| Topic level | Learn adaptive answers | XP, Practice, Test, Flashcards, Notebook, Doubts |
+| User XP | Correct Learn answers now; future XP events later | Frontend-only UI actions |
+| User profile level | `user.xp` | Topic level directly |
+| Competency | Topic states, accuracy, difficulty, Bloom level, speed, consistency | Static frontend data |
+| Dashboard recommendations | active topic, reviews, diagnostics, weak topics, recent activity | Manual fake UI state |
+| Review queue | wrong answers, due notebook items, weak concepts | Flashcard-only activity |
+
+## 14. Component interaction map
+
+Short reference for the main visible controls.
+
+| Component/control | What it does | Data/source |
+| --- | --- | --- |
+| Sidebar workspace card | Opens topic finder and sets current subject/chapter/topic workspace | question catalog + topic state |
+| Dashboard search | Opens the same topic finder modal | question catalog + learning dashboard |
+| Topic finder result | Selects topic and routes to Learn/Practice destination | selected catalog topic |
+| Continue learning button | Opens selected topic in Learn workspace | active topic state |
+| Learn answer option | Saves answer, grades server-side, updates topic/session/XP if correct | adaptive session API |
+| Learn tutor chat | Gives hint/explanation based on answer reveal state | tutor API + session state |
+| Flashcards start | Opens recall flow for selected topic | AI/card generation API |
+| Flashcard rating | Moves to next card; no topic level or XP change for now | browser session state / optional future review state |
+| Practice start | Creates reviewed practice attempt from database questions | question catalog + practice API |
+| Practice submit | Scores attempt and creates review evidence | practice answers + backend scoring |
+| Test start | Creates exam-style assessment | test/session API |
+| Test submit | Stores score, weak areas, and recommendations | backend scoring/analysis |
+| Notebook card | Shows mistake repair and concept summary | wrong answers + review state |
+| Doubt message send | Saves message in thread and triggers AI/fallback answer | doubts API + `doubt_threads` |
+| Profile widgets | Shows XP, level, taxonomy, competency, streak | user profile + growth data |
+
+Rule:
 
 ```txt
-Profile = who the learner is becoming
-Journey = where the learner is moving
-Dashboard = what the learner should do next
+One topic workspace should flow across Learn, Practice, Tests, Notebook, and Doubts.
+No frontend-only fake data should decide state.
 ```
 
-Achievements are intentionally secondary. They are milestones, not the main measurement system.
+## 15. Security and stability guardrails
 
-## 14. What affects what
+Implemented guardrails:
 
-### Topic level
+- session cookie auth with protected backend endpoints
+- CORS restricted to configured frontend origins
+- validation pipe with whitelist and non-whitelisted field rejection
+- rate limiting on sensitive/high-traffic controllers
+- no answer keys exposed before backend submission in exam-style practice
+- AI calls isolated server-side in Agent/Notebook/Doubts services
+- frontend cache is temporary memory cache, not source truth
+- vulnerable frontend transitive packages pinned through safe overrides
 
-Affected by:
+Tracked item:
 
 ```txt
-Learn adaptive answers only
+Backend @huggingface/transformers currently pulls sharp with an npm audit advisory
+that has no patched release available yet.
 ```
 
-Not directly affected by:
-
-```txt
-XP
-Practice
-Test
-Flashcards
-Notebook
-Doubts
-Dashboard navigation
-```
-
-### User XP
-
-Current implemented:
-
-```txt
-Correct Learn answer -> +10 XP
-```
-
-Recommended final:
-
-```txt
-Learn + Practice + Test + Notebook review + streak bonuses -> XP events
-```
-
-### User profile level
-
-Affected by:
-
-```txt
-user.xp
-```
-
-Formula:
-
-```txt
-floor(user.xp / 250) + 1
-```
-
-### Competency
-
-Affected mainly by:
-
-```txt
-topic states
-answer accuracy
-topic difficulty
-Bloom level
-speed
-consistency
-```
-
-### Dashboard recommendations
-
-Affected by:
-
-```txt
-active learning state
-review due items
-diagnostics
-practice/test evidence
-weak topics
-recent activity
-```
-
-### Review queue
-
-Affected by:
-
-```txt
-wrong answers
-due notebook items
-weak concepts
-practice/test/diagnostic mistakes
-```
-
-## 15. Final product rule
+## 16. Final product rule
 
 ```txt
 Dashboard decides what the learner should do next.

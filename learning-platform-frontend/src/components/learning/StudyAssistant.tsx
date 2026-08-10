@@ -262,7 +262,7 @@ export default function StudyAssistant({
       aria-label={title}
       className={
         variant === "panel"
-          ? "flex max-h-[70dvh] min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-hairline bg-white shadow-[0_16px_40px_rgba(20,20,30,0.06)] xl:max-h-[calc(100dvh-7.5rem)]"
+          ? "flex h-full max-h-[70dvh] min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-hairline bg-white shadow-[0_16px_40px_rgba(20,20,30,0.06)] xl:max-h-none"
           : "mb-3 flex h-[min(39rem,calc(100vh-9rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-[1.75rem] border border-hairline bg-white shadow-[0_24px_70px_rgba(20,20,30,0.24)]"
       }
     >
@@ -315,7 +315,7 @@ export default function StudyAssistant({
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,#fff,#fcfbfb)] p-4"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,#fff,#fcfbfb)] p-3 custom-scrollbar"
       >
         {loading && visibleMessages.length === 0 ? (
           <div
@@ -348,8 +348,8 @@ export default function StudyAssistant({
               key={item.id}
               className={
                 item.role === "USER"
-                  ? "ml-8 rounded-2xl rounded-br-md bg-primary px-3.5 py-3 text-[13px] leading-5 text-white"
-                  : "mr-3 rounded-2xl rounded-bl-md border border-hairline bg-white px-3.5 py-3 shadow-[0_6px_16px_rgba(20,20,30,0.04)]"
+                  ? "ml-8 rounded-2xl rounded-br-md bg-primary px-3 py-2.5 text-[12.5px] leading-5 text-white"
+                  : "mr-3 rounded-2xl rounded-bl-md border border-hairline bg-white px-3 py-2.5 shadow-[0_6px_16px_rgba(20,20,30,0.04)]"
               }
             >
               {item.role === "USER" ? (
@@ -363,7 +363,7 @@ export default function StudyAssistant({
                         : "Full explanation"}
                     </p>
                   ) : null}
-                  <StudyMarkdown className="text-[13px] leading-5 text-ink-soft">
+                  <StudyMarkdown className="text-[12.5px] leading-5 text-ink-soft">
                     {item.content}
                   </StudyMarkdown>
                 </>
@@ -372,7 +372,7 @@ export default function StudyAssistant({
           ))}
 
           {draftMessage ? (
-            <article className="ml-8 rounded-2xl rounded-br-md bg-primary/85 px-3.5 py-3 text-sm leading-6 text-white">
+            <article className="ml-8 rounded-2xl rounded-br-md bg-primary/85 px-3 py-2.5 text-[12.5px] leading-5 text-white">
               <p className="whitespace-pre-wrap">{draftMessage}</p>
             </article>
           ) : null}
@@ -427,7 +427,7 @@ export default function StudyAssistant({
             rows={2}
             maxLength={1200}
             placeholder="Ask for a hint or explain the idea..."
-            className="max-h-24 min-h-10 flex-1 resize-none bg-transparent px-2 py-1 text-sm text-ink outline-none placeholder:text-ink-mute"
+            className="max-h-20 min-h-9 flex-1 resize-none bg-transparent px-2 py-1 text-[13px] text-ink outline-none placeholder:text-ink-mute"
           />
           <button
             type="submit"

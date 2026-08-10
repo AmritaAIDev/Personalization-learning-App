@@ -128,14 +128,26 @@ function StatChip({
   icon,
   label,
   value,
+  tone = "default",
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
+  tone?: "default" | "xp" | "competency" | "streak" | "steps";
 }) {
+  const toneClass =
+    tone === "xp"
+      ? "bg-amber-50 text-amber-600"
+      : tone === "streak"
+        ? "bg-red-50 text-red-600"
+        : tone === "competency"
+          ? "bg-blue-50 text-blue-600"
+          : tone === "steps"
+            ? "bg-emerald-50 text-emerald-600"
+            : "bg-primary-tint text-primary";
   return (
     <div className="flex items-center gap-2.5 rounded-2xl bg-surface px-3.5 py-2.5 hairline elevate-sm transition-transform duration-200 hover:-translate-y-0.5">
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary-tint text-primary">
+      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${toneClass}`}>
         {icon}
       </span>
       <div className="min-w-0 leading-tight">
@@ -555,21 +567,25 @@ export default function JourneyMap() {
               icon={<Zap className="h-4 w-4" />}
               label="XP earned"
               value={user?.xp ?? 0}
+              tone="xp"
             />
             <StatChip
               icon={<TrendingUp className="h-4 w-4" />}
               label="Competency"
               value={score}
+              tone="competency"
             />
             <StatChip
               icon={<Flame className="h-4 w-4" />}
               label="On track"
               value={onTrack}
+              tone="streak"
             />
             <StatChip
               icon={<Trophy className="h-4 w-4" />}
               label="Steps cleared"
               value={completedCount}
+              tone="steps"
             />
           </div>
 

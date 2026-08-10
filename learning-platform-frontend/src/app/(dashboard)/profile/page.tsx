@@ -82,7 +82,10 @@ function badgeList(input: {
 const DAY_MS = 86_400_000;
 const HEATMAP_WEEKS = 13;
 
-function buildHeatmap(activity: StudentDashboardPayload["activity"]) {
+function buildHeatmap(
+  activity: StudentDashboardPayload["activity"],
+  streak: number,
+) {
   const counts = new Map<string, number>();
   for (const item of activity) {
     const key = new Date(item.occurredAt).toISOString().slice(0, 10);
@@ -91,6 +94,12 @@ function buildHeatmap(activity: StudentDashboardPayload["activity"]) {
   // End on today, walk back to the start of the week HEATMAP_WEEKS ago.
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  for (let index = 0; index < streak; index += 1) {
+    const key = new Date(today.getTime() - index * DAY_MS)
+      .toISOString()
+      .slice(0, 10);
+    if (!counts.has(key)) counts.set(key, 1);
+  }
   const end = today.getTime();
   const start = end - (HEATMAP_WEEKS * 7 - 1 - today.getDay()) * DAY_MS;
   const weeks: Array<Array<{ key: string; count: number; level: number }>> = [];
@@ -173,7 +182,7 @@ function buildProfileModel(
     bestDiagnostic,
     badges,
     tier: tierFor(level),
-    heatmap: buildHeatmap(data?.activity ?? []),
+    heatmap: buildHeatmap(data?.activity ?? [], streak),
     breakdown: overall?.breakdown,
     taxonomy: buildTaxonomyProfile(data?.growth.topics ?? []),
     subjects: data?.subjectCoverage ?? [],
@@ -418,11 +427,7 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {model.badges.slice(0, 6).map((badge) => (
-              <BadgeCard key={badge.id} badge={badge} />
-            ))}
-          </div>
+          <MilestoneStack badges={model.badges} />
         </section>
       </div>
 
@@ -523,6 +528,65 @@ function Bar({ percent }: { percent: number }) {
       className="block h-full rounded-full bg-primary transition-[width] duration-700 ease-out-soft"
       style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
     />
+  );
+}
+
+function MilestoneStack({ badges }: { badges: Badge[] }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="mt-5">
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="group relative h-28 w-full rounded-[1.4rem] border border-hairline bg-canvas text-left transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_14px_30px_rgba(20,20,30,0.06)]"
+        aria-expanded={expanded}
+      >
+        {badges.slice(0, 4).map((badge, index) => {
+          const unlocked = badge.current >= badge.goal;
+          const Icon = badge.icon;
+          return (
+            <span
+              key={badge.id}
+              className={`absolute left-5 top-5 flex h-16 w-[calc(100%-2.5rem)] items-center gap-3 rounded-2xl border px-4 transition duration-300 ${
+                unlocked
+                  ? "border-primary/20 bg-primary-tint text-primary"
+                  : "border-hairline bg-white text-ink-soft"
+              }`}
+              style={{
+                transform: `translateY(${index * 8}px) scale(${1 - index * 0.035})`,
+                zIndex: 10 - index,
+                opacity: 1 - index * 0.13,
+              }}
+            >
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-white shadow-sm">
+                <Icon className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-bold text-ink">
+                  {badge.label}
+                </span>
+                <span className="block truncate text-[11px] font-semibold text-ink-mute">
+                  {unlocked
+                    ? "Unlocked"
+                    : `${Math.min(badge.current, badge.goal)}/${badge.goal}`}
+                </span>
+              </span>
+            </span>
+          );
+        })}
+        <span className="absolute bottom-3 right-4 text-xs font-bold text-primary">
+          {expanded ? "Collapse" : "Tap to reveal"}
+        </span>
+      </button>
+
+      {expanded ? (
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {badges.map((badge) => (
+            <BadgeCard key={badge.id} badge={badge} />
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

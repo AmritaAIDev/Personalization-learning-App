@@ -1,6 +1,14 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -125,7 +133,7 @@ function DoubtTurn({ doubt }: { doubt: DoubtCard }) {
               className="h-4 w-4 animate-spin text-primary"
               aria-hidden="true"
             />
-            The tutor is preparing a grounded answer.
+            Tutor is thinking.
           </p>
         )}
       </div>
@@ -136,6 +144,13 @@ function DoubtTurn({ doubt }: { doubt: DoubtCard }) {
 export default function DoubtsPage() {
   const searchParams = useSearchParams();
   const routeScope = learningScopeFromSearchParams(searchParams);
+  const scopeSubject = routeScope?.subject ?? "";
+  const scopeChapter = routeScope?.chapter ?? "";
+  const scopeTopic = routeScope?.topic ?? "";
+  const hasRouteScope = Boolean(routeScope);
+  const scopeKey = routeScope
+    ? `${scopeSubject}::${scopeChapter}::${scopeTopic}`
+    : "";
   const [form, setForm] = useState<CreateDoubtPayload>(
     routeScope ? { ...routeScope, message: "" } : emptyForm,
   );
@@ -150,15 +165,16 @@ export default function DoubtsPage() {
   const [pendingDoubtId, setPendingDoubtId] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  async function loadDoubts() {
+  const loadDoubts = useCallback(async () => {
     setError(null);
     const data = await apiFetch<DoubtsResponse>("/api/doubts", {
       memoryCacheTtlMs: 0,
     });
     setDoubts(data);
     return data;
-  }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,8 +184,15 @@ export default function DoubtsPage() {
       try {
         const data = await loadDoubts();
         if (!cancelled && !activeThreadId) {
-          const scoped = routeScope
-            ? data.threads.find((thread) => sameScope(thread, routeScope))
+          const scopedRoute = hasRouteScope
+            ? {
+                subject: scopeSubject,
+                chapter: scopeChapter,
+                topic: scopeTopic,
+              }
+            : null;
+          const scoped = scopedRoute
+            ? data.threads.find((thread) => sameScope(thread, scopedRoute!))
             : data.threads[0];
           setActiveThreadId(scoped?.id ?? null);
         }
@@ -191,8 +214,15 @@ export default function DoubtsPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [
+    activeThreadId,
+    hasRouteScope,
+    loadDoubts,
+    scopeChapter,
+    scopeKey,
+    scopeSubject,
+    scopeTopic,
+  ]);
 
   const workspaceScope = routeScope ?? null;
   const visibleThreads = useMemo(() => {
@@ -242,7 +272,7 @@ export default function DoubtsPage() {
     };
     pollRef.current = window.setTimeout(tick, 1200);
     return stop;
-  }, [pendingDoubtId]);
+  }, [loadDoubts, pendingDoubtId]);
 
   async function createThread() {
     setCreatingThread(true);
@@ -276,6 +306,10 @@ export default function DoubtsPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canSubmit) {
+      messageInputRef.current?.focus();
+      return;
+    }
     setSubmitting(true);
     setError(null);
     setSuccess(null);
@@ -297,7 +331,7 @@ export default function DoubtsPage() {
       });
       setForm((current) => ({ ...current, message: "" }));
       setActiveThreadId(created.threadId ?? activeThreadId);
-      setSuccess("Doubt sent. Tutor is writing.");
+      setSuccess("Sent.");
       setPendingDoubtId(created.id);
       await loadDoubts();
     } catch (caught) {
@@ -309,6 +343,12 @@ export default function DoubtsPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey) return;
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
   }
 
   const canCreateThread =
@@ -338,10 +378,6 @@ export default function DoubtsPage() {
             <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               Topic doubt chats.
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-mute">
-              Create separate doubt chats, keep every message linked to the
-              selected topic, and let the tutor answer in the same thread.
-            </p>
           </div>
           <Link
             href={workspaceScope ? scopeHref("/learn", workspaceScope) : "/learn"}
@@ -396,10 +432,6 @@ export default function DoubtsPage() {
                       <h2 className="mt-3 font-heading text-xl font-semibold text-ink">
                         No messages in this chat yet
                       </h2>
-                      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-mute">
-                        Ask one focused question. The tutor response will stay
-                        inside this chat.
-                      </p>
                     </div>
                   </div>
                 )}
@@ -437,10 +469,11 @@ export default function DoubtsPage() {
                   </div>
                 ) : null}
 
-                <div className="flex items-end gap-2">
+                <div className="flex items-end gap-2 rounded-[1.35rem] border border-hairline bg-canvas p-2 transition focus-within:border-primary/45 focus-within:bg-white focus-within:shadow-[0_10px_28px_rgba(63,111,87,0.08)]">
                   <label className="min-w-0 flex-1">
                     <span className="sr-only">Your doubt</span>
                     <textarea
+                      ref={messageInputRef}
                       value={form.message}
                       onChange={(event) =>
                         setForm((current) => ({
@@ -448,14 +481,16 @@ export default function DoubtsPage() {
                           message: event.target.value,
                         }))
                       }
+                      onKeyDown={handleComposerKeyDown}
                       placeholder="Ask a focused doubt about this topic..."
-                      className="max-h-36 min-h-12 w-full resize-none rounded-2xl border border-hairline bg-canvas p-3 text-sm leading-6 text-ink outline-none transition focus:border-primary/45 focus:bg-white"
+                      disabled={submitting}
+                      className="custom-scrollbar max-h-28 min-h-10 w-full resize-none bg-transparent px-2 py-2 text-[13px] leading-5 text-ink outline-none placeholder:text-ink-mute disabled:cursor-wait disabled:opacity-70"
                     />
                   </label>
                   <button
                     type="submit"
                     disabled={!canSubmit}
-                    className="inline-flex min-h-12 shrink-0 items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-55"
+                    className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(63,111,87,0.18)] transition hover:-translate-y-0.5 hover:bg-primary/90 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55"
                   >
                     {submitting ? (
                       <Loader2

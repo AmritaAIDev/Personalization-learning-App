@@ -76,8 +76,13 @@ export default function TopicPickerDialog({
 
   useEffect(() => {
     if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const timeout = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timeout);
+    return () => {
+      window.clearTimeout(timeout);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [load, open]);
 
   useEffect(() => {
@@ -130,7 +135,7 @@ export default function TopicPickerDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center overflow-hidden bg-ink/35 p-3 backdrop-blur-sm sm:p-8"
+      className="fixed inset-0 z-[80] flex items-center justify-center overflow-hidden bg-ink/45 p-3 backdrop-blur-md sm:p-8"
       role="dialog"
       aria-modal="true"
       aria-label="Find a learning topic"
@@ -141,8 +146,12 @@ export default function TopicPickerDialog({
         onClick={onClose}
         aria-label="Close topic search"
       />
-      <section className="relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] border border-white/70 bg-[radial-gradient(circle_at_top_right,rgba(63,111,87,0.12),transparent_32%),#fff] shadow-[0_28px_90px_rgba(20,20,30,0.22)] sm:max-h-[calc(100dvh-4rem)] sm:rounded-[1.75rem]">
-        <header className="flex items-start justify-between gap-4 border-b border-hairline px-4 py-4 sm:px-7 sm:py-5">
+      <section className="relative z-10 flex h-[min(44rem,calc(100dvh-1.5rem))] w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] border border-white/75 bg-white shadow-[0_28px_90px_rgba(20,20,30,0.28)] sm:h-[min(44rem,calc(100dvh-4rem))] sm:rounded-[1.75rem]">
+        <div
+          className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-primary/10 blur-3xl"
+          aria-hidden="true"
+        />
+        <header className="relative flex shrink-0 items-start justify-between gap-4 border-b border-hairline bg-white/95 px-4 py-4 sm:px-7 sm:py-5">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
               Topic finder
@@ -165,8 +174,8 @@ export default function TopicPickerDialog({
           </button>
         </header>
 
-        <div className="flex min-h-0 flex-1 flex-col p-4 sm:p-7">
-          <label className="relative block">
+        <div className="relative flex min-h-0 flex-1 flex-col bg-white p-4 sm:p-7">
+          <label className="relative block shrink-0">
             <span className="sr-only">Search topics and chapters</span>
             <Search
               className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-primary"
@@ -178,12 +187,12 @@ export default function TopicPickerDialog({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search a topic or chapter"
-              className="h-13 w-full rounded-2xl border border-hairline bg-canvas pl-12 pr-4 text-[15px] font-medium text-ink outline-none transition placeholder:font-normal placeholder:text-ink-mute focus:border-primary/45 focus:bg-white focus:shadow-[0_10px_28px_rgba(63,111,87,0.08)]"
+              className="h-13 w-full rounded-2xl border border-hairline bg-white pl-12 pr-4 text-[15px] font-semibold text-ink shadow-[0_10px_28px_rgba(20,20,30,0.045)] outline-none transition placeholder:font-medium placeholder:text-ink-mute focus:border-primary/55 focus:bg-white focus:shadow-[0_12px_34px_rgba(63,111,87,0.12)]"
             />
           </label>
 
           <div
-            className="mt-5 flex items-center justify-between gap-4"
+            className="mt-5 flex shrink-0 items-center justify-between gap-4"
             aria-live="polite"
           >
             <div>
@@ -201,7 +210,8 @@ export default function TopicPickerDialog({
             ) : null}
           </div>
 
-          <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin]">
+          <div className="mt-4 min-h-0 flex-1 overflow-hidden rounded-[1.25rem] border border-hairline bg-canvas/70 p-2">
+            <div className="h-full overflow-y-auto overscroll-contain pr-1 custom-scrollbar">
             {error ? (
               <div
                 className="flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-3 text-sm text-rose-700"
@@ -245,6 +255,7 @@ export default function TopicPickerDialog({
                 })}
               </div>
             ) : null}
+            </div>
           </div>
         </div>
       </section>

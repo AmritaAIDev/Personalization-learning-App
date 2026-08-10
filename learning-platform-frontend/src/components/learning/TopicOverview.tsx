@@ -161,7 +161,7 @@ export default function TopicOverview({
               {history.slice(0, 4).map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-hairline bg-canvas px-4 py-3"
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-hairline bg-white/70 px-4 py-3 shadow-[0_8px_18px_rgba(20,20,30,0.025)]"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-ink">

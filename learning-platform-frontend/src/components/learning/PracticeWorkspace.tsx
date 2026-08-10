@@ -71,7 +71,7 @@ export default function PracticeWorkspace({
       {!complete ? <RoundProgress payload={payload} onStop={onStop} /> : null}
 
       <div className="grid gap-3 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_minmax(15rem,0.5fr)] xl:items-stretch">
-        <section className="flex min-h-[26rem] flex-col rounded-[1.25rem] border border-hairline bg-surface p-3 shadow-[0_12px_30px_rgba(20,20,30,0.045)] sm:p-4 xl:min-h-0">
+        <section className="flex min-h-[24rem] flex-col rounded-[1.25rem] border border-hairline bg-surface p-3 shadow-[0_12px_30px_rgba(20,20,30,0.045)] sm:p-4 xl:min-h-0">
           {complete ? (
             <RoundOutcome
               payload={payload}
@@ -99,7 +99,7 @@ export default function PracticeWorkspace({
           )}
         </section>
 
-        <div className="min-h-[26rem] xl:min-h-0">
+        <div className="min-h-[24rem] xl:min-h-0 xl:overflow-hidden">
           <StudyAssistant
             key={payload.session.id}
             sessionId={payload.session.id}
@@ -245,8 +245,8 @@ function ActiveQuestion({
         )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-[1.35rem] border border-hairline bg-canvas p-3 sm:p-4">
-        <StudyMarkdown className="font-heading text-lg font-bold leading-7 text-ink sm:text-xl sm:leading-8">
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-[1.35rem] border border-hairline bg-canvas p-3 sm:p-4 custom-scrollbar">
+        <StudyMarkdown className="font-heading text-[1rem] font-bold leading-6 text-ink sm:text-[1.08rem] sm:leading-7">
           {current.questionText}
         </StudyMarkdown>
         <div
@@ -265,7 +265,7 @@ function ActiveQuestion({
                 aria-checked={pendingOption === option}
                 disabled={answering || ruledOut}
                 onClick={() => select(option)}
-                className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition ${
+                className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left text-[13px] font-medium transition ${
                   ruledOut
                     ? "border-rose-200 bg-rose-50 text-rose-700 line-through opacity-75"
                     : pendingOption === option
@@ -283,7 +283,7 @@ function ActiveQuestion({
                 >
                   {index + 1}
                 </span>
-                <StudyMarkdown className="flex-1 min-w-0 text-sm font-medium">
+                <StudyMarkdown className="min-w-0 flex-1 text-[13px] font-medium leading-5">
                   {option}
                 </StudyMarkdown>
                 {ruledOut ? (
@@ -308,7 +308,7 @@ function ActiveQuestion({
 
       <div className="mt-3 space-y-2" aria-live="polite">
         {answering ? (
-          <p className="flex items-center gap-2 rounded-xl bg-primary-tint px-3 py-2.5 text-sm font-semibold text-primary-strong">
+          <p className="flex items-center gap-2 rounded-xl bg-primary-tint px-3 py-2 text-[13px] font-semibold text-primary-strong">
             <LoaderCircle
               className="h-4 w-4 animate-spin text-primary"
               aria-hidden="true"

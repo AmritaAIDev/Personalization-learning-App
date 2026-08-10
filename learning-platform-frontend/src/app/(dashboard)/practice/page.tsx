@@ -26,10 +26,6 @@ export default function PracticePage() {
               <h1 className="mt-3 font-heading text-2xl font-bold tracking-tight text-ink sm:text-3xl">
                 Start a practice set.
               </h1>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-ink-soft">
-                Search a topic and begin a timed set from the verified question
-                bank.
-              </p>
             </div>
 
             <div className="rounded-[1.5rem] border border-hairline bg-canvas p-4 sm:p-5">
@@ -37,9 +33,6 @@ export default function PracticePage() {
                 <div>
                   <p className="text-sm font-semibold text-ink">
                     Find a topic
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-ink-mute">
-                    Live counts from the question bank.
                   </p>
                 </div>
                 <Search className="h-5 w-5 text-primary" aria-hidden="true" />
@@ -62,10 +55,6 @@ export default function PracticePage() {
                 <h2 className="mt-2 font-heading text-2xl font-semibold">
                   No answer keys before submission.
                 </h2>
-                <p className="mt-3 text-sm leading-6 text-white/70">
-                  Answers autosave. Your score, solutions, and weak concepts
-                  appear once you submit.
-                </p>
               </div>
             </div>
           </article>
@@ -77,10 +66,6 @@ export default function PracticePage() {
             <h2 className="mt-2 font-heading text-2xl font-semibold text-ink">
               Use Learn for adaptive tutoring.
             </h2>
-            <p className="mt-3 text-sm leading-6 text-ink-soft">
-              Practice measures; Learn teaches. Want hints and explanations?
-              Open the topic workspace.
-            </p>
             <Link
               href="/learn"
               className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-strong"

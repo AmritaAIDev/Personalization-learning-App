@@ -71,9 +71,6 @@ export default function DashboardPage() {
             <h1 className="mt-2 font-heading text-[2rem] font-semibold leading-[1.08] tracking-tight text-ink sm:text-[2.6rem]">
               {firstName}&apos;s study plan
             </h1>
-            <p className="mt-2 text-sm leading-6 text-ink-mute">
-              One clear next step, then the work that supports it.
-            </p>
           </div>
           <div className="animate-rise w-full [animation-delay:70ms] lg:max-w-md lg:justify-self-end">
             <TopicSearch compact />

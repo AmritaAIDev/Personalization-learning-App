@@ -2,6 +2,18 @@
 
 This document is the practical product logic reference. It explains what the platform stores, what each tab shows, what updates learner state, and how one area affects another.
 
+## Product inspiration map
+
+The platform is not copied from any one product. These references only influenced a few useful product decisions that fit our own JEE AI workflow.
+
+| Reference platform | What we learned from it | How it appears in JEE AI |
+| --- | --- | --- |
+| Embibe | Improvement-led preparation works better when the app shows weak areas, practice evidence, and test analysis instead of only a raw score. | Dashboard signals, review queue, weak-topic repair, and topic-level progress are treated as the main student guidance layer. |
+| Khan Academy | Mastery learning becomes understandable when progress is broken into skills/topics and learners always know what to practice next. | Topic state, mastery percentage, course coverage, and the "next best action" card are designed around skill-level progress. |
+| Vedantu | Doubt solving is valuable when it stays close to the learner's current chapter/topic instead of becoming a disconnected support form. | Doubts inherit the selected workspace subject, chapter, and topic, so the Q&A thread stays linked to the active learning context. |
+| Toppr-style practice flows | Practice and tests should quickly move students from question attempts to review, explanation, and retry. | Practice, Tests, Notebook, and Learn are connected through the same topic workspace so mistakes can become repair cards and next actions. |
+| Modern productivity dashboards | A dashboard should reduce decisions, not add noise. | The dashboard starts with one next step, then shows compact action rail, signals, coverage, review, and recent learning evidence. |
+
 ## UI reference screenshots
 
 These screenshots are captured from the live local app using the demo learner account. They are included as visual references for the exact components described in this working document.

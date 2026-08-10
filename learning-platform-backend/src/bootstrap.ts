@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import type { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import {
@@ -15,8 +16,13 @@ type CreateNestAppOptions = {
 
 export async function createNestApp(options: CreateNestAppOptions = {}) {
   const app = await NestFactory.create(AppModule);
-  const allowedOrigins = configuredAllowedOrigins(process.env.FRONTEND_ORIGIN);
+  const allowedOrigins = configuredAllowedOrigins(
+    process.env.FRONTEND_ORIGIN,
+    process.env.FRONTEND_URL,
+    process.env.CORS_ORIGINS,
+  );
 
+  app.use(createPreflightCorsMiddleware(allowedOrigins));
   app.use(
     helmet({
       // Swagger UI ships inline scripts/styles; allow them while keeping the
@@ -78,6 +84,39 @@ export async function createNestApp(options: CreateNestAppOptions = {}) {
     app.enableShutdownHooks();
   }
   return app;
+}
+
+function createPreflightCorsMiddleware(allowedOrigins: string[]) {
+  return (request: Request, response: Response, next: NextFunction) => {
+    const origin = request.headers.origin;
+    if (isAllowedOrigin(origin, allowedOrigins) && origin) {
+      response.header('Access-Control-Allow-Origin', origin);
+      response.header('Access-Control-Allow-Credentials', 'true');
+      response.header(
+        'Access-Control-Allow-Methods',
+        'GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS',
+      );
+      response.header(
+        'Access-Control-Allow-Headers',
+        requestedHeaders(request) ?? 'Content-Type, Accept',
+      );
+      response.header('Access-Control-Max-Age', '86400');
+      response.vary('Origin');
+      response.vary('Access-Control-Request-Headers');
+    }
+
+    if (request.method === 'OPTIONS') {
+      response.status(204).send();
+      return;
+    }
+
+    next();
+  };
+}
+
+function requestedHeaders(request: Request): string | undefined {
+  const header = request.headers['access-control-request-headers'];
+  return Array.isArray(header) ? header.join(', ') : header;
 }
 
 function isAllowedOrigin(

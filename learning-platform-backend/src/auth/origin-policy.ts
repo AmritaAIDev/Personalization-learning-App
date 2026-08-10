@@ -8,11 +8,16 @@ export const DEFAULT_FRONTEND_ORIGINS = [
  * deployments are never accepted by hostname pattern: add one to
  * FRONTEND_ORIGIN deliberately when it needs access to production sessions.
  */
-export function configuredAllowedOrigins(value?: string): string[] {
-  return (value ?? DEFAULT_FRONTEND_ORIGINS.join(','))
+export function configuredAllowedOrigins(
+  ...values: Array<string | undefined>
+): string[] {
+  const configuredValue = values.find((value) => value?.trim());
+  const origins = (configuredValue ?? DEFAULT_FRONTEND_ORIGINS.join(','))
     .split(',')
     .map((origin) => origin.trim().replace(/\/$/, ''))
     .filter(Boolean);
+
+  return Array.from(new Set(origins));
 }
 
 export function isAllowedBrowserOrigin(

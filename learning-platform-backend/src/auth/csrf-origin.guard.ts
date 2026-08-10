@@ -30,6 +30,8 @@ export class CsrfOriginGuard implements CanActivate {
     const origin = request.get('origin');
     const allowedOrigins = configuredAllowedOrigins(
       this.configService.get<string>('FRONTEND_ORIGIN'),
+      this.configService.get<string>('FRONTEND_URL'),
+      this.configService.get<string>('CORS_ORIGINS'),
     );
 
     if (!isAllowedOrigin(origin, allowedOrigins)) {

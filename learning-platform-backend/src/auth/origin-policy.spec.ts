@@ -23,6 +23,16 @@ describe('origin policy', () => {
     ).toBe(false);
   });
 
+  it('uses the first configured allowlist and removes duplicates', () => {
+    expect(
+      configuredAllowedOrigins(
+        undefined,
+        'https://app.example.test, https://app.example.test/',
+        'https://ignored.example.test',
+      ),
+    ).toEqual(['https://app.example.test']);
+  });
+
   it('rejects requests that omit an origin in browser-origin checks', () => {
     expect(isAllowedBrowserOrigin(undefined, configuredAllowedOrigins())).toBe(
       false,

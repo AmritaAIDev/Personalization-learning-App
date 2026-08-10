@@ -9,7 +9,11 @@ describe('origin policy', () => {
       configuredAllowedOrigins(
         ' https://app.example.test/ , http://localhost:3000 ',
       ),
-    ).toEqual(['https://app.example.test', 'http://localhost:3000']);
+    ).toEqual([
+      'http://localhost:3000',
+      'https://personalization-learning-app.vercel.app',
+      'https://app.example.test',
+    ]);
   });
 
   it('accepts only an exact configured browser origin', () => {
@@ -23,14 +27,19 @@ describe('origin policy', () => {
     ).toBe(false);
   });
 
-  it('uses the first configured allowlist and removes duplicates', () => {
+  it('keeps default origins while adding configured allowlists', () => {
     expect(
       configuredAllowedOrigins(
         undefined,
         'https://app.example.test, https://app.example.test/',
         'https://ignored.example.test',
       ),
-    ).toEqual(['https://app.example.test']);
+    ).toEqual([
+      'http://localhost:3000',
+      'https://personalization-learning-app.vercel.app',
+      'https://app.example.test',
+      'https://ignored.example.test',
+    ]);
   });
 
   it('rejects requests that omit an origin in browser-origin checks', () => {

@@ -11,8 +11,9 @@ export const DEFAULT_FRONTEND_ORIGINS = [
 export function configuredAllowedOrigins(
   ...values: Array<string | undefined>
 ): string[] {
-  const configuredValue = values.find((value) => value?.trim());
-  const origins = (configuredValue ?? DEFAULT_FRONTEND_ORIGINS.join(','))
+  const configuredValues = values.filter((value) => value?.trim());
+  const origins = [...DEFAULT_FRONTEND_ORIGINS, ...configuredValues]
+    .join(',')
     .split(',')
     .map((origin) => origin.trim().replace(/\/$/, ''))
     .filter(Boolean);

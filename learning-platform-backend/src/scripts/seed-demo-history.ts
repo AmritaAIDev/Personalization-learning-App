@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import * as bcrypt from 'bcryptjs';
 import { Repository } from 'typeorm';
 import { AppModule } from '../app.module';
 import {
@@ -33,8 +34,10 @@ import { User } from '../users/user.entity';
 const PHYSICS = 'Physics';
 const CHARGES = 'Electric Charges and Fields';
 const POTENTIAL = 'Electrostatic Potential and Capacitance';
-const DEMO_EMAIL =
-  process.env.DEMO_USER_EMAIL ?? 'lokeshyarramalluyarramalluloke@gmail.com';
+const DEMO_EMAIL = process.env.DEMO_USER_EMAIL ?? 'demo.student@jeeai.local';
+const DEMO_PASSWORD = process.env.DEMO_USER_PASSWORD ?? 'Demo@12345';
+const DEMO_NAME = process.env.DEMO_USER_NAME ?? 'Demo Student';
+const SHOULD_RESET_DEMO_PASSWORD = process.env.RESET_DEMO_PASSWORD !== 'false';
 
 type Scope = {
   subject: string;
@@ -282,14 +285,7 @@ async function main() {
     );
     const doubts = app.get<Repository<Doubt>>(getRepositoryToken(Doubt));
 
-    const user =
-      (await users.findOne({ where: { email: DEMO_EMAIL } })) ??
-      (await users.findOne({ order: { createdAt: 'DESC' } }));
-    if (!user) {
-      throw new Error(
-        'No user found. Create/sign up an account first, then rerun the seed.',
-      );
-    }
+    const user = await ensureDemoUser(users);
 
     const seededQuestions = await seedQuestions(questions);
     await seedLearningStates(states, sessions, user.id);
@@ -313,6 +309,33 @@ async function main() {
   } finally {
     await app.close();
   }
+}
+
+async function ensureDemoUser(users: Repository<User>): Promise<User> {
+  const email = DEMO_EMAIL.trim().toLowerCase();
+  let user = await users.findOne({ where: { email } });
+
+  if (!user) {
+    user = users.create({
+      name: DEMO_NAME,
+      email,
+      passwordHash: await bcrypt.hash(DEMO_PASSWORD, 12),
+      role: 'student',
+      xp: 0,
+      level: 1,
+      streak: 0,
+    });
+  } else if (SHOULD_RESET_DEMO_PASSWORD) {
+    user.passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
+  }
+
+  user.name = user.name || DEMO_NAME;
+  user.role = 'student';
+  user.xp = Math.max(user.xp, 820);
+  user.level = Math.max(user.level, 4);
+  user.streak = Math.max(user.streak, 5);
+
+  return users.save(user);
 }
 
 async function seedQuestions(

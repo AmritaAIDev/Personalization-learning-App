@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CircleAlert } from "lucide-react";
 import StudentActionCenter from "@/components/dashboard/StudentActionCenter";
 import TopicSearch from "@/components/search/TopicSearch";
-import { apiFetch } from "@/lib/api";
+import { LEARNING_DATA_UPDATED_EVENT, apiFetch } from "@/lib/api";
 import type { StudentDashboardPayload } from "@/lib/student-dashboard-types";
 
 function DashboardSkeleton() {
@@ -46,6 +46,16 @@ export default function DashboardPage() {
   useEffect(() => {
     const timeout = window.setTimeout(() => void loadDashboard(), 0);
     return () => window.clearTimeout(timeout);
+  }, [loadDashboard]);
+
+  useEffect(() => {
+    const refreshDashboard = () => void loadDashboard();
+    window.addEventListener(LEARNING_DATA_UPDATED_EVENT, refreshDashboard);
+    return () =>
+      window.removeEventListener(
+        LEARNING_DATA_UPDATED_EVENT,
+        refreshDashboard,
+      );
   }, [loadDashboard]);
 
   const firstName = data?.student.name.split(" ")[0] || "learner";

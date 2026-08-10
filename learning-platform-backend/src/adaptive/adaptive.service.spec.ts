@@ -756,6 +756,12 @@ describe('AdaptiveService row-level answer mutations', () => {
       save: jest.fn(async (value: LearningAnswer) => value),
     };
     const increment = jest.fn(async () => ({ affected: 1 }));
+    const levelSyncQuery = {
+      update: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      execute: jest.fn(async () => ({ affected: 1 })),
+    };
     const manager = {
       getRepository: jest.fn((entity: unknown) => {
         if (entity === LearningSession) return sessionsRepository;
@@ -765,6 +771,7 @@ describe('AdaptiveService row-level answer mutations', () => {
         throw new Error('Unexpected repository request.');
       }),
       increment,
+      createQueryBuilder: jest.fn(() => levelSyncQuery),
     };
     const contentService = {
       toQuestionReference: jest.fn(() => ({
@@ -814,6 +821,7 @@ describe('AdaptiveService row-level answer mutations', () => {
       sessionsRepository,
       itemsRepository,
       increment,
+      levelSyncQuery,
     };
   }
 
@@ -893,6 +901,11 @@ describe('AdaptiveService row-level answer mutations', () => {
       { id: 'user-id' },
       'xp',
       10,
+    );
+    expect(harness.levelSyncQuery.update).toHaveBeenCalledWith(User);
+    expect(harness.levelSyncQuery.where).toHaveBeenCalledWith(
+      'id = :userId',
+      { userId: 'user-id' },
     );
   });
 });

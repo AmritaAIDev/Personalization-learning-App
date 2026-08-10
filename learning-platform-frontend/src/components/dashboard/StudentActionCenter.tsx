@@ -4,12 +4,15 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import {
   ArrowRight,
+  Award,
   BookOpenCheck,
   CircleCheck,
   ClipboardCheck,
   Flame,
   GraduationCap,
   Search,
+  Target,
+  TrendingUp,
 } from "lucide-react";
 import { learningUrl } from "@/lib/learning";
 import { Stagger, StaggerItem } from "@/components/motion/MotionPrimitives";
@@ -47,6 +50,23 @@ function actionIcon(kind: StudentDashboardAction["kind"]) {
   return <GraduationCap className="h-4 w-4" />;
 }
 
+function actionLabel(kind: StudentDashboardAction["kind"]) {
+  if (kind === "RESUME_DIAGNOSTIC") return "baseline";
+  if (kind === "REVIEW_MISTAKES") return "repair";
+  if (kind === "FIND_TOPIC") return "discover";
+  return "learn";
+}
+
+function actionTone(kind: StudentDashboardAction["kind"]) {
+  if (kind === "REVIEW_MISTAKES")
+    return "bg-orange-50 text-orange-700 ring-1 ring-orange-100";
+  if (kind === "RESUME_DIAGNOSTIC")
+    return "bg-blue-50 text-blue-700 ring-1 ring-blue-100";
+  if (kind === "FIND_TOPIC")
+    return "bg-primary-tint text-primary ring-1 ring-primary/10";
+  return "bg-emerald-50 text-primary ring-1 ring-primary/10";
+}
+
 function momentumPoints(timeline: GrowthPoint[]): string {
   const points = timeline.slice(-8);
   if (points.length < 2) return "";
@@ -66,19 +86,38 @@ export default function StudentActionCenter({
 }: {
   data: StudentDashboardPayload;
 }) {
+  const xpIntoLevel = data.student.xp % 250;
+  const xpProgress = Math.round((xpIntoLevel / 250) * 100);
+  const xpToNextLevel = xpIntoLevel === 0 ? 250 : 250 - xpIntoLevel;
+  const momentumHealth = Math.round(
+    Math.min(Math.max(50 + data.growth.overall.momentum / 2, 0), 100),
+  );
+
   return (
     <Stagger className="mt-8" aria-label="Student learning desk">
-      <StaggerItem className="grid grid-cols-1 gap-5 overflow-hidden rounded-[1.75rem] bg-ink p-5 text-white shadow-[0_18px_42px_rgba(20,20,30,0.15)] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center sm:p-6">
+      <StaggerItem className="grid grid-cols-1 gap-5 overflow-hidden rounded-[1.75rem] bg-[radial-gradient(circle_at_top_right,rgba(63,111,87,0.32),transparent_34%),linear-gradient(135deg,#17171d,#222228)] p-5 text-white shadow-[0_18px_42px_rgba(20,20,30,0.15)] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center sm:p-6">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-tint/80">
-            Your next step
+          <p className="inline-flex rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary-tint/90 ring-1 ring-white/10">
+            Next best action
           </p>
-          <h2 className="mt-1 truncate font-heading text-2xl font-bold tracking-tight text-white">
+          <h2 className="mt-3 truncate font-heading text-2xl font-bold tracking-tight text-white">
             {data.today.primary.title}
           </h2>
           <p className="mt-1 truncate text-sm text-white/65">
             {data.today.primary.detail}
           </p>
+          <div className="mt-4 max-w-md">
+            <div className="flex items-center justify-between gap-3 text-[11px] font-semibold text-white/60">
+              <span>Level {data.student.level} progress</span>
+              <span>{xpToNextLevel} XP to next level</span>
+            </div>
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/12">
+              <span
+                className="block h-full rounded-full bg-primary-tint transition-[width] duration-700 ease-out-soft"
+                style={{ width: `${xpProgress}%` }}
+              />
+            </div>
+          </div>
         </div>
         <dl className="flex items-center gap-5 border-y border-white/10 py-3 lg:border-x lg:border-y-0 lg:px-5 lg:py-0">
           <DeskStat
@@ -99,18 +138,27 @@ export default function StudentActionCenter({
             icon={<CircleCheck className="h-3.5 w-3.5" />}
             inverse
           />
+          <DeskStat
+            label="XP"
+            value={`${data.student.xp}`}
+            icon={<Award className="h-3.5 w-3.5" />}
+            inverse
+          />
         </dl>
         <Link
           href={actionHref(data.today.primary)}
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:bg-primary-tint"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-ink transition hover:-translate-y-0.5 hover:bg-primary-tint"
         >
           Open task
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       </StaggerItem>
 
-      <StaggerItem className="mt-7 grid grid-cols-1 gap-7 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <section aria-labelledby="plan-heading">
+      <StaggerItem className="mt-7 grid grid-cols-1 gap-7 xl:grid-cols-[minmax(0,0.92fr)_minmax(19rem,0.42fr)]">
+        <section
+          aria-labelledby="plan-heading"
+          className="rounded-[1.5rem] border border-hairline bg-surface p-5 shadow-[0_10px_28px_rgba(20,20,30,0.035)]"
+        >
           <div className="flex items-end justify-between border-b border-hairline pb-3">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
@@ -120,7 +168,7 @@ export default function StudentActionCenter({
                 id="plan-heading"
                 className="mt-1 font-heading text-2xl font-bold tracking-tight text-ink"
               >
-                Study queue
+                Action rail
               </h2>
             </div>
             <span className="text-xs font-medium text-ink-mute">
@@ -132,17 +180,22 @@ export default function StudentActionCenter({
               <li key={action.id}>
                 <Link
                   href={actionHref(action)}
-                  className="group flex items-center gap-4 rounded-xl px-3 py-4 transition-colors duration-300 ease-out-soft hover:bg-canvas active:scale-[0.995]"
+                  className="group flex items-center gap-4 rounded-xl px-3 py-4 transition duration-300 ease-out-soft hover:-translate-y-0.5 hover:bg-canvas active:scale-[0.995]"
                 >
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-hairline text-xs font-semibold text-ink-soft transition duration-300 group-hover:border-primary/30 group-hover:bg-white group-hover:text-primary">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-ink">
+                    <span className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-bold text-ink">
                       <span className="shrink-0 text-primary">
                         {actionIcon(action.kind)}
                       </span>
                       <span className="truncate">{action.title}</span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] ${actionTone(action.kind)}`}
+                      >
+                        {actionLabel(action.kind)}
+                      </span>
                     </span>
                     <span className="mt-1 block truncate text-xs text-ink-mute">
                       {action.detail}
@@ -156,37 +209,56 @@ export default function StudentActionCenter({
         </section>
 
         <aside
-          className="border-t border-hairline pt-5 xl:border-l xl:border-t-0 xl:pl-7 xl:pt-0"
+          className="rounded-[1.5rem] border border-hairline bg-surface p-5 shadow-[0_12px_30px_rgba(20,20,30,0.04)]"
           aria-label="Learning signals"
         >
-          <h2 className="font-heading text-xl font-bold tracking-tight text-ink">
-            Signals
-          </h2>
-          <div className="mt-4 flex items-start gap-5">
-            <ProgressRing
-              value={data.growth.overall.score}
+          <div>
+            <h2 className="font-heading text-xl font-bold tracking-tight text-ink">
+              Signals
+            </h2>
+            <p className="mt-1 text-xs leading-5 text-ink-mute">
+              Three live indicators from your learning evidence.
+            </p>
+          </div>
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            <SignalCircle
+              icon={<GraduationCap className="h-3.5 w-3.5" />}
               label="Mastery"
-              detail={data.growth.overall.band}
+              value={data.growth.overall.score}
+              center={`${data.growth.overall.score}%`}
+              detail={`${data.growth.overall.band}. Based on completed topic checkpoints.`}
+            />
+            <SignalCircle
+              icon={<TrendingUp className="h-3.5 w-3.5" />}
+              label="Momentum"
+              value={momentumHealth}
+              center={`${data.growth.overall.momentum > 0 ? "+" : ""}${data.growth.overall.momentum}`}
+              detail="Direction of recent mastery movement across completed checkpoints."
+            />
+            <SignalCircle
+              icon={<Target className="h-3.5 w-3.5" />}
+              label="Coverage"
+              value={data.courseProgress.percent}
+              center={`${data.courseProgress.percent}%`}
+              detail={`${data.courseProgress.masteredTopics} mastered out of ${data.courseProgress.trackedTopics} tracked topics.`}
             />
           </div>
-          <div className="mt-5 border-t border-hairline pt-4">
+          <div className="mt-4 rounded-2xl bg-canvas px-3 py-2 text-xs text-ink-soft">
+            <Link
+              href="/notebook"
+              className="flex items-center justify-between gap-3 font-semibold transition hover:text-primary"
+            >
+              <span>{data.revision.dueCount} review cards due</span>
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          </div>
+          <div className="mt-4 border-t border-hairline pt-4">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-semibold text-ink">Momentum</span>
-              <span className="text-xs font-medium text-ink-mute">
-                {data.growth.overall.momentum > 0 ? "+" : ""}
-                {data.growth.overall.momentum} pts
+              <span className="text-xs font-semibold text-ink">
+                Momentum curve
               </span>
             </div>
             <MomentumGraph timeline={data.growth.timeline} />
-          </div>
-          <div className="mt-4 flex items-center justify-between border-t border-hairline pt-4 text-xs">
-            <span className="text-ink-mute">Revision due</span>
-            <Link
-              href="/notebook"
-              className="font-semibold text-orange-600 transition hover:text-primary"
-            >
-              {data.revision.dueCount} to repair
-            </Link>
           </div>
         </aside>
       </StaggerItem>
@@ -195,13 +267,19 @@ export default function StudentActionCenter({
         <SubjectCoverageExplorer subjects={data.subjectCoverage} />
       </StaggerItem>
 
-      <StaggerItem className="mt-7 grid grid-cols-1 gap-8 border-t border-hairline pt-7 xl:grid-cols-[0.88fr_1.12fr]">
-        <section aria-labelledby="revision-heading">
+      <StaggerItem className="mt-7 grid grid-cols-1 gap-5 xl:grid-cols-[0.88fr_1.12fr]">
+        <section
+          aria-labelledby="revision-heading"
+          className="rounded-[1.5rem] border border-orange-100 bg-[linear-gradient(135deg,#fff,#fff8f1)] p-5"
+        >
           <div className="flex items-center justify-between gap-3">
             <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-orange-600">
+                Repair
+              </p>
               <h2
                 id="revision-heading"
-                className="font-heading text-xl font-bold tracking-tight text-ink"
+                className="mt-1 font-heading text-xl font-bold tracking-tight text-ink"
               >
                 Review queue
               </h2>
@@ -219,8 +297,11 @@ export default function StudentActionCenter({
                 <Link
                   key={`${topic.subject}-${topic.chapter}-${topic.topic}`}
                   href="/notebook"
-                  className="group flex items-center gap-3 border-l-2 border-orange-400 py-1 pl-3 transition-[border-color,padding] duration-300 ease-out-soft hover:border-primary hover:pl-4"
+                  className="group flex items-center gap-3 rounded-2xl bg-white/80 p-3 ring-1 ring-orange-100 transition duration-300 ease-out-soft hover:-translate-y-0.5 hover:ring-primary/25"
                 >
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-orange-100 text-orange-700">
+                    <BookOpenCheck className="h-4 w-4" aria-hidden="true" />
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-ink">
                       {topic.topic}
@@ -241,13 +322,21 @@ export default function StudentActionCenter({
           )}
         </section>
 
-        <section aria-labelledby="activity-heading">
-          <h2
-            id="activity-heading"
-            className="font-heading text-xl font-bold tracking-tight text-ink"
-          >
-            Recent learning
-          </h2>
+        <section
+          aria-labelledby="activity-heading"
+          className="rounded-[1.5rem] border border-hairline bg-white p-5"
+        >
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+              Evidence
+            </p>
+            <h2
+              id="activity-heading"
+              className="mt-1 font-heading text-xl font-bold tracking-tight text-ink"
+            >
+              Recent learning
+            </h2>
+          </div>
           {data.activity.length > 0 ? (
             <ol className="mt-5 space-y-0 border-l border-hairline pl-5">
               {data.activity.map((item) => (
@@ -258,7 +347,7 @@ export default function StudentActionCenter({
                   <span className="absolute -left-[1.65rem] top-4 h-2.5 w-2.5 rounded-full border-2 border-white bg-primary first:top-0" />
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-ink">
+                      <p className="truncate text-sm font-bold text-ink">
                         {item.title}
                       </p>
                       <p className="mt-1 truncate text-xs text-ink-mute">
@@ -488,26 +577,30 @@ function DeskStat({
   );
 }
 
-function ProgressRing({
-  value,
+function SignalCircle({
+  icon,
   label,
+  center,
+  value,
   detail,
-  tone = "primary",
 }: {
-  value: number;
+  icon: ReactNode;
   label: string;
+  center: string;
+  value: number;
   detail: string;
-  tone?: "primary" | "soft";
 }) {
   const safeValue = Math.min(Math.max(value, 0), 100);
   const circumference = 226.2;
-  const color = tone === "soft" ? "#99b6a4" : "#3f6f57";
   return (
-    <div className="group text-center">
+    <div
+      className="group relative rounded-2xl border border-hairline bg-canvas px-2 py-3 text-center transition duration-300 ease-out-soft hover:-translate-y-1 hover:border-primary/25 hover:bg-white hover:shadow-[0_12px_28px_rgba(20,20,30,0.07)] focus-within:-translate-y-1"
+      title={detail}
+    >
       <div
-        className="relative h-20 w-20 transition-transform duration-300 group-hover:-translate-y-1"
+        className="relative mx-auto h-[4.7rem] w-[4.7rem]"
         role="img"
-        aria-label={`${label}: ${safeValue}%`}
+        aria-label={`${label}: ${center}`}
       >
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
           <circle
@@ -523,7 +616,7 @@ function ProgressRing({
             cy="50"
             r="36"
             fill="none"
-            stroke={color}
+            stroke="#3f6f57"
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={circumference}
@@ -531,12 +624,17 @@ function ProgressRing({
             className="transition-[stroke-dashoffset] duration-700 ease-out-soft"
           />
         </svg>
-        <span className="absolute inset-0 grid place-items-center text-sm font-semibold text-ink">
-          {safeValue}%
+        <span className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-primary">{icon}</span>
+          <span className="mt-0.5 font-heading text-[15px] font-bold leading-none text-ink">
+            {center}
+          </span>
         </span>
       </div>
-      <p className="mt-2 text-xs font-semibold text-ink">{label}</p>
-      <p className="mt-0.5 max-w-20 text-[10px] leading-4 text-ink-mute">
+      <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.12em] text-ink">
+        {label}
+      </p>
+      <p className="mx-auto mt-1 max-h-0 max-w-[8.5rem] overflow-hidden text-[10px] leading-4 text-ink-mute opacity-0 transition-all duration-300 group-hover:max-h-16 group-hover:opacity-100 group-focus-within:max-h-16 group-focus-within:opacity-100">
         {detail}
       </p>
     </div>

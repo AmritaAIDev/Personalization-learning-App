@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import { levelForXp } from './user-progress';
 import { UsersService } from './users.service';
 
 @ApiTags('Users')
@@ -20,7 +21,7 @@ export class UsersController {
           email: currentUser.email,
           role: currentUser.role,
           xp: currentUser.xp,
-          level: currentUser.level,
+          level: levelForXp(currentUser.xp),
           streak: currentUser.streak,
         },
       },

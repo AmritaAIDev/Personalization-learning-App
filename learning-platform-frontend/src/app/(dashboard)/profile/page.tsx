@@ -16,7 +16,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { LEARNING_DATA_UPDATED_EVENT, apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Stagger, StaggerItem, Pressable } from "@/components/motion/MotionPrimitives";
 import CountUp from "@/components/motion/CountUp";
@@ -138,6 +138,7 @@ function buildProfileModel(
   const streak = data?.student.streak ?? user?.streak ?? 0;
   const overall = data?.growth.overall;
   const accuracy = overall?.breakdown.accuracy ?? 0;
+  const accuracyPercent = Math.round(accuracy * 100);
   const answered = overall?.answered ?? 0;
   const mastered = overall?.mastered ?? data?.courseProgress.masteredTopics ?? 0;
   const momentum = overall?.momentum ?? 0;
@@ -151,7 +152,7 @@ function buildProfileModel(
     answered,
     streak,
     mastered,
-    accuracy,
+    accuracy: accuracyPercent,
     diagnostics: history.length,
     momentum,
   });
@@ -159,7 +160,7 @@ function buildProfileModel(
     level,
     xp,
     streak,
-    accuracy,
+    accuracy: accuracyPercent,
     answered,
     mastered,
     momentum,
@@ -170,6 +171,7 @@ function buildProfileModel(
     tier: tierFor(level),
     heatmap: buildHeatmap(data?.activity ?? []),
     breakdown: overall?.breakdown,
+    taxonomy: buildTaxonomyProfile(data?.growth.topics ?? []),
     subjects: data?.subjectCoverage ?? [],
     strongest: strongestSkill(overall?.breakdown),
     unlocked: badges.filter((b) => b.current >= b.goal).length,
@@ -177,6 +179,23 @@ function buildProfileModel(
 }
 
 type ProfileModel = ReturnType<typeof buildProfileModel>;
+
+function buildTaxonomyProfile(
+  topics: StudentDashboardPayload["growth"]["topics"],
+) {
+  const labels = ["Recall", "Comprehension", "Application", "Higher-Order"];
+  return labels.map((label) => {
+    const matching = topics.filter((topic) => topic.bloomLevel === label);
+    const value =
+      matching.length === 0
+        ? 0
+        : Math.round(
+            matching.reduce((sum, topic) => sum + topic.score, 0) /
+              matching.length,
+          );
+    return { label, value, count: matching.length };
+  });
+}
 
 /* ---------------------------------- page ----------------------------------- */
 
@@ -207,6 +226,13 @@ export default function ProfilePage() {
   useEffect(() => {
     const timeout = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timeout);
+  }, [load]);
+
+  useEffect(() => {
+    const refreshProfile = () => void load();
+    window.addEventListener(LEARNING_DATA_UPDATED_EVENT, refreshProfile);
+    return () =>
+      window.removeEventListener(LEARNING_DATA_UPDATED_EVENT, refreshProfile);
   }, [load]);
 
   const clearHistory = async () => {
@@ -320,26 +346,6 @@ export default function ProfilePage() {
         </StaggerItem>
       </Stagger>
 
-      {/* Achievements */}
-      <section className="mt-5 rounded-[1.5rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:p-6">
-        <div className="flex items-end justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary-tint text-primary">
-              <Trophy className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div>
-              <h2 className="font-heading text-lg font-bold text-ink">Achievements</h2>
-              <p className="text-xs text-ink-mute">{model.unlocked} of {model.badges.length} unlocked</p>
-            </div>
-          </div>
-        </div>
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {model.badges.map((badge) => (
-            <BadgeCard key={badge.id} badge={badge} />
-          ))}
-        </div>
-      </section>
-
       {/* Competency + subjects */}
       <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
         {model.breakdown ? (
@@ -350,6 +356,18 @@ export default function ProfilePage() {
           </section>
         ) : null}
 
+        <section className="rounded-[1.5rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:p-6">
+          <h2 className="font-heading text-lg font-bold text-ink">
+            Bloom taxonomy web
+          </h2>
+          <p className="text-xs text-ink-mute">
+            Score distribution across the four adaptive stages
+          </p>
+          <TaxonomyWeb items={model.taxonomy} />
+        </section>
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[0.82fr_1.18fr]">
         <section className="rounded-[1.5rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:p-6">
           <h2 className="font-heading text-lg font-bold text-ink">Subject mastery</h2>
           <p className="text-xs text-ink-mute">Topics mastered across your courses</p>
@@ -377,6 +395,29 @@ export default function ProfilePage() {
                 </div>
               ))
             )}
+          </div>
+        </section>
+
+        <section className="rounded-[1.5rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:p-6">
+          <div className="flex items-end justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary-tint text-primary">
+                <Trophy className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="font-heading text-lg font-bold text-ink">
+                  Milestones
+                </h2>
+                <p className="text-xs text-ink-mute">
+                  {model.unlocked} of {model.badges.length} unlocked
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {model.badges.slice(0, 6).map((badge) => (
+              <BadgeCard key={badge.id} badge={badge} />
+            ))}
           </div>
         </section>
       </div>
@@ -562,11 +603,11 @@ function Radar({
   breakdown: StudentDashboardPayload["growth"]["overall"]["breakdown"];
 }) {
   const axes: Array<[string, number]> = [
-    ["Accuracy", breakdown.accuracy],
-    ["Rigour", breakdown.difficulty],
-    ["Depth", breakdown.bloom],
-    ["Speed", breakdown.speed],
-    ["Consistency", breakdown.consistency],
+    ["Accuracy", breakdown.accuracy * 100],
+    ["Rigour", breakdown.difficulty * 100],
+    ["Depth", breakdown.bloom * 100],
+    ["Speed", breakdown.speed * 100],
+    ["Consistency", breakdown.consistency * 100],
   ];
   const size = 220;
   const cx = size / 2;
@@ -614,6 +655,43 @@ function Radar({
           );
         })}
       </svg>
+    </div>
+  );
+}
+
+function TaxonomyWeb({
+  items,
+}: {
+  items: Array<{ label: string; value: number; count: number }>;
+}) {
+  return (
+    <div className="mt-5 grid gap-3">
+      {items.map((item, index) => {
+        const tone =
+          index === 0
+            ? "bg-primary"
+            : index === 1
+              ? "bg-emerald-500"
+              : index === 2
+                ? "bg-orange-500"
+                : "bg-indigo-500";
+        return (
+          <div key={item.label}>
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold text-ink">{item.label}</span>
+              <span className="text-xs font-semibold text-ink-mute">
+                {item.count} topic{item.count === 1 ? "" : "s"} · {item.value}%
+              </span>
+            </div>
+            <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-canvas">
+              <span
+                className={`block h-full rounded-full ${tone} transition-[width] duration-700 ease-out-soft`}
+                style={{ width: `${Math.min(100, Math.max(0, item.value))}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

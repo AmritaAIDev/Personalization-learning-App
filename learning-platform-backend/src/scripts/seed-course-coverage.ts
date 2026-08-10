@@ -19,8 +19,7 @@ import { User } from '../users/user.entity';
 const PHYSICS = 'Physics';
 const CHARGES = 'Electric Charges and Fields';
 const POTENTIAL = 'Electrostatic Potential and Capacitance';
-const TARGET_EMAIL =
-  process.env.DEMO_USER_EMAIL ?? 'lokeshyarramalluyarramalluloke@gmail.com';
+const TARGET_EMAIL = process.env.DEMO_USER_EMAIL ?? 'demo.student@jeeai.local';
 
 type SeedQuestion = {
   id: string;

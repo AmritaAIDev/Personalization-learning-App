@@ -40,7 +40,9 @@ Signup page:
 
 What happens in the background:
 
-- The frontend sends the login or signup request to the backend.
+- In production, the frontend sends login/signup through its own `/api` path.
+- The platform routes that request to the backend internally so the browser session stays on the frontend site.
+- In local development, the frontend can still call the configured local backend API.
 - The backend validates the request.
 - The backend stores the session securely.
 - The frontend does not store secret keys or passwords.
@@ -71,11 +73,12 @@ The Dashboard should answer one question: what should the student learn next?
 The Dashboard contains:
 
 - A compact search area.
-- Topic suggestions that stay hidden until the student taps or focuses on search.
+- A shared topic-search dialog that can be opened from Dashboard search or the sidebar workspace selector.
+- Topic suggestions that stay hidden until the student opens search.
 - A baseline diagnostic card only for a new student who has not completed it.
-- Continue learning cards for active topics.
-- Suggested next topic cards based on the student's saved progress.
-- Completed or history information only where it helps the student continue.
+- A current learning desk that shows the next useful action for the student.
+- Active topic or workspace status when it helps the student resume.
+- Review, history, and record information only where it helps the student continue.
 
 The Dashboard should not feel like a report page. It should feel like the learning starting point.
 
@@ -84,10 +87,12 @@ The Dashboard should not feel like a report page. It should feel like the learni
 What the student sees:
 
 - The search bar is visible near the top.
-- Suggested topics are not shown immediately.
-- When the student taps or focuses on the search bar, suggestions can open.
+- The same search component can also open from the sidebar workspace selector.
+- Suggested topics are not shown immediately on the page.
+- When the student opens search, a centered topic picker appears.
 - The student can type a topic name.
 - The student can select a topic result.
+- Search results can show subject, chapter, topic, and a small progress/readiness signal when the backend has that data.
 
 What happens after selecting a topic:
 
@@ -100,6 +105,7 @@ What happens in the background:
 - Search results come from the backend/database.
 - The frontend should not hardcode topic lists as mock data.
 - The backend returns verified topics and question availability where possible.
+- Selecting a topic updates the shared workspace context used by Dashboard, Learn, Practice, Tests, Notebook, and Doubts.
 
 ### 4.3 Baseline diagnostic card
 
@@ -134,6 +140,7 @@ What the student sees:
 - Active topics they have already started.
 - Current checkpoint or stage.
 - A small progress indication.
+- A resume action for the selected workspace topic.
 
 What happens when clicked:
 
@@ -238,7 +245,8 @@ What happens when the student opens the tab:
 
 - The frontend asks the backend whether any live flashcard set is already available for the selected view.
 - The normal flow is live generation: the student taps generate, and the backend asks DeepSeek through the backend AI service.
-- The generated flashcards are returned directly to the current screen.
+- The backend generates a small batch and returns it directly to the current screen.
+- When the student is near the end of the visible batch, the next batch can be prepared so the flow feels continuous.
 - Generated flashcards are not saved in the flashcards database table.
 
 What happens when the student rates a card:
@@ -249,8 +257,9 @@ What happens when the student rates a card:
 
 Important rule:
 
-- Flashcards should come from the backend/database.
+- Flashcards should come from backend generation or backend-controlled data.
 - The frontend should not contain temporary flashcard content.
+- Flashcard review buttons are for the current live recall flow; they are not a formal test score.
 
 ### 6.3 Practice studio tab
 
@@ -272,6 +281,8 @@ The student experience:
 - The student selects an answer.
 - The tutor reacts based on that exact question and answer.
 - The system decides whether to move forward, give a hint, explain, repeat, move up, move down, or route to a prerequisite.
+- The page should avoid full-page reloads between answers.
+- The question area should stay compact while tutor/chat content can scroll independently.
 
 Important rule:
 
@@ -636,6 +647,7 @@ AI can generate:
 For question generation:
 
 - The backend collects source material from existing reviewed questions.
+- The backend can also use reviewed concept chunks from the RAG/vector database when available.
 - The backend asks DeepSeek for questions at the correct topic, proficiency stage, and difficulty.
 - The generated questions are saved in the database.
 - The questions become available as Ready.
@@ -644,9 +656,17 @@ For question generation:
 For flashcard generation:
 
 - The backend uses reviewed question material as grounding.
+- The backend can use RAG concept chunks as supplemental grounding when they are available.
 - DeepSeek generates a fresh live deck for the current topic.
 - The generated cards are returned to the frontend immediately.
 - The generated cards are not saved in the database.
+
+For tutor and doubt answers:
+
+- The tutor first uses the current question, answer attempt, topic state, and reviewed database material.
+- If RAG sources are configured, the backend retrieves a few relevant concept chunks.
+- RAG citations are optional support, not the source of truth.
+- If the vector database is slow or empty, the student still gets a response from reviewed database material and the model prompt.
 
 Latency rule:
 
@@ -751,7 +771,8 @@ The application must follow these rules:
 - No secrets in frontend code.
 - API URLs must come from environment variables.
 - Backend URL must not be hardcoded into many frontend files.
-- Frontend should call only the configured backend API base URL.
+- In production, frontend API calls should use the same-origin `/api` path and be routed to the backend by deployment config.
+- In local development, frontend can use the configured backend API base URL.
 - Backend should allow only the correct frontend origin in production.
 - Login sessions should use secure cookie behavior in production.
 - Correct answers should be checked on the backend.
@@ -804,7 +825,39 @@ Tutor:
 - Create hints after first wrong attempts.
 - Create explanations after second wrong attempts.
 
-## 21. Simple end-to-end example
+RAG and content grounding:
+
+- Store reviewed concept chunks in the vector database by subject, chapter, topic, subtopic, concept, and source.
+- Use those chunks for tutor/doubt grounding when available.
+- Keep PostgreSQL as the source of truth for questions, answers, scoring, level movement, and student history.
+- Never depend on RAG availability for core practice to work.
+
+## 21. Demo and seeded data expectation
+
+The platform should have a reliable demo learner for testing production-like flows.
+
+Demo account:
+
+- Email: `demo.student@jeeai.local`
+- Password: `Demo@12345`
+
+What the demo seed should include:
+
+- A real user account with a secure hashed password.
+- Active and mastered topic states.
+- Baseline diagnostic history.
+- Submitted practice attempts with mistakes.
+- Doubts with tutor-style answers.
+- Course coverage across existing topics and subtopics.
+- Question-bank top-ups so practice and learning do not show empty states unnecessarily.
+
+What should not happen:
+
+- The frontend should not invent demo cards or temporary topic data.
+- The demo seed should not delete real learner data.
+- RAG content should be seeded through Qdrant/vector scripts, not copied into frontend components.
+
+## 22. Simple end-to-end example
 
 Example student flow:
 
@@ -833,7 +886,7 @@ Example student flow:
 23. Student stops when they want a break.
 24. Dashboard later shows Gauss Law as an active topic with the saved checkpoint.
 
-## 22. Product quality expectation
+## 23. Product quality expectation
 
 The final product should feel professional and trustworthy.
 

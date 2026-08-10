@@ -6,10 +6,16 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { ApiError, apiFetch, clearApiMemoryCache } from "@/lib/api";
+import {
+  ApiError,
+  LEARNING_DATA_UPDATED_EVENT,
+  apiFetch,
+  clearApiMemoryCache,
+} from "@/lib/api";
 import type { AuthenticatedUser } from "@/lib/diagnostic-types";
 
 interface AuthContextValue {
@@ -30,6 +36,28 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [xpToast, setXpToast] = useState<number | null>(null);
+  const lastXpRef = useRef<number | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+
+  const updateUser = useCallback((next: AuthenticatedUser | null) => {
+    if (next) {
+      const previousXp = lastXpRef.current;
+      if (previousXp !== null && next.xp > previousXp) {
+        setXpToast(next.xp - previousXp);
+        if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = window.setTimeout(() => {
+          setXpToast(null);
+          toastTimerRef.current = null;
+        }, 2200);
+      }
+      lastXpRef.current = next.xp;
+    } else {
+      lastXpRef.current = null;
+      setXpToast(null);
+    }
+    setUser(next);
+  }, []);
 
   const refreshAuth = useCallback(async () => {
     // Only a genuine 401 means "signed out". Transient failures (backend
@@ -41,13 +69,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const response = await apiFetch<{ user: AuthenticatedUser }>(
           "/api/auth/me",
         );
-        setUser(response.user);
+        updateUser(response.user);
         setLoading(false);
         return;
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
           clearApiMemoryCache();
-          setUser(null);
+          updateUser(null);
           setLoading(false);
           return;
         }
@@ -63,13 +91,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
-  }, []);
+  }, [updateUser]);
 
   useEffect(() => {
     const restoreSession = async () => {
       await refreshAuth();
     };
     void restoreSession();
+  }, [refreshAuth]);
+
+  useEffect(() => {
+    const refreshUserStats = () => void refreshAuth();
+    window.addEventListener(LEARNING_DATA_UPDATED_EVENT, refreshUserStats);
+    return () =>
+      window.removeEventListener(LEARNING_DATA_UPDATED_EVENT, refreshUserStats);
   }, [refreshAuth]);
 
   const value = useMemo<AuthContextValue>(
@@ -86,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             body: JSON.stringify({ email, password }),
           },
         );
-        setUser(response.user);
+        updateUser(response.user);
         return response.user;
       },
       register: async (name, email, password) => {
@@ -98,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             body: JSON.stringify({ name, email, password }),
           },
         );
-        setUser(response.user);
+        updateUser(response.user);
         return response.user;
       },
       logout: async () => {
@@ -106,13 +141,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           method: "POST",
         });
         clearApiMemoryCache();
-        setUser(null);
+        updateUser(null);
       },
     }),
-    [loading, refreshAuth, user],
+    [loading, refreshAuth, updateUser, user],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {xpToast ? (
+        <div
+          className="fixed right-4 top-4 z-[80] rounded-2xl border border-primary/20 bg-ink px-4 py-3 text-sm font-bold text-white shadow-[0_18px_40px_rgba(20,20,30,0.24)] animate-rise"
+          role="status"
+          aria-live="polite"
+        >
+          +{xpToast} XP saved
+        </div>
+      ) : null}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthContextValue {

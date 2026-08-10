@@ -16,8 +16,7 @@ import {
 } from '../question.entity';
 import { User } from '../users/user.entity';
 
-const TARGET_EMAIL =
-  process.env.DEMO_USER_EMAIL ?? 'lokeshyarramalluyarramalluloke@gmail.com';
+const TARGET_EMAIL = process.env.DEMO_USER_EMAIL ?? 'demo.student@jeeai.local';
 
 type TopicDefinition = {
   subject: 'Mathematics' | 'Chemistry';

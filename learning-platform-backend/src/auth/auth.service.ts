@@ -10,6 +10,7 @@ import * as bcrypt from 'bcryptjs';
 import type { CookieOptions } from 'express';
 import { Repository } from 'typeorm';
 import { User } from '../users/user.entity';
+import { levelForXp } from '../users/user-progress';
 import type { LoginDto, RegisterDto } from './auth.dto';
 import { AuthSession } from './auth-session.entity';
 import type { AuthenticatedUser } from './auth.types';
@@ -138,7 +139,7 @@ export class AuthService {
       email: user.email,
       role: user.role === 'admin' ? 'admin' : 'student',
       xp: user.xp,
-      level: user.level,
+      level: levelForXp(user.xp),
       streak: user.streak,
     };
   }

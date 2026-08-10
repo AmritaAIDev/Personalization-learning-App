@@ -9,6 +9,7 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 import { DiagnosticsService } from '../diagnostics/diagnostics.service';
 import { NotebookService } from '../notebook/notebook.service';
 import { Question, QuestionPublicationStatus } from '../question.entity';
+import { levelForXp } from '../users/user-progress';
 import type {
   DashboardAction,
   DashboardActivity,
@@ -61,7 +62,7 @@ export class DashboardService {
     return {
       student: {
         name: user.name,
-        level: user.level,
+        level: levelForXp(user.xp),
         xp: user.xp,
         streak: user.streak,
       },

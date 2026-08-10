@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   ArrowRight,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
 import StudyMarkdown from "@/components/learning/StudyMarkdown";
+import { learningScopeFromSearchParams, learningUrl } from "@/lib/learning";
 import type {
   NotebookConceptGroup,
   NotebookConceptsResponse,
@@ -246,6 +248,8 @@ function ConceptGroupRow({ group }: { group: NotebookConceptGroup }) {
 }
 
 export default function NotebookPage() {
+  const searchParams = useSearchParams();
+  const routeScope = learningScopeFromSearchParams(searchParams);
   const [concepts, setConcepts] = useState<NotebookConceptsResponse | null>(
     null,
   );
@@ -279,18 +283,34 @@ export default function NotebookPage() {
     void loadInitialConcepts();
   }, [loadConcepts]);
 
-  const stats = useMemo(() => {
+  const visibleGroups = useMemo(() => {
     if (!concepts) return null;
+    if (!routeScope) return concepts.groups;
+    return concepts.groups.filter(
+      (group) =>
+        group.subject === routeScope.subject &&
+        group.chapter === routeScope.chapter &&
+        group.topic === routeScope.topic,
+    );
+  }, [concepts, routeScope]);
+
+  const stats = useMemo(() => {
+    if (!concepts || !visibleGroups) return null;
+    const mistakes = visibleGroups.reduce(
+      (sum, group) => sum + group.mistakeCount,
+      0,
+    );
+    const due = visibleGroups.reduce((sum, group) => sum + group.dueCount, 0);
     return [
-      { label: "Concepts to repair", value: concepts.groupCount },
-      { label: "Practice mistakes", value: concepts.summary.practiceMistakes },
-      { label: "Learn mistakes", value: concepts.summary.adaptiveMistakes },
+      { label: "Repair concepts", value: visibleGroups.length },
+      { label: "Mistake cards", value: mistakes },
+      { label: "Due now", value: due },
     ];
-  }, [concepts]);
+  }, [concepts, visibleGroups]);
 
   const sortedGroups = useMemo(() => {
-    if (!concepts) return [];
-    const groups = [...concepts.groups];
+    if (!visibleGroups) return [];
+    const groups = [...visibleGroups];
     groups.sort((left, right) => {
       if (sortBy === "due") {
         if (right.dueCount !== left.dueCount)
@@ -303,36 +323,53 @@ export default function NotebookPage() {
       return right.mistakeCount - left.mistakeCount;
     });
     return groups;
-  }, [concepts, sortBy]);
+  }, [visibleGroups, sortBy]);
+
+  const priority = sortedGroups[0] ?? null;
 
   return (
     <div className="min-h-screen bg-canvas pb-20">
-      <main className="mx-auto w-full max-w-5xl px-4 pt-6 sm:px-8 sm:pt-8 lg:px-10">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <main className="mx-auto w-full max-w-6xl px-4 pt-6 sm:px-8 sm:pt-8 lg:px-10">
+        <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <h1 className="font-heading text-xl font-bold tracking-tight text-ink sm:text-2xl">
-              Mistake notebook
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+              Notebook
+            </p>
+            <h1 className="mt-1 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+              Repair what actually broke.
             </h1>
-            <p className="mt-1 text-[13px] leading-5 text-ink-soft">
-              Wrong answers clubbed by concept, with the recurring gap to
-              repair.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
+              {routeScope
+                ? `Showing repair cards for ${routeScope.topic}.`
+                : "Wrong answers are grouped by concept so review feels like repair, not punishment."}
             </p>
           </div>
-          <Link
-            href="/practice"
-            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink/90"
-          >
-            Practice weak topics
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {routeScope ? (
+              <Link
+                href={learningUrl(routeScope, { tab: "practice" })}
+                className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-strong"
+              >
+                Continue repair
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            ) : null}
+            <Link
+              href="/practice"
+              className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink/90"
+            >
+              Practice weak topics
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
         </header>
 
         {stats && !loading && !error ? (
-          <dl className="mt-4 grid grid-cols-3 gap-2">
+          <dl className="mt-5 grid grid-cols-3 gap-2">
             {stats.map((stat) => (
               <div
                 key={stat.label}
-                className="rounded-2xl border border-hairline bg-surface px-3 py-2.5"
+                className="rounded-2xl border border-hairline bg-surface px-3 py-3 shadow-[0_10px_24px_rgba(20,20,30,0.035)]"
               >
                 <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-mute">
                   {stat.label}
@@ -376,40 +413,86 @@ export default function NotebookPage() {
 
         {!loading && !error && concepts && concepts.groups.length > 0 ? (
           <>
-            <div className="mt-4 flex items-center justify-end gap-2 text-[11px] font-bold">
-              <span className="text-ink-mute">Sort:</span>
-              <button
-                type="button"
-                onClick={() => setSortBy("mistakes")}
-                className={`rounded-full px-2.5 py-0.5 transition ${
-                  sortBy === "mistakes"
-                    ? "bg-primary text-white"
-                    : "bg-canvas text-ink-soft hover:bg-primary-tint/50"
-                }`}
-              >
-                Most mistakes
-              </button>
-              <button
-                type="button"
-                onClick={() => setSortBy("due")}
-                className={`rounded-full px-2.5 py-0.5 transition ${
-                  sortBy === "due"
-                    ? "bg-primary text-white"
-                    : "bg-canvas text-ink-soft hover:bg-primary-tint/50"
-                }`}
-              >
-                Due for review
-              </button>
-            </div>
-            <div className="mt-3 grid gap-3">
-              {sortedGroups.map((group) => (
-                <ConceptGroupRow key={group.id} group={group} />
-              ))}
-              <p className="mt-1 flex items-center justify-center gap-1.5 text-[11px] font-medium text-ink-mute">
-                <CircleDot className="h-3 w-3" aria-hidden="true" />
-                Summaries refresh when you make a new mistake in a topic.
-              </p>
-            </div>
+            {sortedGroups.length === 0 ? (
+              <div className="mt-5 rounded-2xl border border-dashed border-hairline bg-surface p-8 text-center">
+                <BookOpenCheck
+                  className="mx-auto h-8 w-8 text-primary"
+                  aria-hidden="true"
+                />
+                <h2 className="mt-3 font-heading text-xl font-semibold text-ink">
+                  No repair cards for this topic
+                </h2>
+                <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-ink-mute">
+                  Practice or Learn mistakes for this workspace will appear
+                  here automatically.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-5 grid gap-5 lg:grid-cols-[20rem_minmax(0,1fr)]">
+                <aside className="space-y-3">
+                  {priority ? (
+                    <section className="rounded-[1.5rem] bg-ink p-5 text-white shadow-[0_16px_34px_rgba(20,20,30,0.14)]">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">
+                        Repair priority
+                      </p>
+                      <h2 className="mt-2 font-heading text-xl font-semibold leading-7">
+                        {priority.conceptLabel}
+                      </h2>
+                      <p className="mt-2 text-sm leading-6 text-white/65">
+                        {priority.misconceptionSummary}
+                      </p>
+                      <Link
+                        href={practiceHref(priority)}
+                        className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:bg-primary-tint"
+                      >
+                        Repair now
+                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    </section>
+                  ) : null}
+
+                  <section className="rounded-[1.5rem] border border-hairline bg-surface p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-ink-mute">
+                      Notebook view
+                    </p>
+                    <div className="mt-3 grid gap-2 text-[12px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setSortBy("mistakes")}
+                        className={`rounded-xl px-3 py-2 text-left transition ${
+                          sortBy === "mistakes"
+                            ? "bg-primary text-white"
+                            : "bg-canvas text-ink-soft hover:bg-primary-tint/50"
+                        }`}
+                      >
+                        Most repeated gaps
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSortBy("due")}
+                        className={`rounded-xl px-3 py-2 text-left transition ${
+                          sortBy === "due"
+                            ? "bg-primary text-white"
+                            : "bg-canvas text-ink-soft hover:bg-primary-tint/50"
+                        }`}
+                      >
+                        Due for review
+                      </button>
+                    </div>
+                  </section>
+                </aside>
+
+                <section className="grid gap-3">
+                  {sortedGroups.map((group) => (
+                    <ConceptGroupRow key={group.id} group={group} />
+                  ))}
+                  <p className="mt-1 flex items-center justify-center gap-1.5 text-[11px] font-medium text-ink-mute">
+                    <CircleDot className="h-3 w-3" aria-hidden="true" />
+                    Summaries refresh when you make a new mistake in a topic.
+                  </p>
+                </section>
+              </div>
+            )}
           </>
         ) : null}
       </main>

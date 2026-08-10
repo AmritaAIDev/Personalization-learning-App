@@ -141,15 +141,19 @@ export default function TopicPickerDialog({
         onClick={onClose}
         aria-label="Close topic search"
       />
-      <section className="relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] border border-white/70 bg-surface shadow-[0_28px_90px_rgba(20,20,30,0.22)] sm:max-h-[calc(100dvh-4rem)] sm:rounded-[1.75rem]">
+      <section className="relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] border border-white/70 bg-[radial-gradient(circle_at_top_right,rgba(63,111,87,0.12),transparent_32%),#fff] shadow-[0_28px_90px_rgba(20,20,30,0.22)] sm:max-h-[calc(100dvh-4rem)] sm:rounded-[1.75rem]">
         <header className="flex items-start justify-between gap-4 border-b border-hairline px-4 py-4 sm:px-7 sm:py-5">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
               Topic finder
             </p>
             <h2 className="mt-1 font-heading text-2xl font-bold tracking-tight text-ink">
-              Choose your next topic
+              Choose a workspace
             </h2>
+            <p className="mt-1 text-xs leading-5 text-ink-mute">
+              Search once, then use the same topic across Learn, Practice,
+              Notebook, and Doubts.
+            </p>
           </div>
           <button
             type="button"
@@ -174,7 +178,7 @@ export default function TopicPickerDialog({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search a topic or chapter"
-              className="h-13 w-full rounded-2xl border border-hairline bg-canvas pl-12 pr-4 text-[15px] font-medium text-ink outline-none transition placeholder:font-normal placeholder:text-ink-mute focus:border-primary/45 focus:bg-white"
+              className="h-13 w-full rounded-2xl border border-hairline bg-canvas pl-12 pr-4 text-[15px] font-medium text-ink outline-none transition placeholder:font-normal placeholder:text-ink-mute focus:border-primary/45 focus:bg-white focus:shadow-[0_10px_28px_rgba(63,111,87,0.08)]"
             />
           </label>
 
@@ -187,7 +191,7 @@ export default function TopicPickerDialog({
                 {query.trim() ? "Matching topics" : "Suggested topics"}
               </p>
               <p className="mt-0.5 text-xs text-ink-mute">
-                Your active topics stay at the top.
+                {results.length} shown. Active topics stay at the top.
               </p>
             </div>
             {loading ? (
@@ -265,12 +269,21 @@ function TopicResult({
     <button
       type="button"
       onClick={onOpen}
-      className="group rounded-2xl border border-hairline bg-white p-4 text-left transition hover:border-primary/35 hover:bg-primary-tint/35 hover:shadow-[0_10px_24px_rgba(20,20,30,0.06)]"
+      className="group rounded-2xl border border-hairline bg-white p-4 text-left transition duration-300 ease-out-soft hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary-tint/35 hover:shadow-[0_10px_24px_rgba(20,20,30,0.06)]"
     >
       <div className="flex items-start justify-between gap-3">
         <span className="min-w-0">
-          <span className="block truncate text-[15px] font-bold text-ink">
-            {entry.topic}
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="block truncate text-[15px] font-bold text-ink">
+              {entry.topic}
+            </span>
+            {state ? (
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.11em] ${stateTone(state.status)}`}
+              >
+                {stateLabel(state.status)}
+              </span>
+            ) : null}
           </span>
           <span className="mt-1 block truncate text-xs text-ink-mute">
             {entry.subject} / {entry.chapter}
@@ -304,4 +317,18 @@ function TopicResult({
       )}
     </button>
   );
+}
+
+function stateLabel(status: LearningState["status"]) {
+  if (status === "MASTERED") return "mastered";
+  if (status === "PAUSED_FOR_PREREQUISITE") return "paused";
+  return "active";
+}
+
+function stateTone(status: LearningState["status"]) {
+  if (status === "MASTERED")
+    return "bg-primary-tint text-primary ring-1 ring-primary/10";
+  if (status === "PAUSED_FOR_PREREQUISITE")
+    return "bg-rose-50 text-rose-700 ring-1 ring-rose-100";
+  return "bg-orange-50 text-orange-700 ring-1 ring-orange-100";
 }

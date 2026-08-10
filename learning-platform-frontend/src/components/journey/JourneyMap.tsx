@@ -17,7 +17,7 @@ import {
   Trophy,
   Zap,
 } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { LEARNING_DATA_UPDATED_EVENT, apiFetch } from "@/lib/api";
 import { learningUrl } from "@/lib/learning";
 import SubjectCourseExplorer from "@/components/journey/SubjectCourseExplorer";
 import { useAuth } from "@/context/AuthContext";
@@ -169,6 +169,13 @@ export default function JourneyMap() {
   useEffect(() => {
     const timer = window.setTimeout(() => void loadGrowth(), 0);
     return () => window.clearTimeout(timer);
+  }, [loadGrowth]);
+
+  useEffect(() => {
+    const refreshGrowth = () => void loadGrowth();
+    window.addEventListener(LEARNING_DATA_UPDATED_EVENT, refreshGrowth);
+    return () =>
+      window.removeEventListener(LEARNING_DATA_UPDATED_EVENT, refreshGrowth);
   }, [loadGrowth]);
 
   const subjects = useMemo(

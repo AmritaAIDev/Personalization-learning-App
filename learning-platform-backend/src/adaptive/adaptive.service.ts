@@ -11,6 +11,7 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 import { Question, QuestionPublicationStatus } from '../question.entity';
 import { Topic } from '../topics/topic.entity';
 import { User } from '../users/user.entity';
+import { XP_PER_PROFILE_LEVEL } from '../users/user-progress';
 import { AgentService } from '../agent/agent.service';
 import {
   AskTutorDto,
@@ -796,6 +797,15 @@ export class AdaptiveService {
     await sessions.save(session);
     if (isCorrect) {
       await manager.increment(User, { id: userId }, 'xp', 10);
+      await manager
+        .createQueryBuilder()
+        .update(User)
+        .set({
+          level: () =>
+            `GREATEST(1, FLOOR(xp / ${XP_PER_PROFILE_LEVEL})::int + 1)`,
+        })
+        .where('id = :userId', { userId })
+        .execute();
     }
     return {
       kind,

@@ -85,11 +85,11 @@ export default function WorkspaceSelector({
         <button
           type="button"
           onClick={() => setPickerOpen(true)}
-          className={`flex w-full items-center gap-2.5 rounded-[0.95rem] bg-canvas/55 text-left transition hover:bg-primary-tint/45 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${compact ? "mx-auto h-10 w-10 justify-center p-0" : "p-2.5"}`}
+          className={`flex w-full items-center gap-2.5 rounded-[0.95rem] bg-[linear-gradient(135deg,#fff,#f7faf8)] text-left ring-1 ring-hairline transition hover:bg-primary-tint/45 hover:ring-primary/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${compact ? "mx-auto h-10 w-10 justify-center p-0" : "p-2.5"}`}
           aria-haspopup="dialog"
           aria-expanded={pickerOpen}
         >
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary text-white">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-ink text-white shadow-sm">
             <Layers3 className="h-4 w-4" aria-hidden="true" />
           </span>
           <span className={compact ? "sr-only" : "min-w-0 flex-1"}>
@@ -107,7 +107,7 @@ export default function WorkspaceSelector({
             ) : (
               <>
                 <span className="block text-[11px] font-medium text-ink-mute">
-                  No topic selected
+                  Current workspace
                 </span>
                 <span className="block text-[13px] font-semibold text-ink">
                   Choose a workspace
@@ -126,8 +126,8 @@ export default function WorkspaceSelector({
             className="mt-2 border-t border-hairline px-0.5 pt-2"
             aria-label="Selected topic workspace"
           >
-            <p className="px-1 pb-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-primary">
-              Topic tools
+            <p className="px-1 pb-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-primary/90">
+              Workspace tools
             </p>
             <WorkspaceLink
               href={learningUrl(scope)}
@@ -136,7 +136,7 @@ export default function WorkspaceSelector({
               active={pathname === "/learn"}
               featured
             />
-            <div className="mt-2 grid grid-cols-2 gap-1 rounded-xl bg-canvas/70 p-1">
+            <div className="mt-2 grid grid-cols-2 gap-1 rounded-xl bg-canvas/70 p-1 ring-1 ring-hairline/60">
               <WorkspaceLink
                 href={learningUrl(scope, { tab: "practice" })}
                 label="Practice"

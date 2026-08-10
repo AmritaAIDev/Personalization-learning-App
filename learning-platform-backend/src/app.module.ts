@@ -35,6 +35,7 @@ import { TutorConversation } from './adaptive/tutor-conversation.entity';
 import { TutorMessage } from './adaptive/tutor-message.entity';
 import { NotebookModule } from './notebook/notebook.module';
 import { Doubt } from './doubts/doubt.entity';
+import { DoubtThread } from './doubts/doubt-thread.entity';
 import { NotebookConceptSummary } from './notebook/notebook-concept-summary.entity';
 import { DoubtsModule } from './doubts/doubts.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -80,6 +81,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
             FlashcardReview,
             TutorConversation,
             TutorMessage,
+            DoubtThread,
             Doubt,
             NotebookConceptSummary,
           ],

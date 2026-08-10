@@ -3,6 +3,7 @@ import type { Citation } from '../citation.util';
 
 export interface DoubtCard {
   id: string;
+  threadId: string | null;
   subject: string;
   chapter: string;
   topic: string;
@@ -20,8 +21,21 @@ export interface DoubtCard {
   answeredAt: string | null;
 }
 
+export interface DoubtThreadCard {
+  id: string;
+  title: string;
+  subject: string;
+  chapter: string;
+  topic: string;
+  status: 'OPEN' | 'ANSWERED';
+  turns: number;
+  lastMessageAt: string;
+  doubts: DoubtCard[];
+}
+
 export interface DoubtsResponse {
   doubts: DoubtCard[];
+  threads: DoubtThreadCard[];
   total: number;
   summary: {
     open: number;

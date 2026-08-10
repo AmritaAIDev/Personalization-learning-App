@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, apiFetch, clearApiMemoryCache } from "./api";
+import {
+  ApiError,
+  LEARNING_DATA_UPDATED_EVENT,
+  apiFetch,
+  clearApiMemoryCache,
+} from "./api";
 
 describe("apiFetch", () => {
   const fetchMock = vi.fn();
@@ -63,6 +68,28 @@ describe("apiFetch", () => {
     const [, options] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect((options.headers as Headers).get("Content-Type")).toBe(
       "application/json",
+    );
+  });
+
+  it("dispatches the shared learning refresh event after doubt mutations", async () => {
+    const dispatch = vi.fn();
+    vi.stubGlobal("window", {
+      location: { hostname: "localhost" },
+      dispatchEvent: dispatch,
+    });
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ data: { id: "doubt-1" } }), {
+        status: 201,
+      }),
+    );
+
+    await apiFetch("/api/doubts", {
+      method: "POST",
+      body: JSON.stringify({ message: "Why is this wrong?" }),
+    });
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: LEARNING_DATA_UPDATED_EVENT }),
     );
   });
 

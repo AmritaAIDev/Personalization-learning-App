@@ -10,6 +10,7 @@ import {
   HelpCircle,
   Loader2,
   MessageSquareText,
+  Plus,
   Send,
   Sparkles,
 } from "lucide-react";
@@ -18,8 +19,10 @@ import SourceCitations from "@/components/learning/SourceCitations";
 import { ApiError, apiFetch } from "@/lib/api";
 import type {
   CreateDoubtPayload,
+  CreateDoubtThreadPayload,
   DoubtCard,
   DoubtsResponse,
+  DoubtThread,
 } from "@/lib/doubts-types";
 import { learningScopeFromSearchParams, scopeToParams } from "@/lib/learning";
 import type { LearningScope } from "@/lib/learning-types";
@@ -40,11 +43,14 @@ function formatTime(value: string) {
   }).format(new Date(value));
 }
 
-function sameScope(doubt: DoubtCard, scope: LearningScope) {
+function sameScope(
+  item: Pick<DoubtThread, "subject" | "chapter" | "topic">,
+  scope: LearningScope,
+) {
   return (
-    doubt.subject === scope.subject &&
-    doubt.chapter === scope.chapter &&
-    doubt.topic === scope.topic
+    item.subject === scope.subject &&
+    item.chapter === scope.chapter &&
+    item.topic === scope.topic
   );
 }
 
@@ -52,9 +58,13 @@ function scopeHref(path: string, scope: LearningScope) {
   return `${path}?${scopeToParams(scope).toString()}`;
 }
 
+function isRealThreadId(id: string | null | undefined) {
+  return Boolean(id && !id.startsWith("legacy:"));
+}
+
 function DoubtsSkeleton() {
   return (
-    <div className="mt-7 grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <div className="mt-7 grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <section className="rounded-[1.65rem] border border-hairline bg-surface p-5">
         <div className="h-5 w-44 animate-pulse rounded-full bg-ink/10" />
         <div className="mt-5 h-72 animate-pulse rounded-2xl bg-ink/8" />
@@ -129,18 +139,25 @@ export default function DoubtsPage() {
   const [form, setForm] = useState<CreateDoubtPayload>(
     routeScope ? { ...routeScope, message: "" } : emptyForm,
   );
+  const [threadTitle, setThreadTitle] = useState("");
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [doubts, setDoubts] = useState<DoubtsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [creatingThread, setCreatingThread] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pendingDoubtId, setPendingDoubtId] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
   async function loadDoubts() {
     setError(null);
-    const data = await apiFetch<DoubtsResponse>("/api/doubts");
+    const data = await apiFetch<DoubtsResponse>("/api/doubts", {
+      memoryCacheTtlMs: 0,
+    });
     setDoubts(data);
+    return data;
   }
 
   useEffect(() => {
@@ -149,8 +166,13 @@ export default function DoubtsPage() {
     async function load() {
       setLoading(true);
       try {
-        const data = await apiFetch<DoubtsResponse>("/api/doubts");
-        if (!cancelled) setDoubts(data);
+        const data = await loadDoubts();
+        if (!cancelled && !activeThreadId) {
+          const scoped = routeScope
+            ? data.threads.find((thread) => sameScope(thread, routeScope))
+            : data.threads[0];
+          setActiveThreadId(scoped?.id ?? null);
+        }
       } catch (caught) {
         if (!cancelled) {
           setError(
@@ -169,7 +191,26 @@ export default function DoubtsPage() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const workspaceScope = routeScope ?? null;
+  const visibleThreads = useMemo(() => {
+    const threads = doubts?.threads ?? [];
+    if (!workspaceScope) return threads;
+    return threads.filter((thread) => sameScope(thread, workspaceScope));
+  }, [doubts, workspaceScope]);
+
+  const activeThread = useMemo(() => {
+    const fromSelected = visibleThreads.find(
+      (thread) => thread.id === activeThreadId,
+    );
+    return fromSelected ?? visibleThreads[0] ?? null;
+  }, [activeThreadId, visibleThreads]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ block: "end" });
+  }, [activeThread?.id, activeThread?.turns, pendingDoubtId]);
 
   useEffect(() => {
     if (!pendingDoubtId) return;
@@ -182,8 +223,7 @@ export default function DoubtsPage() {
     const tick = async () => {
       attempts += 1;
       try {
-        const data = await apiFetch<DoubtsResponse>("/api/doubts");
-        setDoubts(data);
+        const data = await loadDoubts();
         const resolved = data.doubts.find((d) => d.id === targetId);
         if (resolved && resolved.status === "ANSWERED") {
           setPendingDoubtId(null);
@@ -200,9 +240,39 @@ export default function DoubtsPage() {
       }
       pollRef.current = window.setTimeout(tick, 3000);
     };
-    pollRef.current = window.setTimeout(tick, 3000);
+    pollRef.current = window.setTimeout(tick, 1200);
     return stop;
   }, [pendingDoubtId]);
+
+  async function createThread() {
+    setCreatingThread(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const payload: CreateDoubtThreadPayload = {
+        subject: (routeScope?.subject ?? form.subject).trim(),
+        chapter: (routeScope?.chapter ?? form.chapter).trim(),
+        topic: (routeScope?.topic ?? form.topic).trim(),
+        title: threadTitle.trim() || undefined,
+      };
+      const created = await apiFetch<DoubtThread>("/api/doubts/threads", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setThreadTitle("");
+      setActiveThreadId(created.id);
+      await loadDoubts();
+      setSuccess("New doubt chat created.");
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "Unable to create this chat right now.",
+      );
+    } finally {
+      setCreatingThread(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -211,46 +281,51 @@ export default function DoubtsPage() {
     setSuccess(null);
     try {
       const payload: CreateDoubtPayload = {
-        subject: (routeScope?.subject ?? form.subject).trim(),
-        chapter: (routeScope?.chapter ?? form.chapter).trim(),
-        topic: (routeScope?.topic ?? form.topic).trim(),
+        subject: (routeScope?.subject ?? activeThread?.subject ?? form.subject)
+          .trim(),
+        chapter: (routeScope?.chapter ?? activeThread?.chapter ?? form.chapter)
+          .trim(),
+        topic: (routeScope?.topic ?? activeThread?.topic ?? form.topic).trim(),
         message: form.message.trim(),
+        threadId: isRealThreadId(activeThread?.id)
+          ? activeThread?.id
+          : undefined,
       };
       const created = await apiFetch<DoubtCard>("/api/doubts", {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      setForm(routeScope ? { ...form, message: "" } : emptyForm);
-      setSuccess("Doubt saved — the tutor is writing.");
+      setForm((current) => ({ ...current, message: "" }));
+      setActiveThreadId(created.threadId ?? activeThreadId);
+      setSuccess("Doubt sent. Tutor is writing.");
       setPendingDoubtId(created.id);
       await loadDoubts();
     } catch (caught) {
       setError(
         caught instanceof ApiError
           ? caught.message
-          : "Unable to save this doubt right now.",
+          : "Unable to send this doubt right now.",
       );
     } finally {
       setSubmitting(false);
     }
   }
 
-  const workspaceScope = routeScope ?? null;
-  const scopedDoubts = useMemo(() => {
-    if (!doubts) return [];
-    if (!workspaceScope) return doubts.doubts;
-    return doubts.doubts.filter((doubt) => sameScope(doubt, workspaceScope));
-  }, [doubts, workspaceScope]);
+  const canCreateThread =
+    (routeScope?.subject ?? form.subject).trim().length >= 2 &&
+    (routeScope?.chapter ?? form.chapter).trim().length >= 2 &&
+    (routeScope?.topic ?? form.topic).trim().length >= 2 &&
+    !creatingThread;
 
-  const canSubmit = useMemo(
-    () =>
-      (routeScope?.subject ?? form.subject).trim().length >= 2 &&
-      (routeScope?.chapter ?? form.chapter).trim().length >= 2 &&
-      (routeScope?.topic ?? form.topic).trim().length >= 2 &&
-      form.message.trim().length >= 5 &&
-      !submitting,
-    [form, routeScope, submitting],
-  );
+  const canSubmit =
+    (routeScope?.subject ?? activeThread?.subject ?? form.subject).trim()
+      .length >= 2 &&
+    (routeScope?.chapter ?? activeThread?.chapter ?? form.chapter).trim()
+      .length >= 2 &&
+    (routeScope?.topic ?? activeThread?.topic ?? form.topic).trim().length >=
+      2 &&
+    form.message.trim().length >= 5 &&
+    !submitting;
 
   return (
     <div className="min-h-screen bg-canvas pb-20">
@@ -261,11 +336,11 @@ export default function DoubtsPage() {
               Doubts
             </p>
             <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-              Ask inside the current topic.
+              Topic doubt chats.
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-mute">
-              The workspace scope is carried automatically. Your questions and
-              tutor answers stay together as a topic thread.
+              Create separate doubt chats, keep every message linked to the
+              selected topic, and let the tutor answer in the same thread.
             </p>
           </div>
           <Link
@@ -280,7 +355,7 @@ export default function DoubtsPage() {
         {loading ? <DoubtsSkeleton /> : null}
 
         {!loading ? (
-          <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
             <section className="flex min-h-[38rem] flex-col overflow-hidden rounded-[1.65rem] border border-hairline bg-surface shadow-[0_14px_34px_rgba(20,20,30,0.05)]">
               <div className="border-b border-hairline px-5 py-4">
                 <div className="flex flex-wrap items-center gap-3">
@@ -289,23 +364,26 @@ export default function DoubtsPage() {
                   </span>
                   <div className="min-w-0">
                     <h2 className="font-heading text-lg font-bold text-ink">
-                      {workspaceScope ? workspaceScope.topic : "General doubt thread"}
+                      {activeThread?.title ??
+                        workspaceScope?.topic ??
+                        "Start a doubt chat"}
                     </h2>
                     <p className="truncate text-xs font-medium text-ink-mute">
-                      {workspaceScope
-                        ? `${workspaceScope.subject} / ${workspaceScope.chapter}`
-                        : "Choose a topic once, or ask a general scoped doubt below."}
+                      {activeThread
+                        ? `${activeThread.subject} / ${activeThread.chapter} / ${activeThread.topic}`
+                        : "Create a chat, then send your first doubt."}
                     </p>
                   </div>
                   <span className="ml-auto rounded-full bg-canvas px-3 py-1 text-xs font-bold text-ink-soft">
-                    {scopedDoubts.length} turn{scopedDoubts.length === 1 ? "" : "s"}
+                    {activeThread?.turns ?? 0} turn
+                    {activeThread?.turns === 1 ? "" : "s"}
                   </span>
                 </div>
               </div>
 
               <div className="flex-1 space-y-5 overflow-y-auto bg-canvas/45 px-4 py-5 custom-scrollbar sm:px-5">
-                {scopedDoubts.length > 0 ? (
-                  scopedDoubts.map((doubt) => (
+                {activeThread && activeThread.doubts.length > 0 ? (
+                  activeThread.doubts.map((doubt) => (
                     <DoubtTurn key={doubt.id} doubt={doubt} />
                   ))
                 ) : (
@@ -316,22 +394,23 @@ export default function DoubtsPage() {
                         aria-hidden="true"
                       />
                       <h2 className="mt-3 font-heading text-xl font-semibold text-ink">
-                        No doubts in this thread yet
+                        No messages in this chat yet
                       </h2>
                       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-mute">
-                        Ask one focused question. The answer will appear here
-                        and remain linked to this topic.
+                        Ask one focused question. The tutor response will stay
+                        inside this chat.
                       </p>
                     </div>
                   </div>
                 )}
+                <div ref={bottomRef} />
               </div>
 
               <form
                 onSubmit={handleSubmit}
                 className="border-t border-hairline bg-surface p-4"
               >
-                {!workspaceScope ? (
+                {!workspaceScope && !activeThread ? (
                   <div className="mb-3 grid gap-2 sm:grid-cols-3">
                     {(["subject", "chapter", "topic"] as const).map((field) => (
                       <label key={field} className="block">
@@ -387,7 +466,7 @@ export default function DoubtsPage() {
                       <Send className="h-4 w-4" aria-hidden="true" />
                     )}
                     <span className="hidden sm:inline">
-                      {submitting ? "Sending" : "Ask"}
+                      {submitting ? "Sending" : "Send"}
                     </span>
                   </button>
                 </div>
@@ -415,49 +494,107 @@ export default function DoubtsPage() {
 
             <aside className="space-y-4">
               <section className="rounded-[1.65rem] bg-ink p-5 text-white shadow-[0_14px_34px_rgba(20,20,30,0.12)]">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">
-                  Doubt record
-                </p>
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <div className="rounded-2xl bg-white/8 p-4">
-                    <p className="text-2xl font-semibold">
-                      {doubts?.summary.open ?? 0}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">
+                      Chats
                     </p>
-                    <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-white/55">
-                      Open
-                    </p>
+                    <h2 className="mt-1 font-heading text-xl font-bold">
+                      Doubt threads
+                    </h2>
                   </div>
-                  <div className="rounded-2xl bg-white/8 p-4">
-                    <p className="text-2xl font-semibold">
-                      {doubts?.summary.answered ?? 0}
-                    </p>
-                    <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-white/55">
-                      Answered
-                    </p>
-                  </div>
+                  <span className="rounded-full bg-white/10 px-2 py-1 text-xs font-bold">
+                    {visibleThreads.length}
+                  </span>
                 </div>
-              </section>
 
-              <section className="rounded-[1.65rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)]">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-mute">
-                  Recent topics
-                </p>
-                {doubts && doubts.summary.recentTopics.length > 0 ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {doubts.summary.recentTopics.map((topic) => (
-                      <span
-                        key={topic}
-                        className="rounded-full bg-primary-tint px-3 py-1 text-xs font-semibold text-primary"
-                      >
-                        {topic}
-                      </span>
+                {!workspaceScope ? (
+                  <div className="mt-4 grid gap-2">
+                    {(["subject", "chapter", "topic"] as const).map((field) => (
+                      <input
+                        key={field}
+                        value={form[field]}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            [field]: event.target.value,
+                          }))
+                        }
+                        placeholder={
+                          field === "subject"
+                            ? "Subject"
+                            : field === "chapter"
+                              ? "Chapter"
+                              : "Topic"
+                        }
+                        className="min-h-10 rounded-xl border border-white/10 bg-white/8 px-3 text-sm font-semibold text-white outline-none placeholder:text-white/40 focus:border-white/30"
+                      />
                     ))}
                   </div>
-                ) : (
-                  <p className="mt-3 text-sm leading-6 text-ink-mute">
-                    Your doubt topics will appear here after the first answer.
-                  </p>
-                )}
+                ) : null}
+
+                <input
+                  value={threadTitle}
+                  onChange={(event) => setThreadTitle(event.target.value)}
+                  placeholder="Optional chat title"
+                  className="mt-4 min-h-10 w-full rounded-xl border border-white/10 bg-white/8 px-3 text-sm font-semibold text-white outline-none placeholder:text-white/40 focus:border-white/30"
+                />
+                <button
+                  type="button"
+                  onClick={() => void createThread()}
+                  disabled={!canCreateThread}
+                  className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-bold text-ink transition hover:bg-primary-tint disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {creatingThread ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  New chat
+                </button>
+              </section>
+
+              <section className="rounded-[1.65rem] border border-hairline bg-surface p-3 shadow-[0_14px_34px_rgba(20,20,30,0.05)]">
+                <div className="max-h-[25rem] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                  {visibleThreads.length > 0 ? (
+                    visibleThreads.map((thread) => {
+                      const active = thread.id === activeThread?.id;
+                      return (
+                        <button
+                          key={thread.id}
+                          type="button"
+                          onClick={() => setActiveThreadId(thread.id)}
+                          className={`w-full rounded-2xl p-3 text-left transition ${
+                            active
+                              ? "bg-primary-tint text-primary ring-1 ring-primary/15"
+                              : "hover:bg-canvas"
+                          }`}
+                        >
+                          <span className="block truncate text-sm font-bold text-ink">
+                            {thread.title}
+                          </span>
+                          <span className="mt-1 block truncate text-[11px] font-medium text-ink-mute">
+                            {thread.topic} · {thread.turns} turn
+                            {thread.turns === 1 ? "" : "s"}
+                          </span>
+                          <span
+                            className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.11em] ${
+                              thread.status === "OPEN"
+                                ? "bg-amber-50 text-amber-700"
+                                : "bg-emerald-50 text-emerald-700"
+                            }`}
+                          >
+                            {thread.status === "OPEN" ? "Tutor writing" : "Answered"}
+                          </span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="p-4 text-sm leading-6 text-ink-mute">
+                      No chats yet. Create one and ask your first doubt.
+                    </p>
+                  )}
+                </div>
               </section>
             </aside>
           </div>

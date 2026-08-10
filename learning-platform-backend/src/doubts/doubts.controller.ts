@@ -3,7 +3,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth.types';
-import { CreateDoubtDto } from './doubts.dto';
+import { CreateDoubtDto, CreateDoubtThreadDto } from './doubts.dto';
 import { DoubtsService } from './doubts.service';
 
 @ApiTags('Doubts')
@@ -27,6 +27,17 @@ export class DoubtsController {
   ) {
     return {
       data: await this.doubtsService.create(user.id, body),
+    };
+  }
+
+  @Post('threads')
+  @Throttle({ default: { limit: 8, ttl: 60_000 } })
+  async createThread(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: CreateDoubtThreadDto,
+  ) {
+    return {
+      data: await this.doubtsService.createThread(user.id, body),
     };
   }
 }

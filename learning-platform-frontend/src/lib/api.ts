@@ -50,7 +50,9 @@ function shouldRefreshLearningViews(path: string) {
   return (
     path.startsWith("/api/learning/sessions") ||
     path.startsWith("/api/practice/sessions") ||
-    path.startsWith("/api/diagnostics")
+    path.startsWith("/api/diagnostics") ||
+    path.startsWith("/api/doubts") ||
+    path.startsWith("/api/notebook")
   );
 }
 

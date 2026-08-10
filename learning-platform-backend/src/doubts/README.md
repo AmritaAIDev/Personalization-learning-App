@@ -1,47 +1,54 @@
 # Doubts module
 
-Stores student-authored questions with learning context (a doubt can attach to a
-topic, practice attempt, learning session item, or notebook card) and resolves
-them with the AI tutor.
+Stores student-authored questions with learning context. A doubt can attach to a
+topic, practice attempt, learning session item, notebook card, and now a
+topic-scoped doubt thread.
 
 ## Key components
 
-- `DoubtsController` — `/api/doubts` (list, create).
-- `DoubtsService` — persistence + out-of-band tutor resolution.
-- `Doubt` entity — the `doubts` table.
+- `DoubtsController` — `/api/doubts` list, create message, create thread.
+- `DoubtsService` — persistence, thread grouping, and out-of-band tutor resolution.
+- `DoubtThread` entity — the `doubt_threads` table.
+- `Doubt` entity — the `doubts` table, with optional `thread_id`.
 
 ## API
 
 | Method | Path | Description |
 | --- | --- | --- |
-| GET | `/api/doubts` | the signed-in student's doubt history + open/answered summary + recent topics |
-| POST | `/api/doubts` | save a doubt; **returns immediately as `OPEN`** |
+| GET | `/api/doubts` | signed-in student's doubt threads, message history, summary counts, and recent topics |
+| POST | `/api/doubts/threads` | create a new topic-scoped doubt chat |
+| POST | `/api/doubts` | save a doubt message in a thread; returns immediately as `OPEN` |
 
-### Async resolution (non-blocking)
+## Thread behavior
 
-`create()` saves the doubt and fires `resolveDoubtInBackground(doubtId)` without
-awaiting — the HTTP response returns at once with `status: OPEN, assistantResponse: null`.
-The background task calls `AgentService.generateTutorResponse`, then flips the row
-to `ANSWERED` with the response. If the model is unavailable the doubt stays
-`OPEN` (no save failure). The frontend polls `GET /api/doubts` until the new
-doubt's status becomes `ANSWERED` (≈3s cadence, ~2 min cap).
+Each new chat is persisted in `doubt_threads`. Each message is persisted in
+`doubts` with `thread_id`, so the frontend can show multiple chats for the same
+topic and send new messages into the selected chat.
 
-This matches the in-session tutor's `pending` pattern: the request never blocks
-on the model, so a slow DeepSeek call cannot hang the doubt form.
+Old rows without `thread_id` still appear through legacy grouped threads in the
+GET response, so existing demo/history data remains visible.
+
+## Async tutor resolution
+
+`create()` saves the message and fires `resolveDoubtInBackground(doubtId)`
+without awaiting the model. The HTTP response returns at once with
+`status: OPEN` and `assistantResponse: null`.
+
+The background task calls `AgentService.generateTutorResponse`, then flips the
+row to `ANSWERED` with the response. If the model is unavailable, the service
+persists a deterministic, question-grounded fallback answer instead of leaving
+the learner in a permanent loading/open state. The frontend polls
+`GET /api/doubts` until the new message becomes `ANSWERED`.
 
 ## RAG citations
 
-When the background task answers a doubt it also fetches
-`AgentService.retrieveSupplementalSources(topic)` and persists the reduced
-citation list on `doubts.sources` (jsonb, nullable; migration
-`AddDoubtSources1785500000000`). Each `DoubtCard` returns `sources: Citation[]`
-(empty when Qdrant had nothing or was unavailable), which the doubts page renders
-as a "Sources" strip under the answer. Retrieval is best-effort — a missing or
-slow vector store just yields no citations, never a failed or delayed answer.
+When the background task answers a doubt, it also fetches
+`AgentService.retrieveSupplementalSources(topic)` and persists reduced citations
+on `doubts.sources`. Retrieval is best-effort: a missing or slow vector store
+only means no citations, never a failed or delayed save.
 
-## Data strategy & safety
+## Data strategy and safety
 
-Doubts are student-authored records persisted in the `doubts` table. The browser
-only sends the doubt text and optional context IDs; AI config and prompt policy
-stay server-side. The tutor prompt for a doubt carries no answer key and uses
-Socratic mode unless an upstream caller explicitly reveals the answer.
+Doubts are student-authored records persisted in the database. The browser sends
+only the message, thread/context IDs, and topic scope. AI configuration and
+prompt policy stay server-side.

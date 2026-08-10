@@ -9,6 +9,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../users/user.entity';
+import { DoubtThread } from './doubt-thread.entity';
 
 export enum DoubtStatus {
   OPEN = 'OPEN',
@@ -28,6 +29,16 @@ export class Doubt {
 
   @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
+
+  @ManyToOne(() => DoubtThread, (thread) => thread.doubts, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'thread_id' })
+  thread: DoubtThread | null;
+
+  @Column({ name: 'thread_id', type: 'uuid', nullable: true })
+  threadId: string | null;
 
   @Column({ type: 'varchar', length: 100 })
   subject: string;

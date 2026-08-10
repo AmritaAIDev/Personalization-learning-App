@@ -1,5 +1,6 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { TutorMessageType } from '../adaptive/adaptive.types';
+import { DoubtThread } from './doubt-thread.entity';
 import { Doubt, DoubtStatus } from './doubt.entity';
 import { DoubtsService } from './doubts.service';
 
@@ -12,6 +13,7 @@ function makeDoubt(overrides: Partial<Doubt> = {}): Doubt {
   return {
     id: 'doubt-1',
     userId: 'user-1',
+    threadId: 'thread-1',
     subject: 'Physics',
     chapter: 'Electrostatics',
     topic: 'Gauss Law',
@@ -28,6 +30,32 @@ function makeDoubt(overrides: Partial<Doubt> = {}): Doubt {
     updatedAt: new Date('2026-07-20T10:00:00.000Z'),
     ...overrides,
   } as Doubt;
+}
+
+function makeThread(overrides: Partial<DoubtThread> = {}): DoubtThread {
+  return {
+    id: 'thread-1',
+    userId: 'user-1',
+    title: 'Gauss Law doubt chat',
+    subject: 'Physics',
+    chapter: 'Electrostatics',
+    topic: 'Gauss Law',
+    doubts: [],
+    createdAt: new Date('2026-07-20T09:59:00.000Z'),
+    updatedAt: new Date('2026-07-20T10:00:00.000Z'),
+    ...overrides,
+  } as DoubtThread;
+}
+
+function makeThreadRepo(overrides: Record<string, unknown> = {}) {
+  return {
+    create: jest.fn((thread: Partial<DoubtThread>) => makeThread(thread)),
+    save: jest.fn((thread: DoubtThread) => Promise.resolve(thread)),
+    find: jest.fn().mockResolvedValue([]),
+    findOne: jest.fn().mockResolvedValue(makeThread()),
+    update: jest.fn().mockResolvedValue({ affected: 1 }),
+    ...overrides,
+  };
 }
 
 describe('DoubtsService', () => {
@@ -51,6 +79,7 @@ describe('DoubtsService', () => {
       retrieveSupplementalSources: jest.fn().mockResolvedValue([]),
     };
     const service = new DoubtsService(
+      makeThreadRepo() as never,
       repository as never,
       makeLookupRepo() as never,
       makeLookupRepo() as never,
@@ -127,6 +156,7 @@ describe('DoubtsService', () => {
       retrieveSupplementalSources: jest.fn().mockResolvedValue([]),
     };
     const service = new DoubtsService(
+      makeThreadRepo() as never,
       repository as never,
       sessionItemsRepo as never,
       makeLookupRepo() as never,
@@ -154,11 +184,16 @@ describe('DoubtsService', () => {
     );
   });
 
-  it('keeps a saved doubt open when tutor generation is unavailable', async () => {
+  it('answers with a deterministic fallback when tutor generation is unavailable', async () => {
     const created = makeDoubt();
+    const saved: Doubt[] = [];
     const repository = {
       create: jest.fn(() => created),
-      save: jest.fn().mockResolvedValue(created),
+      save: jest.fn().mockImplementation((doubt: Doubt) => {
+        const resolved = { ...doubt };
+        saved.push(resolved);
+        return Promise.resolve(resolved);
+      }),
       find: jest.fn(),
       findOne: jest.fn().mockResolvedValue(created),
     };
@@ -169,6 +204,7 @@ describe('DoubtsService', () => {
       retrieveSupplementalSources: jest.fn().mockResolvedValue([]),
     };
     const service = new DoubtsService(
+      makeThreadRepo() as never,
       repository as never,
       makeLookupRepo() as never,
       makeLookupRepo() as never,
@@ -188,6 +224,12 @@ describe('DoubtsService', () => {
       status: DoubtStatus.OPEN,
       assistantResponse: null,
     });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(repository.save).toHaveBeenCalledTimes(2);
+    expect(saved.at(-1)).toMatchObject({
+      status: DoubtStatus.ANSWERED,
+      assistantResponse: expect.stringContaining('safe fallback'),
+    });
   });
 
   it('lists doubt history with summary counts and recent topics', async () => {
@@ -206,6 +248,7 @@ describe('DoubtsService', () => {
       ]),
     };
     const service = new DoubtsService(
+      makeThreadRepo() as never,
       repository as never,
       makeLookupRepo() as never,
       makeLookupRepo() as never,

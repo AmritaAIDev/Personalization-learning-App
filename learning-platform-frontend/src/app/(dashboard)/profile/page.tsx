@@ -121,6 +121,11 @@ function strongestSkill(breakdown?: StudentDashboardPayload["growth"]["overall"]
   return dims.reduce((best, dim) => (dim[1] > best[1] ? dim : best))[0];
 }
 
+function percentValue(value: number | null | undefined) {
+  if (typeof value !== "number" || Number.isNaN(value)) return 0;
+  return Math.round(value <= 1 ? value * 100 : value);
+}
+
 type ProfileUser = {
   name?: string;
   xp?: number;
@@ -137,8 +142,7 @@ function buildProfileModel(
   const xp = data?.student.xp ?? user?.xp ?? 0;
   const streak = data?.student.streak ?? user?.streak ?? 0;
   const overall = data?.growth.overall;
-  const accuracy = overall?.breakdown.accuracy ?? 0;
-  const accuracyPercent = Math.round(accuracy * 100);
+  const accuracyPercent = percentValue(overall?.breakdown.accuracy);
   const answered = overall?.answered ?? 0;
   const mastered = overall?.mastered ?? data?.courseProgress.masteredTopics ?? 0;
   const momentum = overall?.momentum ?? 0;
@@ -603,11 +607,11 @@ function Radar({
   breakdown: StudentDashboardPayload["growth"]["overall"]["breakdown"];
 }) {
   const axes: Array<[string, number]> = [
-    ["Accuracy", breakdown.accuracy * 100],
-    ["Rigour", breakdown.difficulty * 100],
-    ["Depth", breakdown.bloom * 100],
-    ["Speed", breakdown.speed * 100],
-    ["Consistency", breakdown.consistency * 100],
+    ["Accuracy", percentValue(breakdown.accuracy)],
+    ["Rigour", percentValue(breakdown.difficulty)],
+    ["Depth", percentValue(breakdown.bloom)],
+    ["Speed", percentValue(breakdown.speed)],
+    ["Consistency", percentValue(breakdown.consistency)],
   ];
   const size = 220;
   const cx = size / 2;

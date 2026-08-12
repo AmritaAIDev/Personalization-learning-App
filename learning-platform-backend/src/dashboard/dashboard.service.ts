@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AdaptiveService } from '../adaptive/adaptive.service';
@@ -18,6 +18,67 @@ import type {
   DashboardTopicProgressStatus,
 } from './dashboard.types';
 
+type LearningDashboard = Awaited<ReturnType<AdaptiveService['getDashboard']>>;
+type GrowthPayload = Awaited<ReturnType<CompetencyService['getGrowth']>>;
+type DiagnosticsDashboard = Awaited<
+  ReturnType<DiagnosticsService['getDashboard']>
+>;
+type NotebookMistakes = Awaited<ReturnType<NotebookService['getMistakes']>>;
+
+const EMPTY_LEARNING_DASHBOARD: LearningDashboard = {
+  activeTopics: [],
+  completedTopics: [],
+  history: [],
+  suggestions: [],
+};
+
+const EMPTY_GROWTH_PAYLOAD: GrowthPayload = {
+  overall: {
+    score: 0,
+    band: 'Beginner',
+    breakdown: {
+      accuracy: 0,
+      difficulty: 0,
+      bloom: 0,
+      speed: 0,
+      consistency: 0,
+    },
+    topicsTracked: 0,
+    mastered: 0,
+    answered: 0,
+    momentum: 0,
+    positiveStreak: 0,
+  },
+  topics: [],
+  timeline: [],
+};
+
+const EMPTY_DIAGNOSTICS_DASHBOARD: DiagnosticsDashboard = {
+  data: {
+    stats: {
+      testsTaken: 0,
+      bestScore: null,
+      averageScore: null,
+      subject: 'Physics - Electrostatics',
+    },
+    diagnostic: {
+      title: 'Class XII Physics - Electrostatics Diagnostic',
+      chapters: [],
+      questionCount: 0,
+      durationMinutes: 0,
+      ready: false,
+    },
+    activeAttempt: null,
+    recentAttempts: [],
+  },
+};
+
+const EMPTY_NOTEBOOK_MISTAKES: NotebookMistakes = {
+  cards: [],
+  total: 0,
+  summary: { practiceMistakes: 0, adaptiveMistakes: 0, weakTopics: [] },
+};
+
 /**
  * Composes the student home view from existing, user-owned learning records.
  * This service deliberately returns only progress and navigation metadata—never
@@ -25,6 +86,20 @@ import type {
  */
 @Injectable()
 export class DashboardService {
+  private readonly logger = new Logger(DashboardService.name);
+
+  /**
+   * The published-question catalog grouped by subject/chapter/topic is the
+   * same for every user and only changes when content is authored, so it's
+   * cached process-wide instead of re-aggregating the whole questions table
+   * on every dashboard load.
+   */
+  private catalogCache: {
+    value: Array<{ subject: string; chapter: string; topic: string }>;
+    expiresAt: number;
+  } | null = null;
+  private static readonly CATALOG_CACHE_TTL_MS = 10 * 60 * 1000;
+
   constructor(
     private readonly adaptiveService: AdaptiveService,
     private readonly competencyService: CompetencyService,
@@ -35,13 +110,36 @@ export class DashboardService {
   ) {}
 
   async getStudentDashboard(user: AuthenticatedUser) {
-    const [learning, growth, diagnosticsResponse, notebook] = await Promise.all(
-      [
+    const [learningResult, growthResult, diagnosticsResult, notebookResult] =
+      await Promise.allSettled([
         this.adaptiveService.getDashboard(user.id),
         this.competencyService.getGrowth(user.id),
         this.diagnosticsService.getDashboard(user.id),
         this.notebookService.getMistakes(user.id, 24),
-      ],
+      ]);
+    const learning = this.settledOr(
+      learningResult,
+      'learning',
+      user.id,
+      EMPTY_LEARNING_DASHBOARD,
+    );
+    const growth = this.settledOr(
+      growthResult,
+      'growth',
+      user.id,
+      EMPTY_GROWTH_PAYLOAD,
+    );
+    const diagnosticsResponse = this.settledOr(
+      diagnosticsResult,
+      'diagnostics',
+      user.id,
+      EMPTY_DIAGNOSTICS_DASHBOARD,
+    );
+    const notebook = this.settledOr(
+      notebookResult,
+      'notebook',
+      user.id,
+      EMPTY_NOTEBOOK_MISTAKES,
     );
     const diagnostics = diagnosticsResponse.data;
     const dueCards = notebook.cards.filter(
@@ -96,20 +194,42 @@ export class DashboardService {
         }),
       },
       activity: this.getActivity(learning.history, diagnostics.recentAttempts),
-      subjectCoverage: await this.getSubjectCoverage(growth.topics),
+      subjectCoverage: await this.getSubjectCoverage(growth.topics).catch(
+        (error: unknown) => {
+          this.logger.warn(
+            `Dashboard section "subjectCoverage" failed for user ${user.id}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+          return [] as DashboardSubjectCoverage[];
+        },
+      ),
     };
   }
 
-  private async getSubjectCoverage(
-    trackedTopics: Array<{
-      subject: string;
-      chapter: string;
-      topic: string;
-      score: number;
-      status: string;
-    }>,
-  ): Promise<DashboardSubjectCoverage[]> {
-    const catalog = await this.questionsRepository
+  private settledOr<T>(
+    result: PromiseSettledResult<T>,
+    section: string,
+    userId: string,
+    fallback: T,
+  ): T {
+    if (result.status === 'fulfilled') return result.value;
+    this.logger.warn(
+      `Dashboard section "${section}" failed for user ${userId}: ${
+        result.reason instanceof Error
+          ? result.reason.message
+          : String(result.reason)
+      }`,
+    );
+    return fallback;
+  }
+
+  private async getQuestionCatalog(): Promise<
+    Array<{ subject: string; chapter: string; topic: string }>
+  > {
+    const cached = this.catalogCache;
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
+    const value = await this.questionsRepository
       .createQueryBuilder('question')
       .select('question.subject', 'subject')
       .addSelect('question.chapter', 'chapter')
@@ -124,6 +244,23 @@ export class DashboardService {
       .addOrderBy('question.chapter', 'ASC')
       .addOrderBy('question.topic', 'ASC')
       .getRawMany<{ subject: string; chapter: string; topic: string }>();
+    this.catalogCache = {
+      value,
+      expiresAt: Date.now() + DashboardService.CATALOG_CACHE_TTL_MS,
+    };
+    return value;
+  }
+
+  private async getSubjectCoverage(
+    trackedTopics: Array<{
+      subject: string;
+      chapter: string;
+      topic: string;
+      score: number;
+      status: string;
+    }>,
+  ): Promise<DashboardSubjectCoverage[]> {
+    const catalog = await this.getQuestionCatalog();
 
     const progressByTopic = new Map(
       trackedTopics.map((topic) => [

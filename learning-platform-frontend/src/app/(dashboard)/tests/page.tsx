@@ -12,6 +12,7 @@ import {
   Clock3,
   LoaderCircle,
   Play,
+  Trophy,
 } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
 import type {
@@ -244,6 +245,31 @@ export default function TestsPage() {
                 </span>
               </div>
             </section>
+
+            <Link
+              href="/mock-test"
+              className="group mt-4 flex items-center gap-4 rounded-[1.55rem] border border-hairline bg-surface p-5 shadow-[0_12px_30px_rgba(20,20,30,0.045)] transition hover:border-primary/30 hover:shadow-[0_16px_36px_rgba(20,20,30,0.08)] sm:p-6"
+            >
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary-tint text-primary">
+                <Trophy className="h-6 w-6" aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+                  Full mock test
+                </span>
+                <span className="mt-1 block font-heading text-lg font-bold text-ink">
+                  Physics + Chemistry + Maths, JEE-style negative marking
+                </span>
+                <span className="mt-1 block text-sm text-ink-soft">
+                  See your percentile against other test-takers on this
+                  platform and exactly which chapters cost you marks.
+                </span>
+              </span>
+              <ArrowRight
+                className="h-5 w-5 shrink-0 text-ink-mute transition group-hover:translate-x-0.5 group-hover:text-primary"
+                aria-hidden="true"
+              />
+            </Link>
 
             {!dashboard.diagnostic.ready && !dashboard.activeAttempt ? (
               <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

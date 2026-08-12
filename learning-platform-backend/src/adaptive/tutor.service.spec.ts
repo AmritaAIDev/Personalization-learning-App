@@ -163,3 +163,87 @@ describe('TutorService background reply state', () => {
     expect(service.isPending(session.id)).toBe(false);
   });
 });
+
+describe('TutorService streaming chat', () => {
+  function createStreamingService(
+    generateTutorResponseStream: AgentService['generateTutorResponseStream'],
+  ): { service: TutorService; session: LearningSession } {
+    const agent = {
+      generateTutorResponseStream,
+    } as unknown as AgentService;
+    const messages = {
+      find: jest.fn(async () => []),
+      create: jest.fn((value: Partial<TutorMessage>) => value as TutorMessage),
+      save: jest.fn(async (value: Partial<TutorMessage>) => ({
+        id: 'message-id',
+        createdAt: new Date(),
+        ...value,
+      })),
+    } as unknown as Repository<TutorMessage>;
+    const conversations = {
+      findOne: jest.fn(async () => ({ id: 'conversation-id' })),
+    } as unknown as Repository<TutorConversation>;
+    return {
+      service: new TutorService(agent, conversations, messages),
+      session: {
+        id: 'session-id',
+        subject: 'Physics',
+        chapter: 'Electric Charges and Fields',
+        topic: "Coulomb's Law and Charge",
+      } as LearningSession,
+    };
+  }
+
+  it('yields chunks as they arrive and persists the assembled message', async () => {
+    async function* stream() {
+      yield 'The SI unit ';
+      yield 'of charge is the coulomb.';
+    }
+    const { service, session } = createStreamingService(stream);
+
+    const generator = service.answerLearnerMessageStream(
+      'user-id',
+      session,
+      null,
+      null,
+      false,
+      'What is the SI unit of charge?',
+    );
+    const chunks: string[] = [];
+    let step = await generator.next();
+    while (!step.done) {
+      chunks.push(step.value);
+      step = await generator.next();
+    }
+
+    expect(chunks).toEqual(['The SI unit ', 'of charge is the coulomb.']);
+    expect(step.value.content).toBe('The SI unit of charge is the coulomb.');
+  });
+
+  it('falls back to deterministic guidance when the stream fails before yielding anything', async () => {
+    async function* stream(): AsyncGenerator<string> {
+      throw new Error('model unavailable');
+
+      yield '';
+    }
+    const { service, session } = createStreamingService(stream);
+
+    const generator = service.answerLearnerMessageStream(
+      'user-id',
+      session,
+      null,
+      null,
+      false,
+      'I am stuck on this topic.',
+    );
+    const chunks: string[] = [];
+    let step = await generator.next();
+    while (!step.done) {
+      chunks.push(step.value);
+      step = await generator.next();
+    }
+
+    expect(chunks).toHaveLength(1);
+    expect(step.value.content.length).toBeGreaterThan(0);
+  });
+});

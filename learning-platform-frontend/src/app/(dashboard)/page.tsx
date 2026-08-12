@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { CircleAlert } from "lucide-react";
 import StudentActionCenter from "@/components/dashboard/StudentActionCenter";
+import LearningOverview from "@/components/learning/LearningOverview";
 import TopicSearch from "@/components/search/TopicSearch";
 import { LEARNING_DATA_UPDATED_EVENT, apiFetch } from "@/lib/api";
 import type { StudentDashboardPayload } from "@/lib/student-dashboard-types";
+import { useApiResource } from "@/lib/useApiResource";
 
 function DashboardSkeleton() {
   return (
@@ -20,33 +22,14 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardPage() {
-  const [data, setData] = useState<StudentDashboardPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadDashboard = useCallback(async () => {
-    setLoading(true);
-    try {
-      const summary = await apiFetch<StudentDashboardPayload>(
-        "/api/dashboard/student",
-      );
-      setData(summary);
-      setError(null);
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Your learning dashboard could not be loaded.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => void loadDashboard(), 0);
-    return () => window.clearTimeout(timeout);
-  }, [loadDashboard]);
+  const fetchDashboard = useCallback(
+    () => apiFetch<StudentDashboardPayload>("/api/dashboard/student"),
+    [],
+  );
+  const { data, loading, error, reload: loadDashboard } = useApiResource(
+    fetchDashboard,
+    "Your learning dashboard could not be loaded.",
+  );
 
   useEffect(() => {
     const refreshDashboard = () => void loadDashboard();
@@ -102,7 +85,12 @@ export default function DashboardPage() {
 
         {loading ? <DashboardSkeleton /> : null}
 
-        {data ? <StudentActionCenter data={data} /> : null}
+        {data ? (
+          <>
+            <StudentActionCenter data={data} />
+            <LearningOverview />
+          </>
+        ) : null}
       </main>
     </div>
   );

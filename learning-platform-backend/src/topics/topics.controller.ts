@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Roles } from '../auth/roles.decorator';
 import { CreateTopicDto } from './create-topic.dto';
@@ -26,7 +33,7 @@ export class TopicsController {
   }
 
   @Get(':id/prerequisites')
-  async getPrerequisites(@Param('id') id: string) {
+  async getPrerequisites(@Param('id', ParseUUIDPipe) id: string) {
     const prereqs = await this.topicsService.getPrerequisites(id);
     return { success: true, data: prereqs };
   }

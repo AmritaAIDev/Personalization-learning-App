@@ -46,6 +46,13 @@ const navigation: Array<{
 ];
 
 const overviewLabels = new Set(["Dashboard", "Journey"]);
+const studyLabels = new Set([
+  "Learn",
+  "Practice",
+  "Tests",
+  "Notebook",
+  "Doubts",
+]);
 const planningLabels = new Set(["Content"]);
 const mobileLabels = new Set([
   "Dashboard",
@@ -182,7 +189,7 @@ export default function Sidebar() {
             href={href}
             title={label}
             aria-current={active ? "page" : undefined}
-            className={`group flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 text-[10px] font-semibold transition-all duration-200 md:h-10 md:flex-row md:justify-center md:gap-3 md:px-2 md:text-[13.5px] lg:justify-start lg:px-3 ${
+            className={`group flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 text-[10px] font-semibold transition duration-200 md:h-10 md:flex-row md:justify-center md:gap-3 md:px-2 md:text-[13.5px] lg:justify-start lg:px-3 ${
               active
                 ? "text-primary md:bg-primary-tint"
                 : "text-ink-mute hover:text-ink md:hover:bg-canvas"
@@ -198,6 +205,17 @@ export default function Sidebar() {
         <SidebarSection
           title="Overview"
           items={navigation.filter((item) => overviewLabels.has(item.label))}
+          pathname={pathname}
+          collapsed={isCollapsed}
+        />
+        <div className="my-3 border-t border-hairline" />
+        <SidebarSection
+          title="Study"
+          items={navigation.filter(
+            (item) =>
+              studyLabels.has(item.label) &&
+              (!item.roles || item.roles.includes(user?.role ?? "student")),
+          )}
           pathname={pathname}
           collapsed={isCollapsed}
         />
@@ -305,7 +323,7 @@ function SidebarSection({
               key={href}
               href={href}
               title={collapsed ? label : undefined}
-              className={`flex h-9 items-center gap-3 rounded-xl text-[13px] font-semibold transition-all duration-200 ${collapsed ? "justify-center px-0" : "px-3"} ${
+              className={`flex h-9 items-center gap-3 rounded-xl text-[13px] font-semibold transition duration-200 ${collapsed ? "justify-center px-0" : "px-3"} ${
                 active
                   ? "bg-primary-tint text-primary shadow-[0_6px_16px_rgba(20,20,30,0.035)]"
                   : "text-ink-soft hover:bg-canvas hover:text-ink"

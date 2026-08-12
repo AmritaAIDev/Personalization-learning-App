@@ -83,6 +83,9 @@ export type LearningSessionPayload = {
     requiresRetry: boolean;
     /** Options already used on this item, so a retry can rule them out. */
     attemptedOptions: string[];
+    /** The underlying question's own identity — distinct from `id` above. */
+    questionSource: "CURATED" | "AI_POOL";
+    questionRefId: string;
   } | null;
   progress: Array<{
     id: string;

@@ -334,7 +334,7 @@ export default function DiagnosticAttemptPage() {
             aria-label="Answered questions"
           >
             <div
-              className="h-full rounded-full bg-primary transition-all duration-500"
+              className="h-full rounded-full bg-primary transition-[width] duration-500"
               style={{ width: `${progressPercent}%` }}
             />
           </div>

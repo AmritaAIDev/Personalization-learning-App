@@ -133,6 +133,85 @@ export async function apiFetch<T>(
   }
 }
 
+export type SseEvent = { event: string; data: unknown };
+
+/**
+ * Consumes a Server-Sent Events endpoint that needs a JSON POST body (so the
+ * native `EventSource`, which is GET-only and header-less, can't be used).
+ * Shares `apiFetch`'s cookie-based session auth and API base URL, but streams
+ * parsed events instead of waiting for one full JSON response.
+ */
+export async function* streamApi(
+  path: string,
+  options: { body?: unknown } = {},
+): AsyncGenerator<SseEvent> {
+  const apiUrl = resolveApiUrl();
+  const headers = new Headers({ Accept: "text/event-stream" });
+  const body = options.body !== undefined ? JSON.stringify(options.body) : undefined;
+  if (body !== undefined) headers.set("Content-Type", "application/json");
+
+  let response: Response;
+  try {
+    response = await fetch(`${apiUrl}${path}`, {
+      method: "POST",
+      headers,
+      body,
+      credentials: "include",
+      cache: "no-store",
+    });
+  } catch {
+    throw new ApiError(
+      0,
+      "Unable to reach the learning server. Please try again.",
+    );
+  }
+
+  if (!response.ok || !response.body) {
+    const text = await response.text().catch(() => "");
+    let message = "The request could not be completed.";
+    try {
+      message = errorMessage(JSON.parse(text) as unknown, message);
+    } catch {
+      // Non-JSON error body; keep the generic message.
+    }
+    throw new ApiError(response.status, message);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary !== -1) {
+      const rawEvent = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      const parsed = parseSseEvent(rawEvent);
+      if (parsed) yield parsed;
+      boundary = buffer.indexOf("\n\n");
+    }
+  }
+}
+
+function parseSseEvent(raw: string): SseEvent | null {
+  let eventName = "message";
+  const dataLines: string[] = [];
+  for (const line of raw.split("\n")) {
+    if (line.startsWith("event:")) eventName = line.slice(6).trim();
+    else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+  }
+  if (dataLines.length === 0) return null;
+  try {
+    return { event: eventName, data: JSON.parse(dataLines.join("\n")) as unknown };
+  } catch {
+    return null;
+  }
+}
+
 async function requestApi<T>(
   apiUrl: string,
   path: string,

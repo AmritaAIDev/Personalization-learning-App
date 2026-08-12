@@ -72,6 +72,10 @@ describe('DashboardService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // The question-catalog cache is process-wide and long-lived in
+    // production (content rarely changes); reset it between tests so each
+    // test's mocked catalog is actually exercised instead of a prior test's.
+    (service as unknown as { catalogCache: unknown }).catalogCache = null;
     adaptiveService.getDashboard.mockResolvedValue(learningDashboard());
     notebookService.getMistakes.mockResolvedValue({ cards: [] });
     questionsRepository.createQueryBuilder.mockReturnValue({
@@ -189,5 +193,42 @@ describe('DashboardService', () => {
     expect(
       result.subjectCoverage[0].topics.map((topic) => topic.topic),
     ).toEqual(['Electric Field', 'Capacitance', 'Gauss Law']);
+  });
+
+  it('degrades gracefully when one section fails instead of failing the whole dashboard', async () => {
+    diagnosticsService.getDashboard.mockRejectedValue(
+      new Error('diagnostics db timeout'),
+    );
+    notebookService.getMistakes.mockResolvedValue({
+      cards: [
+        {
+          subject: 'Physics',
+          chapter: 'Electrostatics',
+          topic: 'Gauss Law',
+          reviewState: 'DUE',
+        },
+      ],
+    });
+
+    const result = await service.getStudentDashboard(user);
+
+    expect(result.diagnostics.activeAttempt).toBeNull();
+    expect(result.diagnostics.recentAttempts).toEqual([]);
+    expect(result.today.primary.kind).toBe('REVIEW_MISTAKES');
+    expect(result.learning.activeTopics).toHaveLength(1);
+  });
+
+  it('degrades gracefully when subject coverage lookup throws', async () => {
+    diagnosticsService.getDashboard.mockResolvedValue(
+      diagnosticDashboard(null),
+    );
+    questionsRepository.createQueryBuilder.mockImplementation(() => {
+      throw new Error('connection pool exhausted');
+    });
+
+    const result = await service.getStudentDashboard(user);
+
+    expect(result.subjectCoverage).toEqual([]);
+    expect(result.today).toBeDefined();
   });
 });

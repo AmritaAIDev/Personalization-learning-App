@@ -14,6 +14,7 @@ import {
   Timer,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import ReportQuestionButton from "@/components/ReportQuestionButton";
 import StudyMarkdown from "@/components/learning/StudyMarkdown";
 import { formatDuration } from "@/lib/format";
 import {
@@ -331,7 +332,7 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
             aria-label="Answered questions"
           >
             <div
-              className="h-full rounded-full bg-primary transition-all duration-500"
+              className="h-full rounded-full bg-primary transition-[width] duration-500"
               style={{
                 width: `${Math.round((progress.answered / Math.max(1, payload.attempt.totalQuestions)) * 100)}%`,
               }}
@@ -430,19 +431,25 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
               answered={Boolean(answers[question.id])}
               onRetry={() => queueRef.current?.retryNow()}
             />
-            <button
-              type="button"
-              onClick={toggleMark}
-              aria-pressed={isMarked}
-              className={`inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${
-                isMarked
-                  ? "border-amber-200 bg-amber-50 text-amber-800"
-                  : "border-hairline text-ink-soft hover:bg-canvas"
-              }`}
-            >
-              <Flag className="h-4 w-4" aria-hidden="true" />
-              {isMarked ? "Marked for review" : "Mark for review"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleMark}
+                aria-pressed={isMarked}
+                className={`inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${
+                  isMarked
+                    ? "border-amber-200 bg-amber-50 text-amber-800"
+                    : "border-hairline text-ink-soft hover:bg-canvas"
+                }`}
+              >
+                <Flag className="h-4 w-4" aria-hidden="true" />
+                {isMarked ? "Marked for review" : "Mark for review"}
+              </button>
+              <ReportQuestionButton
+                questionSource="CURATED"
+                questionRefId={question.id}
+              />
+            </div>
           </div>
 
           <div className="mt-6 flex flex-col-reverse gap-3 border-t border-hairline pt-6 sm:flex-row sm:items-center sm:justify-between">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -9,23 +9,12 @@ import {
   Target,
   TrendingUp,
 } from "lucide-react";
+import GrowthPanel from "@/components/dashboard/GrowthPanel";
 import { apiFetch } from "@/lib/api";
 import type { DashboardPayload } from "@/lib/diagnostic-types";
 import type { GrowthPayload, TopicCompetency } from "@/lib/growth-types";
 import { learningUrl } from "@/lib/learning";
-
-function average(values: number[]) {
-  if (values.length === 0) return 0;
-  return Math.round(
-    values.reduce((sum, value) => sum + value, 0) / values.length,
-  );
-}
-
-function scoreTone(score: number) {
-  if (score >= 70) return "bg-emerald-500";
-  if (score >= 45) return "bg-orange-500";
-  return "bg-primary";
-}
+import { useApiResource } from "@/lib/useApiResource";
 
 function rankTopics(topics: TopicCompetency[]) {
   return topics
@@ -34,54 +23,27 @@ function rankTopics(topics: TopicCompetency[]) {
     .slice(0, 6);
 }
 
+type AnalyticsData = { growth: GrowthPayload; dashboard: DashboardPayload };
+
 export default function AnalyticsPage() {
-  const [growth, setGrowth] = useState<GrowthPayload | null>(null);
-  const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [growthData, dashboardData] = await Promise.all([
-        apiFetch<GrowthPayload>("/api/learning/growth"),
-        apiFetch<DashboardPayload>("/api/diagnostics/dashboard"),
-      ]);
-      setGrowth(growthData);
-      setDashboard(dashboardData);
-      setError(null);
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Analytics could not be loaded.",
-      );
-    } finally {
-      setLoading(false);
-    }
+  const fetchAnalytics = useCallback(async (): Promise<AnalyticsData> => {
+    const [growthData, dashboardData] = await Promise.all([
+      apiFetch<GrowthPayload>("/api/learning/growth"),
+      apiFetch<DashboardPayload>("/api/diagnostics/dashboard"),
+    ]);
+    return { growth: growthData, dashboard: dashboardData };
   }, []);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timeout);
-  }, [load]);
+  const { data, loading, error, reload: load } = useApiResource(
+    fetchAnalytics,
+    "Analytics could not be loaded.",
+  );
+  const growth = data?.growth ?? null;
+  const dashboard = data?.dashboard ?? null;
 
   const weakTopics = useMemo(
     () => rankTopics(growth?.topics ?? []),
     [growth?.topics],
   );
-  const subjectRows = useMemo(() => {
-    const groups = new Map<string, TopicCompetency[]>();
-    for (const topic of growth?.topics ?? []) {
-      groups.set(topic.subject, [...(groups.get(topic.subject) ?? []), topic]);
-    }
-    return Array.from(groups.entries()).map(([subject, topics]) => ({
-      subject,
-      score: average(topics.map((topic) => topic.score)),
-      answered: topics.reduce((sum, topic) => sum + topic.answered, 0),
-      weak: topics.filter((topic) => topic.score < 45).length,
-    }));
-  }, [growth?.topics]);
 
   return (
     <div className="min-h-screen bg-canvas pb-20">
@@ -190,45 +152,7 @@ export default function AnalyticsPage() {
               </article>
             </section>
 
-            <section className="mt-5 grid gap-5 lg:grid-cols-[0.56fr_0.44fr]">
-              <article className="rounded-[1.55rem] border border-hairline bg-white p-6 shadow-[0_18px_48px_rgba(20,20,30,0.05)]">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
-                  Subject readiness
-                </p>
-                <div className="mt-5 space-y-5">
-                  {subjectRows.length > 0 ? (
-                    subjectRows.map((subject) => (
-                      <div key={subject.subject}>
-                        <div className="mb-2 flex items-center justify-between gap-4">
-                          <div>
-                            <p className="font-semibold text-ink">
-                              {subject.subject}
-                            </p>
-                            <p className="text-xs text-ink-mute">
-                              {subject.answered} answers · {subject.weak} weak
-                            </p>
-                          </div>
-                          <span className="font-heading text-2xl font-semibold text-ink">
-                            {subject.score}%
-                          </span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-hairline">
-                          <div
-                            className={`h-full rounded-full ${scoreTone(subject.score)}`}
-                            style={{ width: `${subject.score}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="rounded-2xl border border-dashed border-hairline bg-canvas p-5 text-sm leading-6 text-ink-soft">
-                      Analytics will populate after you complete a diagnostic or
-                      learning session.
-                    </p>
-                  )}
-                </div>
-              </article>
-
+            <section className="mt-5">
               <article className="rounded-[1.55rem] border border-hairline bg-white p-6 shadow-[0_18px_48px_rgba(20,20,30,0.05)]">
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
                   Weak-topic queue
@@ -271,6 +195,8 @@ export default function AnalyticsPage() {
                 </div>
               </article>
             </section>
+
+            <GrowthPanel />
           </>
         ) : null}
       </main>

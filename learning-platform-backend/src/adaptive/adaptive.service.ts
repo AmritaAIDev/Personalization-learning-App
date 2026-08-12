@@ -102,6 +102,8 @@ type PublicSessionPayload = {
     requiresRetry: boolean;
     /** Options already used on this item, so the retry can rule them out. */
     attemptedOptions: string[];
+    questionSource: LearningQuestionSource;
+    questionRefId: string;
   } | null;
   progress: Array<{
     id: string;
@@ -182,6 +184,18 @@ type AnswerMutation = {
 export class AdaptiveService {
   /** One background card top-up per topic at a time. */
   private readonly flashcardTopUps = new Map<string, Promise<void>>();
+
+  /**
+   * The full topic graph (with prerequisites) is identical for every user
+   * and only changes when content is authored, so it's cheap to cache
+   * process-wide instead of re-joining the whole table on every dashboard
+   * load's suggestion pass.
+   */
+  private topicsWithPrerequisitesCache: {
+    value: Topic[];
+    expiresAt: number;
+  } | null = null;
+  private static readonly TOPICS_GRAPH_CACHE_TTL_MS = 10 * 60 * 1000;
 
   constructor(
     private readonly dataSource: DataSource,
@@ -453,6 +467,34 @@ export class AdaptiveService {
   }
 
   async askTutor(userId: string, sessionId: string, input: AskTutorDto) {
+    const { session, currentItem, question, answerRevealed } =
+      await this.resolveTutorAskContext(userId, sessionId);
+    const message = await this.tutorService.answerLearnerMessage(
+      userId,
+      session,
+      currentItem?.id ?? null,
+      question,
+      answerRevealed,
+      input.message,
+    );
+    return { message };
+  }
+
+  /** Streaming counterpart of {@link askTutor}; same context resolution, progressive reply. */
+  async askTutorStream(userId: string, sessionId: string, input: AskTutorDto) {
+    const { session, currentItem, question, answerRevealed } =
+      await this.resolveTutorAskContext(userId, sessionId);
+    return this.tutorService.answerLearnerMessageStream(
+      userId,
+      session,
+      currentItem?.id ?? null,
+      question,
+      answerRevealed,
+      input.message,
+    );
+  }
+
+  private async resolveTutorAskContext(userId: string, sessionId: string) {
     const session = await this.getOwnedSession(userId, sessionId, true);
     const currentItem =
       session.items
@@ -465,15 +507,7 @@ export class AdaptiveService {
     const answerRevealed = Boolean(
       currentItem?.resolvedAt && (currentItem.answers?.length ?? 0) > 0,
     );
-    const message = await this.tutorService.answerLearnerMessage(
-      userId,
-      session,
-      currentItem?.id ?? null,
-      question,
-      answerRevealed,
-      input.message,
-    );
-    return { message };
+    return { session, currentItem, question, answerRevealed };
   }
 
   async getDashboard(userId: string) {
@@ -1006,6 +1040,11 @@ export class AdaptiveService {
               options: currentQuestion.options,
               bloomLevel: currentQuestion.bloomLevel,
               difficulty: currentQuestion.difficulty,
+              // The underlying question's own identity, distinct from the
+              // session-item id above — needed to report an issue with the
+              // question itself rather than this occurrence of it.
+              questionSource: currentQuestion.source,
+              questionRefId: currentQuestion.id,
               attemptCount: current.answers?.length ?? 0,
               requiresRetry:
                 (current.answers?.length ?? 0) === 1 &&
@@ -1234,7 +1273,7 @@ export class AdaptiveService {
         questionCount: string;
       }>();
     const graphTopics = completedTopics.length
-      ? await this.topicsRepository.find({ relations: { prerequisites: true } })
+      ? await this.getTopicsWithPrerequisites()
       : [];
     const directlyUnlocked = new Set(
       graphTopics
@@ -1257,6 +1296,19 @@ export class AdaptiveService {
           : `Related to your ${row.chapter} learning activity`,
       }))
       .slice(0, 3);
+  }
+
+  private async getTopicsWithPrerequisites(): Promise<Topic[]> {
+    const cached = this.topicsWithPrerequisitesCache;
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
+    const value = await this.topicsRepository.find({
+      relations: { prerequisites: true },
+    });
+    this.topicsWithPrerequisitesCache = {
+      value,
+      expiresAt: Date.now() + AdaptiveService.TOPICS_GRAPH_CACHE_TTL_MS,
+    };
+    return value;
   }
 
   /**

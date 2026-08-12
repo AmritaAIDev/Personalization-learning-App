@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useCallback, useMemo } from "react";
 import {
   ArrowUpRight,
   BookOpen,
@@ -11,6 +12,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { learningUrl } from "@/lib/learning";
+import { useApiResource } from "@/lib/useApiResource";
 import type {
   CompetencyBand,
   GrowthPayload,
@@ -198,31 +201,14 @@ function GrowthSkeleton() {
 }
 
 export default function GrowthPanel() {
-  const [data, setData] = useState<GrowthPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const next = await apiFetch<GrowthPayload>("/api/learning/growth");
-      setData(next);
-      setError(null);
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Readiness could not be loaded.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timeout);
-  }, [load]);
+  const fetchGrowth = useCallback(
+    () => apiFetch<GrowthPayload>("/api/learning/growth"),
+    [],
+  );
+  const { data, loading, error } = useApiResource(
+    fetchGrowth,
+    "Readiness could not be loaded.",
+  );
 
   const chart = useMemo(
     () => buildAreaPath(data?.timeline ?? [], 320, 104),
@@ -479,9 +465,17 @@ export default function GrowthPanel() {
         {chapterPreview.length > 0 ? (
           <div className="mt-5 grid gap-3 lg:grid-cols-2">
             {chapterPreview.map((chapter) => (
-              <article
+              <Link
                 key={`${chapter.subject}-${chapter.chapter}`}
-                className="group rounded-2xl bg-canvas p-4 transition duration-300 hover:bg-surface hover:shadow-[0_12px_30px_rgba(20,20,30,0.06)]"
+                href={learningUrl(
+                  {
+                    subject: chapter.weakestTopic.subject,
+                    chapter: chapter.weakestTopic.chapter,
+                    topic: chapter.weakestTopic.topic,
+                  },
+                  { tab: "practice" },
+                )}
+                className="group block rounded-2xl bg-canvas p-4 transition duration-300 hover:bg-surface hover:shadow-[0_12px_30px_rgba(20,20,30,0.06)]"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -508,7 +502,7 @@ export default function GrowthPanel() {
                     aria-hidden="true"
                   />
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         ) : (

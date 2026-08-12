@@ -1,40 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { ArrowRight, CheckCircle2, CircleAlert } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { learningUrl } from "@/lib/learning";
 import type { LearningDashboardPayload } from "@/lib/learning-types";
+import { useApiResource } from "@/lib/useApiResource";
 
 export default function LearningOverview() {
-  const [data, setData] = useState<LearningDashboardPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const next = await apiFetch<LearningDashboardPayload>(
-        "/api/learning/dashboard",
-      );
-      setData(next);
-      setError(null);
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Adaptive learning history could not be loaded.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timeout);
-  }, [load]);
+  const fetchOverview = useCallback(
+    () => apiFetch<LearningDashboardPayload>("/api/learning/dashboard"),
+    [],
+  );
+  const { data, loading, error, reload: load } = useApiResource(
+    fetchOverview,
+    "Adaptive learning history could not be loaded.",
+  );
 
   return (
     <section className="mt-14">
@@ -112,7 +94,7 @@ export default function LearningOverview() {
                   <Link
                     key={topic.id}
                     href={learningUrl(topic, { tab: "overview" })}
-                    className="group flex items-center justify-between gap-4 rounded-xl bg-canvas p-4 transition-all duration-200 hover:bg-surface hover:shadow-[0_8px_24px_rgba(20,20,30,0.06)]"
+                    className="group flex items-center justify-between gap-4 rounded-xl bg-canvas p-4 transition duration-200 hover:bg-surface hover:shadow-[0_8px_24px_rgba(20,20,30,0.06)]"
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-ink">
@@ -153,7 +135,7 @@ export default function LearningOverview() {
                   <Link
                     key={[topic.subject, topic.chapter, topic.topic].join("-")}
                     href={learningUrl(topic, { tab: "overview" })}
-                    className="group block rounded-xl bg-canvas p-4 transition-all duration-200 hover:bg-surface hover:shadow-[0_8px_24px_rgba(20,20,30,0.06)]"
+                    className="group block rounded-xl bg-canvas p-4 transition duration-200 hover:bg-surface hover:shadow-[0_8px_24px_rgba(20,20,30,0.06)]"
                   >
                     <span className="flex items-start justify-between gap-3">
                       <span className="min-w-0">

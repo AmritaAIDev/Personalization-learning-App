@@ -4,12 +4,18 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
 import { QuestionPublicationStatus, QuestionSource } from './question.entity';
+import {
+  QuestionReportReason,
+  QuestionReportStatus,
+} from './question-report.entity';
+import { LearningQuestionSource } from './adaptive/adaptive.types';
 
 // Accept both the four canonical proficiency levels and the legacy Bloom
 // vocabulary so historical clients and seeded data continue to validate.
@@ -142,4 +148,44 @@ export class UpdateQuestionPublicationDto {
   @IsString()
   @MaxLength(1000)
   reviewNotes?: string;
+}
+
+/** Either questionId (CURATED) or generatedQuestionId (AI_POOL) must be set, matching source. */
+export class ReportQuestionDto {
+  @IsIn(Object.values(LearningQuestionSource))
+  questionSource: LearningQuestionSource;
+
+  @IsOptional()
+  @IsUUID()
+  questionId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  generatedQuestionId?: string;
+
+  @IsIn(Object.values(QuestionReportReason))
+  reason: QuestionReportReason;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  details?: string;
+}
+
+export class QuestionReportQueryDto {
+  @IsOptional()
+  @IsIn(Object.values(QuestionReportStatus))
+  status?: QuestionReportStatus;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit = 25;
+}
+
+export class ResolveQuestionReportDto {
+  @IsIn(['DISMISS', 'RESOLVE'])
+  action: 'DISMISS' | 'RESOLVE';
 }

@@ -18,6 +18,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { describeRoundOutcome, learningUrl } from "@/lib/learning";
+import ReportQuestionButton from "@/components/ReportQuestionButton";
 import type {
   LearningAnswerPayload,
   LearningSessionPayload,
@@ -147,7 +148,7 @@ function RoundProgress({
         aria-label="Round progress"
       >
         <div
-          className="h-full rounded-full bg-primary transition-all duration-500"
+          className="h-full rounded-full bg-primary transition-[width] duration-500"
           style={{ width: `${percent}%` }}
         />
       </div>
@@ -243,6 +244,11 @@ function ActiveQuestion({
             Two attempts per question
           </span>
         )}
+        <ReportQuestionButton
+          questionSource={current.questionSource}
+          questionRefId={current.questionRefId}
+          compact
+        />
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto rounded-[1.35rem] border border-hairline bg-canvas p-3 sm:p-4 custom-scrollbar">

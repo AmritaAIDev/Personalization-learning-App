@@ -5,16 +5,26 @@ import {
   Archive,
   CheckCircle2,
   CircleAlert,
+  Flag,
   FilePenLine,
   LoaderCircle,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
 import type {
   AdminQuestionRecord,
+  QuestionReport,
   QuestionReviewStatus,
 } from "@/lib/question-review-types";
+
+const REPORT_REASON_LABELS: Record<QuestionReport["reason"], string> = {
+  WRONG_ANSWER: "Answer key looks wrong",
+  CONFUSING_WORDING: "Confusing or unclear",
+  TYPO_OR_FORMATTING: "Typo or formatting issue",
+  OTHER: "Something else",
+};
 
 const statusOptions: QuestionReviewStatus[] = [
   "DRAFT",
@@ -40,6 +50,11 @@ export default function ContentReviewPage() {
     bloomLevel: "Application",
     difficulty: "Medium",
   });
+  const [reports, setReports] = useState<QuestionReport[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [resolvingReportId, setResolvingReportId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (user?.role !== "admin") return;
@@ -69,6 +84,42 @@ export default function ContentReviewPage() {
       active = false;
     };
   }, [status, user?.role]);
+
+  useEffect(() => {
+    if (user?.role !== "admin") return;
+    let active = true;
+    void apiFetch<QuestionReport[]>("/api/questions/reports?status=OPEN")
+      .then((data) => {
+        if (active) setReports(data);
+      })
+      .catch(() => {
+        // Non-critical panel; the main review queue above already surfaces errors.
+      })
+      .finally(() => {
+        if (active) setReportsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.role]);
+
+  const resolveReport = async (
+    reportId: string,
+    action: "DISMISS" | "RESOLVE",
+  ) => {
+    setResolvingReportId(reportId);
+    try {
+      await apiFetch(`/api/questions/reports/${reportId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ action }),
+      });
+      setReports((current) => current.filter((report) => report.id !== reportId));
+    } catch {
+      // Leave the report in the list; the reviewer can retry.
+    } finally {
+      setResolvingReportId(null);
+    }
+  };
 
   const generateDraft = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -473,6 +524,111 @@ export default function ContentReviewPage() {
             </div>
           )}
         </section>
+      </section>
+
+      <section className="mt-6 rounded-[1.75rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:p-6">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-rose-50 text-rose-600">
+            <Flag className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="font-heading text-xl font-bold text-ink">
+              Reported questions
+            </h2>
+            <p className="mt-0.5 text-sm text-ink-soft">
+              Student-flagged issues, including the real-time AI practice
+              pool that can&apos;t be reviewed before it reaches a learner.
+            </p>
+          </div>
+        </div>
+
+        {reportsLoading ? (
+          <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-ink-soft">
+            <LoaderCircle
+              className="h-4 w-4 animate-spin text-primary"
+              aria-hidden="true"
+            />
+            Loading reports
+          </div>
+        ) : reports.length === 0 ? (
+          <p className="mt-5 rounded-xl bg-canvas px-4 py-8 text-center text-sm leading-6 text-ink-soft">
+            No open reports right now.
+          </p>
+        ) : (
+          <div className="mt-5 space-y-3">
+            {reports.map((report) => (
+              <article
+                key={report.id}
+                className="rounded-2xl border border-hairline bg-surface p-4"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap gap-2 text-xs font-bold">
+                      <span className="rounded-full bg-rose-50 px-2.5 py-1 text-rose-700">
+                        {REPORT_REASON_LABELS[report.reason]}
+                      </span>
+                      <span className="rounded-full bg-canvas px-2.5 py-1 text-ink-soft">
+                        {report.questionSource === "AI_POOL"
+                          ? "AI practice pool"
+                          : "Curated"}
+                      </span>
+                    </div>
+                    {report.questionPreview ? (
+                      <>
+                        <p className="mt-3 text-xs font-medium text-ink-mute">
+                          {report.questionPreview.chapter} ·{" "}
+                          {report.questionPreview.topic}
+                        </p>
+                        <h3 className="mt-1 text-sm font-bold leading-6 text-ink">
+                          {report.questionPreview.text}
+                        </h3>
+                      </>
+                    ) : (
+                      <p className="mt-3 text-sm text-ink-mute">
+                        The reported question is no longer available.
+                      </p>
+                    )}
+                    {report.details ? (
+                      <p className="mt-2 rounded-xl bg-canvas px-3 py-2 text-xs leading-5 text-ink-soft">
+                        &ldquo;{report.details}&rdquo;
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      disabled={resolvingReportId === report.id}
+                      onClick={() => void resolveReport(report.id, "RESOLVE")}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-white hover:bg-primary-strong disabled:opacity-60"
+                    >
+                      {resolvingReportId === report.id ? (
+                        <LoaderCircle
+                          className="h-3.5 w-3.5 animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <CheckCircle2
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
+                      )}{" "}
+                      Resolved
+                    </button>
+                    <button
+                      type="button"
+                      disabled={resolvingReportId === report.id}
+                      onClick={() => void resolveReport(report.id, "DISMISS")}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-hairline px-3 py-2 text-xs font-bold text-ink-soft hover:bg-canvas disabled:opacity-60"
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden="true" />
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

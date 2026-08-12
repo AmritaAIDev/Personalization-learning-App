@@ -103,7 +103,7 @@ export default function SubtopicExplorer({ scope }: { scope: LearningScope }) {
               key={item.name}
               type="button"
               onClick={() => setSelected(item.name)}
-              className={`group relative rounded-full px-3.5 py-2 text-[13px] font-medium transition-all duration-200 ${
+              className={`group relative rounded-full px-3.5 py-2 text-[13px] font-medium transition duration-200 ${
                 isActive
                   ? "bg-ink text-white"
                   : "bg-canvas text-ink-soft hover:bg-primary-tint hover:text-primary"

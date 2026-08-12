@@ -33,7 +33,7 @@ export default function ScoreRing({ score }: { score: number }) {
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className="text-[#a8c4b6] transition-all duration-700"
+          className="text-[#a8c4b6] transition-[stroke-dashoffset] duration-700"
         />
       </svg>
       <span className="absolute font-heading text-4xl font-bold tracking-tight text-white">

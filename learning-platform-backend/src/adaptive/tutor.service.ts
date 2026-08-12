@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AgentService } from '../agent/agent.service';
+import { AgentService, TutorPromptContext } from '../agent/agent.service';
 import { LearningQuestionReference } from './adaptive-content.service';
 import { TutorMessageRole, TutorMessageType } from './adaptive.types';
 import { LearningSession } from './learning-session.entity';
@@ -245,6 +245,88 @@ export class TutorService {
           : 'Tell me which part of the topic feels uncertain, and we can isolate one idea at a time.',
       TUTOR_INTERACTIVE_TIMEOUT_MS,
     );
+    return this.saveAssistantMessage(
+      conversation.id,
+      TutorMessageType.GENERAL,
+      content,
+      sessionItemId,
+    );
+  }
+
+  /**
+   * Streaming counterpart of {@link answerLearnerMessage}: yields text
+   * chunks as the model generates them, then returns (as the generator's
+   * final value) the persisted assistant message — same DB write and
+   * fallback behavior as the non-streaming path, just progressive.
+   */
+  async *answerLearnerMessageStream(
+    userId: string,
+    session: LearningSession,
+    sessionItemId: string | null,
+    question: LearningQuestionReference | null,
+    answerRevealed: boolean,
+    message: string,
+  ): AsyncGenerator<string, TutorMessagePayload, void> {
+    const conversation = await this.getOrCreateConversation(userId, session);
+    await this.messagesRepository.save(
+      this.messagesRepository.create({
+        conversationId: conversation.id,
+        role: TutorMessageRole.USER,
+        messageType: TutorMessageType.GENERAL,
+        content: message.trim(),
+        relatedSessionItemId: sessionItemId,
+      }),
+    );
+
+    const context: TutorPromptContext = {
+      subject: session.subject,
+      chapter: session.chapter,
+      topic: session.topic,
+      learnerMessage: message.trim(),
+      mode: TutorMessageType.GENERAL,
+      questionText: question?.questionText,
+      options: question?.options,
+      selectedOption: undefined,
+      correctAnswer: answerRevealed ? question?.correctAnswer : undefined,
+      solution: answerRevealed ? question?.solution : undefined,
+      commonErrors: question?.commonErrors,
+      answerRevealed,
+      recentMessages: await this.recentMessages(conversation.id),
+    };
+
+    let full = '';
+    const deadline = Date.now() + TUTOR_INTERACTIVE_TIMEOUT_MS;
+    try {
+      for await (const chunk of this.agentService.generateTutorResponseStream(
+        context,
+      )) {
+        full += chunk;
+        yield chunk;
+        if (Date.now() > deadline) {
+          this.logger.warn(
+            `Tutor stream exceeded its ${TUTOR_INTERACTIVE_TIMEOUT_MS}ms budget; finalizing with the partial response.`,
+          );
+          break;
+        }
+      }
+    } catch (error) {
+      // A stream that fails before producing anything falls back exactly
+      // like the non-streaming path. A stream that fails partway keeps
+      // whatever was already shown to the learner rather than discarding it.
+      if (!full) {
+        this.logger.warn(
+          `Tutor AI unavailable; serving database-backed guidance. ${this.toErrorMessage(error)}`,
+        );
+        full = question
+          ? answerRevealed
+            ? this.fallbackExplanation(question, '')
+            : this.fallbackHint(question)
+          : 'Tell me which part of the topic feels uncertain, and we can isolate one idea at a time.';
+        yield full;
+      }
+    }
+    const content =
+      full.trim() || 'Let’s break the idea into one smaller step.';
     return this.saveAssistantMessage(
       conversation.id,
       TutorMessageType.GENERAL,

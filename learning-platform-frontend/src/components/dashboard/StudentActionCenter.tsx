@@ -638,7 +638,7 @@ function SignalCircle({
       <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.12em] text-ink">
         {label}
       </p>
-      <p className="mx-auto mt-1 max-h-0 max-w-[8.5rem] overflow-hidden text-[10px] leading-4 text-ink-mute opacity-0 transition-all duration-300 group-hover:max-h-16 group-hover:opacity-100 group-focus-within:max-h-16 group-focus-within:opacity-100">
+      <p className="mx-auto mt-1 max-h-0 max-w-[8.5rem] overflow-hidden text-[10px] leading-4 text-ink-mute opacity-0 transition-[max-height,opacity] duration-300 group-hover:max-h-16 group-hover:opacity-100 group-focus-within:max-h-16 group-focus-within:opacity-100">
         {detail}
       </p>
     </div>

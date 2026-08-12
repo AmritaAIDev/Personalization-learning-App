@@ -20,7 +20,7 @@ import {
   SendHorizontal,
   X,
 } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, streamApi } from "@/lib/api";
 import type { TutorMessage } from "@/lib/learning-types";
 import { nextTutorPollDelay } from "@/lib/tutor-polling";
 import StudyMarkdown from "./StudyMarkdown";
@@ -77,6 +77,8 @@ export default function StudyAssistant({
   const [draftMessage, setDraftMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  /** Assistant text as it streams in, chunk by chunk; null when nothing is streaming. */
+  const [streamingReply, setStreamingReply] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -178,7 +180,7 @@ export default function StudyAssistant({
   useEffect(() => {
     if (!stickToBottomRef.current) return;
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [visibleMessages, pendingReply, draftMessage, isOpen]);
+  }, [visibleMessages, pendingReply, draftMessage, streamingReply, isOpen]);
 
   const onScroll = () => {
     const node = scrollRef.current;
@@ -207,13 +209,33 @@ export default function StudyAssistant({
     // Echo the question straight away: the learner should never wonder whether
     // their message was registered while the model is thinking.
     setDraftMessage(trimmed);
+    setStreamingReply("");
     stickToBottomRef.current = true;
     try {
-      await apiFetch<{ message: TutorMessage }>(
-        `/api/learning/sessions/${sessionId}/tutor`,
-        { method: "POST", body: JSON.stringify({ message: trimmed }) },
-      );
-      await loadConversation();
+      let savedReply: TutorMessage | null = null;
+      for await (const event of streamApi(
+        `/api/learning/sessions/${sessionId}/tutor/stream`,
+        { body: { message: trimmed } },
+      )) {
+        if (event.event === "chunk") {
+          const { content } = event.data as { content: string };
+          setStreamingReply((prev) => (prev ?? "") + content);
+        } else if (event.event === "done") {
+          savedReply = (event.data as { message: TutorMessage }).message;
+        } else if (event.event === "error") {
+          const { message: reason } = event.data as { message?: string };
+          throw new Error(
+            reason || "The assistant could not respond just now.",
+          );
+        }
+      }
+      if (savedReply) {
+        setMessages((prev) => [...prev, savedReply as TutorMessage]);
+      } else {
+        // The stream ended without a `done` event; reconcile from the server
+        // rather than trust a possibly-incomplete local transcript.
+        await loadConversation();
+      }
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -223,6 +245,7 @@ export default function StudyAssistant({
       setMessage(trimmed);
     } finally {
       setDraftMessage(null);
+      setStreamingReply(null);
       setSending(false);
     }
   };
@@ -253,6 +276,8 @@ export default function StudyAssistant({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalPrompt]);
   const showWritingBubble = pendingReply || sending;
+  const showStreamingBubble = sending && Boolean(streamingReply);
+  const showTypingDots = showWritingBubble && !showStreamingBubble;
 
   const panel = isOpen ? (
     <section
@@ -377,7 +402,18 @@ export default function StudyAssistant({
             </article>
           ) : null}
 
-          {showWritingBubble ? (
+          {showStreamingBubble ? (
+            <article
+              className="mr-3 rounded-2xl rounded-bl-md border border-hairline bg-white px-3 py-2.5 shadow-[0_6px_16px_rgba(20,20,30,0.04)]"
+              aria-live="polite"
+            >
+              <StudyMarkdown className="text-[12.5px] leading-5 text-ink-soft">
+                {streamingReply ?? ""}
+              </StudyMarkdown>
+            </article>
+          ) : null}
+
+          {showTypingDots ? (
             <article
               className="mr-3 flex items-center gap-2 rounded-2xl rounded-bl-md border border-hairline bg-white px-3.5 py-3.5"
               aria-label="The tutor is writing"

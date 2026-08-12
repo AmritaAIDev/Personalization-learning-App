@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { Question } from './question.entity';
+import { QuestionReport } from './question-report.entity';
 import { QuestionsModule } from './questions.module';
 import { User } from './users/user.entity';
 import { UsersModule } from './users/users.module';
@@ -39,6 +40,9 @@ import { DoubtThread } from './doubts/doubt-thread.entity';
 import { NotebookConceptSummary } from './notebook/notebook-concept-summary.entity';
 import { DoubtsModule } from './doubts/doubts.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { MockTestAttempt } from './mock-tests/mock-test-attempt.entity';
+import { MockTestAnswer } from './mock-tests/mock-test-answer.entity';
+import { MockTestsModule } from './mock-tests/mock-tests.module';
 
 @Module({
   imports: [
@@ -62,6 +66,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
           ssl: sslEnabled ? { rejectUnauthorized } : false,
           entities: [
             Question,
+            QuestionReport,
             User,
             Topic,
             TestSession,
@@ -84,6 +89,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
             DoubtThread,
             Doubt,
             NotebookConceptSummary,
+            MockTestAttempt,
+            MockTestAnswer,
           ],
           migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
           synchronize: false,
@@ -104,6 +111,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     NotebookModule,
     DoubtsModule,
     DashboardModule,
+    MockTestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

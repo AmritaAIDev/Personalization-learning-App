@@ -7,8 +7,10 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import type { Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import {
@@ -148,5 +150,55 @@ export class AdaptiveController {
     return {
       data: await this.adaptiveService.askTutor(user.id, sessionId, body),
     };
+  }
+
+  /**
+   * Server-Sent Events variant of {@link askTutor}: emits `chunk` events as
+   * the model generates text, then one `done` event carrying the persisted
+   * message (same shape the non-streaming endpoint returns), or one `error`
+   * event if generation fails before producing anything. A POST body (not
+   * native EventSource) is required here, so the frontend reads this with a
+   * plain `fetch` + stream reader rather than the `EventSource` API.
+   */
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('sessions/:sessionId/tutor/stream')
+  async askTutorStream(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('sessionId', ParseUUIDPipe) sessionId: string,
+    @Body() body: AskTutorDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const send = (event: string, data: unknown) => {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    try {
+      const stream = await this.adaptiveService.askTutorStream(
+        user.id,
+        sessionId,
+        body,
+      );
+      const iterator = stream[Symbol.asyncIterator]();
+      let step = await iterator.next();
+      while (!step.done) {
+        send('chunk', { content: step.value });
+        step = await iterator.next();
+      }
+      send('done', { message: step.value });
+    } catch (error) {
+      send('error', {
+        message:
+          error instanceof Error
+            ? error.message
+            : 'The AI tutor is currently unavailable.',
+      });
+    } finally {
+      res.end();
+    }
   }
 }

@@ -18,6 +18,9 @@ import {
   AdminQuestionReviewQueryDto,
   GenerateQuestionDraftDto,
   QuestionBankQueryDto,
+  QuestionReportQueryDto,
+  ReportQuestionDto,
+  ResolveQuestionReportDto,
   SearchQuestionCatalogDto,
   TutorChatDto,
   UpdateQuestionPublicationDto,
@@ -116,5 +119,38 @@ export class QuestionsController {
   @Get('bank/:questionId')
   async getBankQuestion(@Param('questionId') questionId: string) {
     return { data: await this.questionsService.findByQuestionId(questionId) };
+  }
+
+  /**
+   * Student-facing: flag a question with a wrong answer key, confusing
+   * wording, or a formatting issue. The one safety net for AI-pool content,
+   * which is generated and served in real time and can't wait on a human
+   * reviewer beforehand.
+   */
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('report')
+  async reportQuestion(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: ReportQuestionDto,
+  ) {
+    return { data: await this.questionsService.reportQuestion(user.id, body) };
+  }
+
+  @Roles('admin')
+  @Get('reports')
+  async getReports(@Query() query: QuestionReportQueryDto) {
+    return { data: await this.questionsService.findReports(query) };
+  }
+
+  @Roles('admin')
+  @Patch('reports/:reportId')
+  async resolveReport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('reportId') reportId: string,
+    @Body() body: ResolveQuestionReportDto,
+  ) {
+    return {
+      data: await this.questionsService.resolveReport(reportId, user.id, body),
+    };
   }
 }

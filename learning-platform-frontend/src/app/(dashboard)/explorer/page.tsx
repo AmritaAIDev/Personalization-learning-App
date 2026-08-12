@@ -64,19 +64,19 @@ export default function ExplorerBubblePage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex justify-center text-[#86868b] bg-[#020617] h-[calc(100vh-3.5rem)] items-center">
-        Igniting Universe...
+      <div className="p-8 flex justify-center text-ink-mute bg-canvas h-[calc(100vh-3.5rem)] items-center">
+        Loading your knowledge universe...
       </div>
     );
   }
 
   if (layoutedNodes.length === 0) {
     return (
-      <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-4 bg-[#020617] px-6 text-center">
-        <p className="text-lg font-semibold text-white">
+      <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-4 bg-canvas px-6 text-center">
+        <p className="text-lg font-semibold text-ink">
           {error ? "The universe could not be charted" : "Your universe is empty"}
         </p>
-        <p className="max-w-md text-sm text-slate-400">
+        <p className="max-w-md text-sm text-ink-mute">
           {error ??
             "Complete a diagnostic or a learning session and your topics will appear here."}
         </p>
@@ -84,7 +84,7 @@ export default function ExplorerBubblePage() {
           <button
             type="button"
             onClick={() => void refreshJourney()}
-            className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600"
+            className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white transition hover:bg-primary-strong"
           >
             Try again
           </button>
@@ -95,22 +95,21 @@ export default function ExplorerBubblePage() {
 
   return (
     <div
-      className="relative w-full h-[calc(100vh-3.5rem)] bg-[#020617] overflow-hidden"
+      className="relative w-full h-[calc(100vh-3.5rem)] bg-canvas overflow-hidden"
       ref={containerRef}
     >
       {/* Background ambient glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[150px] pointer-events-none"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/[0.06] rounded-full blur-[150px] pointer-events-none"></div>
 
       {/* HUD Header */}
       <header className="absolute top-0 left-0 w-full p-8 z-20 pointer-events-none flex justify-between items-start">
         <div>
-          <h1 className="font-heading text-3xl font-black text-white flex items-center gap-3 drop-shadow-md tracking-tight">
-            <Network size={28} className="text-orange-500" />
+          <h1 className="font-heading text-3xl font-black text-ink flex items-center gap-3 tracking-tight">
+            <Network size={28} className="text-primary" />
             Knowledge Universe
           </h1>
-          <p className="text-sm text-slate-400 mt-2 font-medium tracking-wide">
-            Drag to explore the cosmos. Center topics dilate for closer
-            inspection.
+          <p className="text-sm text-ink-mute mt-2 font-medium tracking-wide">
+            Drag to explore. Topics near the center are your closest focus.
           </p>
         </div>
       </header>
@@ -156,33 +155,47 @@ export default function ExplorerBubblePage() {
           const isMastered = node.state === "completed";
           const isActive = node.nodeType === "history";
 
-          let bg = "bg-slate-800/80";
-          let border = "border-slate-700/50";
+          let bg = "bg-white";
+          let border = "border-hairline";
           let glow = "none";
 
           if (isMastered) {
-            bg = "bg-emerald-900/40";
-            border = "border-emerald-500/50";
-            glow = "0 0 40px rgba(16,185,129,0.3)";
+            bg = "bg-emerald-50";
+            border = "border-emerald-300";
+            glow = "0 0 32px rgba(16,185,129,0.18)";
           } else if (isActive) {
-            bg = "bg-orange-900/60";
-            border = "border-orange-500/80";
-            glow = "0 0 60px rgba(249,115,22,0.5)";
+            bg = "bg-amber-50";
+            border = "border-amber-400";
+            glow = "0 0 40px rgba(217,119,6,0.22)";
           } else if (!isLocked) {
-            bg = "bg-blue-900/40";
-            border = "border-blue-500/50";
-            glow = "0 0 30px rgba(59,130,246,0.2)";
+            bg = "bg-primary-tint";
+            border = "border-primary/40";
+            glow = "0 0 26px rgba(63,111,87,0.14)";
           }
 
           return (
             <div
               key={node.id}
+              role="button"
+              tabIndex={isLocked ? -1 : 0}
+              aria-disabled={isLocked}
+              aria-label={
+                isLocked
+                  ? `${node.name} (locked)`
+                  : `Open ${node.name}`
+              }
               onClick={() => {
                 if (!isDragging && !isLocked) {
                   router.push(`/arena?topic=${node.id}`);
                 }
               }}
-              className="absolute flex items-center justify-center transition-all duration-75"
+              onKeyDown={(event) => {
+                if (isLocked) return;
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                router.push(`/arena?topic=${node.id}`);
+              }}
+              className="absolute flex items-center justify-center rounded-full transition-[transform,opacity] duration-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               style={{
                 left: node.x,
                 top: node.y,
@@ -193,12 +206,9 @@ export default function ExplorerBubblePage() {
             >
               {/* The Bubble Orb */}
               <div
-                className={`relative w-28 h-28 rounded-full backdrop-blur-xl border-2 flex flex-col items-center justify-center text-center p-3 transition-colors ${bg} ${border} ${!isLocked ? "cursor-pointer hover:border-white" : "cursor-not-allowed grayscale"}`}
+                className={`relative w-28 h-28 rounded-full backdrop-blur-xl border-2 flex flex-col items-center justify-center text-center p-3 shadow-sm transition-colors ${bg} ${border} ${!isLocked ? "cursor-pointer hover:border-primary/60" : "cursor-not-allowed grayscale opacity-70"}`}
                 style={{ boxShadow: glow }}
               >
-                {/* 3D Glass Specular Highlight */}
-                <div className="absolute top-1 left-2 w-10 h-6 bg-white/20 rounded-full blur-[4px] -rotate-45 pointer-events-none"></div>
-
                 {isLocked ? (
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -210,7 +220,7 @@ export default function ExplorerBubblePage() {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="text-slate-500 mb-1"
+                    className="text-ink-mute mb-1"
                   >
                     <rect
                       x="3"
@@ -225,27 +235,27 @@ export default function ExplorerBubblePage() {
                 ) : isActive ? (
                   <Brain
                     size={24}
-                    className="text-orange-400 mb-1 animate-pulse"
+                    className="text-amber-600 mb-1 animate-pulse"
                   />
                 ) : isMastered ? (
-                  <div className="text-emerald-400 font-black text-xs mb-1">
+                  <div className="text-emerald-600 font-black text-xs mb-1">
                     M
                   </div>
                 ) : (
                   <Play
                     size={16}
-                    className="text-blue-400 mb-1"
+                    className="text-primary mb-1"
                     fill="currentColor"
                   />
                 )}
 
-                <span className="text-white font-bold text-[10px] leading-tight line-clamp-3">
+                <span className="text-ink font-bold text-[10px] leading-tight line-clamp-3">
                   {node.name}
                 </span>
 
                 {node.score !== null && (
                   <span
-                    className={`text-[9px] font-black mt-1 ${isMastered ? "text-emerald-400" : "text-orange-400"}`}
+                    className={`text-[9px] font-black mt-1 ${isMastered ? "text-emerald-600" : "text-primary"}`}
                   >
                     {node.score}%
                   </span>

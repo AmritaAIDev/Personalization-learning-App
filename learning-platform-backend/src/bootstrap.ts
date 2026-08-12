@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
@@ -14,6 +14,8 @@ type CreateNestAppOptions = {
   enableShutdownHooks?: boolean;
 };
 
+const bootstrapLogger = new Logger('Bootstrap');
+
 export async function createNestApp(options: CreateNestAppOptions = {}) {
   const app = await NestFactory.create(AppModule);
   const allowedOrigins = configuredAllowedOrigins(
@@ -21,6 +23,18 @@ export async function createNestApp(options: CreateNestAppOptions = {}) {
     process.env.FRONTEND_URL,
     process.env.CORS_ORIGINS,
   );
+  if (
+    !process.env.FRONTEND_ORIGIN &&
+    !process.env.FRONTEND_URL &&
+    !process.env.CORS_ORIGINS
+  ) {
+    bootstrapLogger.warn(
+      'None of FRONTEND_ORIGIN, FRONTEND_URL, or CORS_ORIGINS is set; ' +
+        'falling back to the built-in default origins only. Browser ' +
+        'requests from any other origin will be silently CORS-blocked.',
+    );
+  }
+  bootstrapLogger.log(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
 
   app.use(createPreflightCorsMiddleware(allowedOrigins));
   app.use(

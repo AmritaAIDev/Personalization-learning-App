@@ -43,9 +43,12 @@ export class FlashcardReview {
   @Column({ name: 'interval_days', type: 'smallint', default: 0 })
   intervalDays: number;
 
-  /** SM-2 ease factor; tightens on HARD/AGAIN, loosens on EASY. Never below 1.3. */
-  @Column({ name: 'ease_factor', type: 'real', default: 2.5 })
-  easeFactor: number;
+  /** FSRS memory state (D in [1,10], S in days) — see fsrs.util.ts. */
+  @Column({ name: 'difficulty', type: 'real', default: 5 })
+  difficulty: number;
+
+  @Column({ name: 'stability', type: 'real', default: 1 })
+  stability: number;
 
   @Column({ name: 'due_at', type: 'timestamp' })
   dueAt: Date;

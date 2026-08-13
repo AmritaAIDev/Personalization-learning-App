@@ -80,18 +80,20 @@ describe('AdaptiveService flashcard reviews', () => {
     return { service, save };
   }
 
-  it('creates a short first interval for a good first review', async () => {
+  it('sets a short first interval for a good first review, from FSRS init weights', async () => {
     const { service, save } = createService(null);
     const result = await service.reviewFlashcard('user-id', 'card-id', {
       rating: FlashcardRating.GOOD,
     });
+    // Deterministic: default weight w[2] (Good's init stability) is 2.3065
+    // days, and interval == stability exactly at the 90% retention target.
     expect(save).toHaveBeenCalledWith(
-      expect.objectContaining({ repetitions: 1, intervalDays: 1 }),
+      expect.objectContaining({ repetitions: 1, intervalDays: 2 }),
     );
-    expect(result.review).toMatchObject({ repetitions: 1, intervalDays: 1 });
+    expect(result.review).toMatchObject({ repetitions: 1, intervalDays: 2 });
   });
 
-  it('resets a difficult card to a ten-minute retry window', async () => {
+  it('shrinks stability on an AGAIN rating after the card was actually forgotten', async () => {
     const existing = {
       id: 'review-id',
       userId: 'user-id',
@@ -99,25 +101,31 @@ describe('AdaptiveService flashcard reviews', () => {
       lastRating: FlashcardRating.GOOD,
       repetitions: 4,
       intervalDays: 8,
+      difficulty: 5,
+      stability: 8,
       dueAt: new Date(),
-      lastReviewedAt: new Date(),
+      // A week ago, so this AGAIN takes FSRS's forgetting/lapse path rather
+      // than the same-day short-term path.
+      lastReviewedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
       createdAt: new Date(),
       updatedAt: new Date(),
     } as FlashcardReview;
+    const originalStability = existing.stability;
     const { service, save } = createService(existing);
+
+    // `reviewFlashcard` mutates the review object findOne returned in place
+    // (Object.assign), so the pre-review stability must be captured above.
     await service.reviewFlashcard('user-id', 'card-id', {
       rating: FlashcardRating.AGAIN,
     });
-    expect(save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        repetitions: 0,
-        intervalDays: 0,
-        lastRating: FlashcardRating.AGAIN,
-      }),
-    );
+
+    const [saved] = save.mock.calls[0] as [FlashcardReview];
+    expect(saved.lastRating).toBe(FlashcardRating.AGAIN);
+    expect(saved.repetitions).toBe(5);
+    expect(saved.stability).toBeLessThan(originalStability);
   });
 
-  it('shrinks the ease factor on a HARD rating, slowing future interval growth', async () => {
+  it('never lets a successful (non-Again) rating shrink stability', async () => {
     const existing = {
       id: 'review-id',
       userId: 'user-id',
@@ -125,58 +133,27 @@ describe('AdaptiveService flashcard reviews', () => {
       lastRating: FlashcardRating.GOOD,
       repetitions: 2,
       intervalDays: 6,
-      easeFactor: 2.5,
+      difficulty: 5,
+      stability: 6,
       dueAt: new Date(),
-      lastReviewedAt: new Date(),
+      lastReviewedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
       createdAt: new Date(),
       updatedAt: new Date(),
     } as FlashcardReview;
-    const { service, save } = createService(existing);
 
-    await service.reviewFlashcard('user-id', 'card-id', {
-      rating: FlashcardRating.HARD,
-    });
-
-    expect(save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        repetitions: 3,
-        easeFactor: 2.36,
-        // 6 days * the *shrunk* ease factor (2.36), not the old fixed 1.2x step.
-        intervalDays: 14,
-      }),
-    );
+    for (const rating of [
+      FlashcardRating.HARD,
+      FlashcardRating.GOOD,
+      FlashcardRating.EASY,
+    ]) {
+      const { service, save } = createService({ ...existing });
+      await service.reviewFlashcard('user-id', 'card-id', { rating });
+      const [saved] = save.mock.calls[0] as [FlashcardReview];
+      expect(saved.stability).toBeGreaterThanOrEqual(existing.stability);
+    }
   });
 
-  it('grows the ease factor on repeated EASY ratings, accelerating future intervals', async () => {
-    const existing = {
-      id: 'review-id',
-      userId: 'user-id',
-      flashcardId: 'card-id',
-      lastRating: FlashcardRating.EASY,
-      repetitions: 2,
-      intervalDays: 6,
-      easeFactor: 2.5,
-      dueAt: new Date(),
-      lastReviewedAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as FlashcardReview;
-    const { service, save } = createService(existing);
-
-    await service.reviewFlashcard('user-id', 'card-id', {
-      rating: FlashcardRating.EASY,
-    });
-
-    expect(save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        repetitions: 3,
-        easeFactor: 2.6,
-        intervalDays: 16,
-      }),
-    );
-  });
-
-  it('never lets the ease factor drop below SM-2s 1.3 floor', async () => {
+  it('keeps difficulty within the FSRS [1,10] band after a review', async () => {
     const existing = {
       id: 'review-id',
       userId: 'user-id',
@@ -184,9 +161,10 @@ describe('AdaptiveService flashcard reviews', () => {
       lastRating: FlashcardRating.HARD,
       repetitions: 1,
       intervalDays: 1,
-      easeFactor: 1.3,
+      difficulty: 1,
+      stability: 1,
       dueAt: new Date(),
-      lastReviewedAt: new Date(),
+      lastReviewedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
       createdAt: new Date(),
       updatedAt: new Date(),
     } as FlashcardReview;
@@ -196,9 +174,9 @@ describe('AdaptiveService flashcard reviews', () => {
       rating: FlashcardRating.HARD,
     });
 
-    expect(save).toHaveBeenCalledWith(
-      expect.objectContaining({ easeFactor: 1.3 }),
-    );
+    const [saved] = save.mock.calls[0] as [FlashcardReview];
+    expect(saved.difficulty).toBeGreaterThanOrEqual(1);
+    expect(saved.difficulty).toBeLessThanOrEqual(10);
   });
 
   type FlashcardDeliveryHarness = {

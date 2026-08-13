@@ -128,14 +128,14 @@ lacks `subject`/`chapter` needed for the generation scope, and the adaptive
 session hides the answer until a second attempt, which needs its own UX
 treatment. Both can reuse `TargetedPracticeCard` once wired.
 
-### 2.4 Modern spaced repetition (FSRS)
+### 2.4 Modern spaced repetition (FSRS) ✅
 **Modules:** `adaptive` flashcard review
 
-- [ ] Replace the basic schedule with FSRS parameters (stability/difficulty/retrievability) per card.
-- [ ] Migration to add FSRS columns to `flashcard_reviews`.
-- [ ] Review endpoint returns the next review date from FSRS; rating updates it.
-- [ ] Tests: FSRS next-date math over a fixture history.
-- [ ] Docs: `adaptive` README flashcard section.
+- [x] Replace the basic schedule with FSRS parameters (stability/difficulty/retrievability) per card. — `fsrs.util.ts`, a direct port of FSRS-6 (`open-spaced-repetition/ts-fsrs`) with its published default weights, superseding the SM-2 ease-factor scheduler from the previous cycle.
+- [x] Migration to add FSRS columns to `flashcard_reviews`. — `1786900200000-AddFlashcardFsrsState` adds `difficulty`/`stability`, drops `ease_factor`.
+- [x] Review endpoint returns the next review date from FSRS; rating updates it. — `reviewFlashcard` → `nextReviewSchedule` → `nextFsrsState` + `intervalDaysFromStability`; `POST /api/learning/flashcards/:id/review` unchanged externally (payload shape never exposed `easeFactor`).
+- [x] Tests: FSRS next-date math over a fixture history. — `fsrs.util.spec.ts` (init weights, monotonicity/bounds invariants, forgetting-curve and interval-modifier identities) + `adaptive.service.spec.ts` flashcard-review cases.
+- [x] Docs: `adaptive` README flashcard section.
 
 ### 2.5 AI auto-tagging + review pipeline for admins
 **Modules:** `questions` admin review · `agent`
@@ -252,7 +252,7 @@ platform. Higher effort, sequenced after Phases 1–2 give a solid base.
 - [x] 2.1 RAG-grounded explanations + citations
 - [x] 2.2 Misconception detection + remediation
 - [x] 2.3 On-demand similar question (practice review + notebook; diagnostics/Learn tutor board still open)
-- [ ] 2.4 FSRS spaced repetition
+- [x] 2.4 FSRS spaced repetition
 - [ ] 2.5 Admin AI auto-tagging pipeline
 - [ ] 2.6 Photo-to-question (OCR + solve)
 

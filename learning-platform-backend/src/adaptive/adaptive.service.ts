@@ -43,6 +43,11 @@ import {
 } from './adaptive.types';
 import { Flashcard } from './flashcard.entity';
 import { FlashcardReview } from './flashcard-review.entity';
+import {
+  type FsrsGrade,
+  intervalDaysFromStability,
+  nextFsrsState,
+} from './fsrs.util';
 import { GeneratedLearningQuestion } from './generated-learning-question.entity';
 import { GenerationWorkerService } from './generation-worker.service';
 import { LearningAnswer } from './learning-answer.entity';
@@ -1515,62 +1520,51 @@ export class AdaptiveService {
   }
 
   /**
-   * SM-2 spaced repetition. Each rating maps to SM-2's 0-5 recall-quality
-   * scale (AGAIN=0 fail, HARD=3, GOOD=4, EASY=5 — this app never asks for
-   * finer-grained self-assessment than four buttons) and updates a
-   * per-card ease factor from it, so a card the learner keeps rating HARD
-   * grows its interval more slowly over time and one they keep rating EASY
-   * grows it faster — unlike a fixed multiplier applied the same way
-   * regardless of that card's actual review history.
+   * FSRS-6 spaced repetition (fsrs.util.ts). Each rating maps to FSRS's
+   * Again/Hard/Good/Easy grade and updates a per-card (difficulty, stability)
+   * memory state, so the next due date reflects the model's estimate of when
+   * recall probability decays to the target retention — not a fixed
+   * multiplier applied the same way regardless of the card's real review
+   * history and how forgettable it has proven to be.
    */
   private nextReviewSchedule(
     current: FlashcardReview | null,
     rating: FlashcardRating,
     now: Date,
   ) {
-    const repetitions = current?.repetitions ?? 0;
-    const interval = current?.intervalDays ?? 0;
-    const easeFactor = current?.easeFactor ?? 2.5;
-
-    if (rating === FlashcardRating.AGAIN) {
-      return {
-        lastRating: rating,
-        repetitions: 0,
-        intervalDays: 0,
-        easeFactor: this.updatedEaseFactor(easeFactor, 0),
-        dueAt: new Date(now.getTime() + 10 * 60 * 1000),
-        lastReviewedAt: now,
-      };
-    }
-
-    const quality = {
-      [FlashcardRating.HARD]: 3,
-      [FlashcardRating.GOOD]: 4,
-      [FlashcardRating.EASY]: 5,
+    const grade: FsrsGrade = {
+      [FlashcardRating.AGAIN]: 1 as const,
+      [FlashcardRating.HARD]: 2 as const,
+      [FlashcardRating.GOOD]: 3 as const,
+      [FlashcardRating.EASY]: 4 as const,
     }[rating];
-    const nextEaseFactor = this.updatedEaseFactor(easeFactor, quality);
-    const nextRepetitions = repetitions + 1;
-    const intervalDays =
-      nextRepetitions === 1
-        ? 1
-        : nextRepetitions === 2
-          ? 6
-          : Math.round(Math.max(interval, 1) * nextEaseFactor);
+    const elapsedDays = current
+      ? Math.max(
+          0,
+          Math.floor(
+            (now.getTime() - current.lastReviewedAt.getTime()) /
+              (24 * 60 * 60 * 1000),
+          ),
+        )
+      : 0;
+    const state = nextFsrsState(
+      current
+        ? { difficulty: current.difficulty, stability: current.stability }
+        : null,
+      elapsedDays,
+      grade,
+    );
+    const intervalDays = intervalDaysFromStability(state.stability);
 
     return {
       lastRating: rating,
-      repetitions: nextRepetitions,
-      intervalDays,
-      easeFactor: nextEaseFactor,
-      dueAt: this.addDays(now, intervalDays),
+      repetitions: (current?.repetitions ?? 0) + 1,
+      intervalDays: Math.max(0, Math.round(intervalDays)),
+      difficulty: state.difficulty,
+      stability: state.stability,
+      dueAt: new Date(now.getTime() + intervalDays * 24 * 60 * 60 * 1000),
       lastReviewedAt: now,
     };
-  }
-
-  /** Canonical SM-2 ease-factor update, clamped to SM-2's floor of 1.3. */
-  private updatedEaseFactor(current: number, quality: number): number {
-    const delta = 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02);
-    return Math.max(1.3, Math.round((current + delta) * 100) / 100);
   }
 
   private toFlashcardPayload(

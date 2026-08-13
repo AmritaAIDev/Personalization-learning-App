@@ -35,6 +35,22 @@ it reaches its target depth.
 Cards are derived only from published question material, so the pool is shared
 safely across learners while each learner's review schedule stays private.
 
+### Flashcards: FSRS-6 scheduling
+
+`fsrs.util.ts` is a faithful, dependency-free port of FSRS-6 (Anki's current
+spaced-repetition algorithm) — ported directly from the official `ts-fsrs`
+source rather than re-derived, since the exact constants matter. It runs
+the published default weight set (no per-user training; this app doesn't
+have the review-history volume optimization needs). `flashcard_reviews`
+persists the two-parameter memory state (`difficulty` in `[1,10]`,
+`stability` in days); `intervalDays` is a rounded, informational projection
+of stability for display, never fed back into the algorithm. `dueAt` is
+derived from the *unrounded* stability so a fresh AGAIN can legitimately
+come due same-day, rather than being floored to a whole day the way Anki's
+discrete learning-step scheduler would. This superseded the SM-2 ease-factor
+scheduler from `1786800000000-AddFlashcardEaseFactor`
+(`1786900200000-AddFlashcardFsrsState` drops that column).
+
 `tutor_conversations` and `tutor_messages` preserve the side-assistant thread for
 a session. A hint or explanation is written in the background after an answer;
 the session is marked pending so the conversation endpoint can report that a

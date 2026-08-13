@@ -9,13 +9,11 @@ import {
   ArrowRight,
   BookOpenCheck,
   Brain,
-  CheckCircle2,
   ChevronDown,
   CircleDot,
   RotateCcw,
   Sparkles,
   Target,
-  XCircle,
 } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { learningScopeFromSearchParams, learningUrl } from "@/lib/learning";
@@ -24,12 +22,7 @@ import type {
   NotebookConceptsResponse,
   NotebookMistakeCard,
 } from "@/lib/notebook-types";
-import {
-  generateTargetedQuestion,
-  submitTargetedAnswer,
-  type TargetedAnswerResult,
-  type TargetedQuestion,
-} from "@/lib/targeted-practice";
+import TargetedPracticeCard from "@/components/learning/TargetedPracticeCard";
 
 const StudyMarkdown = dynamic(
   () => import("@/components/learning/StudyMarkdown"),
@@ -162,152 +155,35 @@ function MistakeDetail({ card }: { card: NotebookMistakeCard }) {
 }
 
 /**
- * On-demand single AI question targeting the group's most-repeated
- * classified misconception (AI Phase 2.2). Standalone from the adaptive
- * session state: generated, answered once, done.
+ * Practice for the group's most-repeated classified misconception (AI Phase
+ * 2.2), via the shared on-demand generation card.
  */
 function MisconceptionPractice({ group }: { group: NotebookConceptGroup }) {
   const dominant = group.dominantMisconception;
-  const [question, setQuestion] = useState<TargetedQuestion | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [result, setResult] = useState<TargetedAnswerResult | null>(null);
-  const [status, setStatus] = useState<"idle" | "loading" | "answering" | "error">(
-    "idle",
-  );
-  const [error, setError] = useState<string | null>(null);
-
   if (!dominant) return null;
 
-  const start = async () => {
-    setStatus("loading");
-    setError(null);
-    setResult(null);
-    setSelected(null);
-    try {
-      const generated = await generateTargetedQuestion({
+  return (
+    <TargetedPracticeCard
+      reason="MISCONCEPTION"
+      focusText={dominant.text}
+      scope={{
         subject: group.subject,
         chapter: group.chapter,
         topic: group.topic,
-        reason: "MISCONCEPTION",
-        focusText: dominant.text,
-      });
-      setQuestion(generated);
-      setStatus("idle");
-    } catch (caught) {
-      setError(
-        caught instanceof ApiError
-          ? caught.message
-          : "Could not generate a question right now.",
-      );
-      setStatus("error");
-    }
-  };
-
-  const answer = async (option: string) => {
-    if (!question || result) return;
-    setSelected(option);
-    setStatus("answering");
-    try {
-      const graded = await submitTargetedAnswer(question.id, option);
-      setResult(graded);
-      setStatus("idle");
-    } catch (caught) {
-      setError(
-        caught instanceof ApiError
-          ? caught.message
-          : "Could not grade that answer.",
-      );
-      setStatus("error");
-    }
-  };
-
-  return (
-    <div className="mt-3 rounded-xl border border-hairline bg-canvas p-3">
-      <div className="flex items-start gap-2">
-        <Target
-          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary"
-          aria-hidden="true"
-        />
-        <p className="text-[13px] leading-5 text-ink-soft">
-          Repeated {dominant.count}&times;: {dominant.text}
-        </p>
-      </div>
-
-      {!question ? (
-        <button
-          type="button"
-          onClick={() => void start()}
-          disabled={status === "loading"}
-          className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-primary-strong disabled:opacity-60"
-        >
-          {status === "loading"
-            ? "Generating…"
-            : "Practice this misconception"}
-        </button>
-      ) : (
-        <div className="mt-3">
-          <StudyMarkdown className="text-[13px] font-semibold leading-6 text-ink">
-            {question.questionText}
-          </StudyMarkdown>
-          <div className="mt-2 grid gap-1.5">
-            {question.options.map((option) => {
-              const isSelected = selected === option;
-              const isAnswerKey = result && option === result.correctAnswer;
-              const tone = !result
-                ? "border-hairline bg-white hover:border-primary/40"
-                : isAnswerKey
-                  ? "border-emerald-300 bg-emerald-50"
-                  : isSelected
-                    ? "border-rose-300 bg-rose-50"
-                    : "border-hairline bg-white opacity-60";
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  disabled={Boolean(result) || status === "answering"}
-                  onClick={() => void answer(option)}
-                  className={`rounded-lg border px-3 py-2 text-left text-[13px] font-medium text-ink transition ${tone}`}
-                >
-                  {option}
-                </button>
-              );
-            })}
-          </div>
-
-          {result ? (
-            <div className="mt-3 rounded-lg border border-hairline bg-white p-3">
-              <div
-                className={`flex items-center gap-1.5 text-[12px] font-bold ${
-                  result.isCorrect ? "text-emerald-600" : "text-rose-600"
-                }`}
-              >
-                {result.isCorrect ? (
-                  <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                ) : (
-                  <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                )}
-                {result.isCorrect ? "Avoided it this time" : "Same gap again"}
-              </div>
-              <StudyMarkdown className="mt-2 text-[13px] leading-5 text-ink-soft">
-                {result.solution}
-              </StudyMarkdown>
-              <button
-                type="button"
-                onClick={() => void start()}
-                className="mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-soft transition hover:bg-canvas"
-              >
-                <RotateCcw className="h-3 w-3" aria-hidden="true" />
-                Try another
-              </button>
-            </div>
-          ) : null}
+      }}
+      triggerLabel="Practice this misconception"
+      contextLine={
+        <div className="flex items-start gap-2">
+          <Target
+            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary"
+            aria-hidden="true"
+          />
+          <p className="text-[13px] leading-5 text-ink-soft">
+            Repeated {dominant.count}&times;: {dominant.text}
+          </p>
         </div>
-      )}
-
-      {error ? (
-        <p className="mt-2 text-[12px] font-medium text-rose-600">{error}</p>
-      ) : null}
-    </div>
+      }
+    />
   );
 }
 

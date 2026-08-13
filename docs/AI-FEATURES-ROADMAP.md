@@ -112,15 +112,21 @@ Goal: productise the AI infrastructure you already have. Each item reuses
 - [x] Tests: classification accuracy on fixtures; remediation payload. — `misconceptions.service.spec.ts`, `targeted-practice.service.spec.ts`, `agent.service.spec.ts` classification cases.
 - [x] Docs: `notebook` README + migration. — plus new `misconceptions` and `targeted-practice` module READMEs.
 
-### 2.3 On-demand "similar question" generation
-**Modules:** `adaptive` generation worker · `agent` · frontend practice/review
+### 2.3 On-demand "similar question" generation ✅ (practice review + notebook)
+**Modules:** new `targeted-practice` (shared with 2.2) · `agent` · frontend practice/review
 
-- [ ] Endpoint `POST /api/learning/sessions/:id/items/:itemId/similar` (and a practice variant) that generates one isomorphic question.
-- [ ] Generation grounded in the source question's concept tags + difficulty, not the answer key.
-- [ ] Frontend: "Try a similar one" button after a wrong answer / on review.
-- [ ] Rate-limit per user; cache by source-hash to bound cost.
-- [ ] Tests: generation prompt shape; rate-limit; fallback.
-- [ ] Docs: `adaptive` README.
+- [x] Endpoint that generates one isomorphic question. — Implemented as the reason-generic `POST /api/targeted-practice/questions` (`reason: 'SIMILAR'`) rather than nested per-session/per-item routes, so the same primitive serves both 2.2 and 2.3 without duplicating generation/caching/rate-limit logic.
+- [x] Generation grounded in the source question's concept tags + difficulty, not the answer key. — `focusHint` carries only `questionText` (never `correctAnswer`); topic material comes from `AdaptiveContentService.buildSourceMaterial`.
+- [x] Frontend: "Try a similar one" button after a wrong answer / on review. — Wired into `PracticeReview` (incorrect results only), via the shared `TargetedPracticeCard` also used by Notebook's "Practice this misconception."
+- [x] Rate-limit per user; cache by source-hash to bound cost. — Shared with 2.2: controller-level `@Throttle`, 10-minute unanswered-question reuse keyed by a focus-text hash.
+- [x] Tests: generation prompt shape; rate-limit; fallback. — `targeted-practice.service.spec.ts` SIMILAR-reason case (isomorphic phrasing, bloom/difficulty threading); rate-limit is the same `@Throttle` pattern used elsewhere in this codebase, not independently unit-tested.
+- [x] Docs: `adaptive` README. — see `targeted-practice` README instead (the module lives outside `adaptive` since it's shared with `notebook`/2.2).
+
+Still open: the diagnostic-test analysis review and the live adaptive tutor
+board (Learn) don't offer "try a similar one" yet — `DiagnosticReviewItem`
+lacks `subject`/`chapter` needed for the generation scope, and the adaptive
+session hides the answer until a second attempt, which needs its own UX
+treatment. Both can reuse `TargetedPracticeCard` once wired.
 
 ### 2.4 Modern spaced repetition (FSRS)
 **Modules:** `adaptive` flashcard review
@@ -245,7 +251,7 @@ platform. Higher effort, sequenced after Phases 1–2 give a solid base.
 ### Phase 2 — Integratable
 - [x] 2.1 RAG-grounded explanations + citations
 - [x] 2.2 Misconception detection + remediation
-- [ ] 2.3 On-demand similar question
+- [x] 2.3 On-demand similar question (practice review + notebook; diagnostics/Learn tutor board still open)
 - [ ] 2.4 FSRS spaced repetition
 - [ ] 2.5 Admin AI auto-tagging pipeline
 - [ ] 2.6 Photo-to-question (OCR + solve)

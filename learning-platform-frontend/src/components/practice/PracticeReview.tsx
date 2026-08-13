@@ -15,6 +15,7 @@ import {
   Target,
 } from "lucide-react";
 import ExplainThis from "@/components/learning/ExplainThis";
+import TargetedPracticeCard from "@/components/learning/TargetedPracticeCard";
 import ConfidenceBadge from "@/components/diagnostic/ConfidenceBadge";
 import { apiFetch } from "@/lib/api";
 import { learningUrl } from "@/lib/learning";
@@ -451,6 +452,17 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
                     <ExplainThis
                       endpoint={`/api/practice/sessions/${attemptId}/questions/${result.id}/explain`}
                     />
+                    {!result.isCorrect ? (
+                      <TargetedPracticeCard
+                        reason="SIMILAR"
+                        focusText={result.questionText}
+                        scope={scope}
+                        sourceQuestionId={result.id}
+                        bloomLevel={result.bloomLevel}
+                        difficulty={result.difficulty}
+                        triggerLabel="Try a similar one"
+                      />
+                    ) : null}
                   </div>
                 ) : null}
               </article>

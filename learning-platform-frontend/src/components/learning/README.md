@@ -46,6 +46,16 @@ The tutor board already surfaces the **Hint / Explain / Why wrong?** quick promp
 
 `ExplainThis` is a shared one-tap "Explain this" control used on the practice and diagnostic review screens. Given an `endpoint` (the backend explain URL), it POSTs the selected **depth** (`Concise` / `Step by step` / `From scratch`) and renders the returned explanation through `StudyMarkdown`. The answer is already revealed at review time, so the tutor teaches it in full. A `Regenerate` action re-runs at a different depth, and when the backend serves its deterministic fallback (`grounded: false`) the panel labels it as an offline explanation. All content comes from the backend; nothing is generated client-side.
 
+## TargetedPracticeCard
+
+`TargetedPracticeCard` is the shared on-demand single-question control behind
+two AI Phase 2 features: Notebook's "Practice this misconception" and
+`PracticeReview`'s "Try a similar one" (shown only on incorrect results). Given
+a `reason` (`MISCONCEPTION` | `SIMILAR`), a `focusText`, and a scope, it calls
+the backend `targeted-practice` module to generate one question, renders it
+with answer options, grades the submission, and shows the worked solution —
+all state-local; nothing here touches the adaptive session.
+
 ## SourceCitations (RAG)
 
 `SourceCitations` renders the reviewed concept notes an AI answer was grounded on — the `sources` array (`title`/`topic`/`chapter`) returned by the explain endpoints and stored on answered doubts. It shows a compact "Sources" strip and renders nothing when the list is empty (Qdrant empty/unavailable), so an ungrounded answer simply carries no citations. Used by `ExplainThis` and the doubts page.

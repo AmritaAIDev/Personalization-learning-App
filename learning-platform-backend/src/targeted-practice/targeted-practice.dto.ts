@@ -6,7 +6,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { BLOOM_LEVELS, DIFFICULTY_LEVELS } from '../adaptive/adaptive.types';
+import { DIFFICULTY_LEVELS } from '../adaptive/adaptive.types';
 
 export class GenerateTargetedQuestionDto {
   @IsString()
@@ -37,9 +37,15 @@ export class GenerateTargetedQuestionDto {
   @IsUUID()
   sourceQuestionId?: string;
 
+  /**
+   * Accepts legacy or canonical Bloom labels — the service normalizes via
+   * normalizeBloomLevel, since callers (e.g. a practice review row) may only
+   * know the question's raw stored label.
+   */
   @IsOptional()
-  @IsIn(BLOOM_LEVELS)
-  bloomLevel?: (typeof BLOOM_LEVELS)[number];
+  @IsString()
+  @MaxLength(50)
+  bloomLevel?: string;
 
   @IsOptional()
   @IsIn(DIFFICULTY_LEVELS)

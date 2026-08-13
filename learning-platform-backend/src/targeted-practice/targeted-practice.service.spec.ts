@@ -81,6 +81,43 @@ describe('TargetedPracticeService', () => {
     );
   });
 
+  it('threads an isomorphic-question focus hint for the SIMILAR reason', async () => {
+    const repository = makeRepository();
+    const contentService = makeContentService();
+    const agentService = {
+      generateLearningQuestionBatch: jest
+        .fn()
+        .mockResolvedValue([makeGoodGeneratedQuestion()]),
+    };
+    const service = new TargetedPracticeService(
+      repository as never,
+      agentService as never,
+      contentService as never,
+    );
+    const sourceQuestionText = 'A capacitor question about plate separation.';
+
+    await service.generate('user-1', {
+      ...baseInput,
+      reason: 'SIMILAR',
+      focusText: sourceQuestionText,
+      sourceQuestionId: 'question-source-1',
+      bloomLevel: 'Apply',
+      difficulty: 'Hard',
+    });
+
+    const [request] = agentService.generateLearningQuestionBatch.mock.calls[0];
+    expect(request.focusHint.toLowerCase()).toContain('isomorphic');
+    expect(request.focusHint).toContain(sourceQuestionText);
+    expect(request.bloomLevel).toBe('Application');
+    expect(request.difficulty).toBe('Hard');
+    expect(repository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: 'SIMILAR',
+        sourceQuestionId: 'question-source-1',
+      }),
+    );
+  });
+
   it('reuses a recent unanswered question instead of generating again', async () => {
     const cached: TargetedPracticeQuestion = {
       id: 'cached-1',

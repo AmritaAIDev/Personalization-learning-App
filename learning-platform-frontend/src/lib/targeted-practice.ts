@@ -29,6 +29,8 @@ export function generateTargetedQuestion(input: {
   reason: TargetedPracticeReason;
   focusText: string;
   sourceQuestionId?: string;
+  bloomLevel?: string;
+  difficulty?: string;
 }): Promise<TargetedQuestion> {
   return apiFetch<TargetedQuestion>("/api/targeted-practice/questions", {
     method: "POST",

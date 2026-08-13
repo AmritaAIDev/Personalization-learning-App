@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ChangeEvent,
   FormEvent,
   KeyboardEvent,
   useCallback,
@@ -15,6 +16,7 @@ import { useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   ArrowRight,
+  Camera,
   CheckCircle2,
   HelpCircle,
   Loader2,
@@ -34,6 +36,7 @@ import type {
 } from "@/lib/doubts-types";
 import { learningScopeFromSearchParams, scopeToParams } from "@/lib/learning";
 import type { LearningScope } from "@/lib/learning-types";
+import { OcrError, recognizeQuestionImage } from "@/lib/ocr";
 
 const StudyMarkdown = dynamic(
   () => import("@/components/learning/StudyMarkdown"),
@@ -168,9 +171,11 @@ export default function DoubtsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pendingDoubtId, setPendingDoubtId] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
   const pollRef = useRef<number | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadDoubts = useCallback(async () => {
     setError(null);
@@ -350,6 +355,37 @@ export default function DoubtsPage() {
     }
   }
 
+  async function handlePhotoSelected(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+
+    setScanning(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const extracted = await recognizeQuestionImage(file);
+      setForm((current) => ({
+        ...current,
+        message: current.message.trim()
+          ? `${current.message.trim()}\n${extracted}`
+          : extracted,
+      }));
+      messageInputRef.current?.focus();
+    } catch (caught) {
+      // Fallback per the roadmap: leave the composer editable and ask the
+      // learner to type the question themselves.
+      setError(
+        caught instanceof OcrError
+          ? caught.message
+          : "Could not read that image. Please type the question instead.",
+      );
+    } finally {
+      setScanning(false);
+    }
+  }
+
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== "Enter" || event.shiftKey) return;
     event.preventDefault();
@@ -475,6 +511,28 @@ export default function DoubtsPage() {
                 ) : null}
 
                 <div className="flex items-end gap-2 rounded-[1.35rem] border border-hairline bg-canvas p-2 transition focus-within:border-primary/45 focus-within:bg-white focus-within:shadow-[0_10px_28px_rgba(63,111,87,0.08)]">
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(event) => void handlePhotoSelected(event)}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={scanning || submitting}
+                    title="Scan a photo of the question"
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-hairline bg-white text-ink-soft transition hover:border-primary/40 hover:text-primary disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {scanning ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Camera className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    <span className="sr-only">Scan a photo of the question</span>
+                  </button>
                   <label className="min-w-0 flex-1">
                     <span className="sr-only">Your doubt</span>
                     <textarea
@@ -487,7 +545,7 @@ export default function DoubtsPage() {
                         }))
                       }
                       onKeyDown={handleComposerKeyDown}
-                      placeholder="Ask a focused doubt about this topic..."
+                      placeholder="Ask a focused doubt, or scan a photo of the question..."
                       disabled={submitting}
                       className="custom-scrollbar max-h-28 min-h-10 w-full resize-none bg-transparent px-2 py-2 text-[13px] leading-5 text-ink outline-none placeholder:text-ink-mute disabled:cursor-wait disabled:opacity-70"
                     />
@@ -510,6 +568,12 @@ export default function DoubtsPage() {
                     </span>
                   </button>
                 </div>
+                {scanning ? (
+                  <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-ink-mute">
+                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                    Reading the photo...
+                  </p>
+                ) : null}
 
                 {error ? (
                   <div className="mt-3 flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">

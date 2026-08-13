@@ -145,23 +145,23 @@ treatment. Both can reuse `TargetedPracticeCard` once wired.
 - [x] Tests: tagger prompt shape; suggestions never auto-publish. — `questions.service.spec.ts`: topic-fallback when the model suggests no tags, full AI-suggestion pass-through, difficulty-scaled marks, and an explicit assertion that a suggestion-filled draft still lands `DRAFT`/unpublished; a reviewer-edit case for `common_errors`/`concept_tags`.
 - [x] Docs: `questions` README (admin flow). — backend `README.md` API reference (no dedicated `questions` module folder/README exists; it lives directly under `src/`).
 
-### 2.6 Photo-to-question (OCR + solve/match)
-**Modules:** new `vision`/OCR path in `agent` · `doubts` · frontend upload
+### 2.6 Photo-to-question (OCR + solve/match) ✅
+**Modules:** frontend `lib/ocr.ts` (client-side) · `doubts` page — no backend/agent changes
 
-- [ ] Accept an image upload; OCR (model or service) to text.
-- [ ] Either solve step-by-step or match to a practice question; return a tutor explanation.
-- [ ] Frontend: upload/camera control on the doubts page.
-- [ ] Fallback: if OCR fails, ask the user to type the question.
-- [ ] Tests: OCR mock + match; error handling.
-- [ ] Docs: new module README.
+- [x] Accept an image upload; OCR (model or service) to text. — Client-side via `tesseract.js` (dynamically imported, so its WASM/language-data payload never ships to learners who don't use it), not a new backend vision model call. Deliberate choice: DeepSeek (this app's only configured LLM) has no vision endpoint wired through `AgentService`, and adding a second model provider/credential just for OCR would violate the "all model calls go through AgentService" boundary far more than keeping OCR entirely client-side and feeding its plain-text output into the *existing* doubts pipeline.
+- [x] Either solve step-by-step or match to a practice question; return a tutor explanation. — The extracted text becomes the doubt message, so the already-shipped doubts/tutor pipeline (grounded explanation, Phase 2.1) is what actually answers it; no new solve/match logic needed.
+- [x] Frontend: upload/camera control on the doubts page. — Camera button next to the composer; `capture="environment"` opens the rear camera directly on mobile, falls back to a file picker on desktop.
+- [x] Fallback: if OCR fails, ask the user to type the question. — Any failure (non-image file, oversized file, no worker, no readable text) surfaces an inline error and leaves the composer empty/editable; never a dead end.
+- [x] Tests: OCR mock + match; error handling. — `ocr.test.ts` (5 cases: success, non-image rejection, oversized rejection, empty-text rejection, worker-failure wrapping), all against a mocked `tesseract.js`.
+- [x] Docs: new module README. — `(dashboard)` README's `/doubts` entry (no separate module folder; it's one small lib file + a composer addition).
 
 ### Phase 2 exit criteria
-- [ ] Tutor and doubt answers are grounded with citations.
-- [ ] Misconceptions are detected and drive targeted practice.
-- [ ] Learners can request a similar question on demand.
-- [ ] Flashcards use FSRS; admins get AI tag suggestions.
-- [ ] Photo-to-question available on doubts.
-- [ ] All features have tests + module READMEs.
+- [x] Tutor and doubt answers are grounded with citations.
+- [x] Misconceptions are detected and drive targeted practice.
+- [x] Learners can request a similar question on demand (practice review + notebook; diagnostics review and the live Learn tutor board still open, see 2.3).
+- [x] Flashcards use FSRS; admins get AI tag suggestions.
+- [x] Photo-to-question available on doubts.
+- [x] All features have tests + module READMEs.
 
 ---
 
@@ -254,7 +254,7 @@ platform. Higher effort, sequenced after Phases 1–2 give a solid base.
 - [x] 2.3 On-demand similar question (practice review + notebook; diagnostics/Learn tutor board still open)
 - [x] 2.4 FSRS spaced repetition
 - [x] 2.5 Admin AI auto-tagging pipeline
-- [ ] 2.6 Photo-to-question (OCR + solve)
+- [x] 2.6 Photo-to-question (OCR + solve)
 
 ### Phase 3 — Strategic
 - [ ] 3.1 Probabilistic knowledge tracing

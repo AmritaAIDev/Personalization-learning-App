@@ -926,9 +926,7 @@ export class DiagnosticsService {
     }
 
     const dominantCount =
-      optionSlotCounts.size > 0
-        ? Math.max(...optionSlotCounts.values())
-        : 0;
+      optionSlotCounts.size > 0 ? Math.max(...optionSlotCounts.values()) : 0;
     const dominantOptionShare =
       answeredCount > 0 ? dominantCount / answeredCount : 0;
     const fastWrongRatio =

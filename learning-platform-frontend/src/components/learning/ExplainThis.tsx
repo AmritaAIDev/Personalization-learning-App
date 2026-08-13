@@ -1,15 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { LoaderCircle, Sparkles, WifiOff } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import StudyMarkdown from "@/components/learning/StudyMarkdown";
 import SourceCitations from "@/components/learning/SourceCitations";
 import type {
   Citation,
   ExplanationDepth,
   ExplanationResponse,
 } from "@/lib/diagnostic-types";
+
+const StudyMarkdown = dynamic(
+  () => import("@/components/learning/StudyMarkdown"),
+  { ssr: false },
+);
 
 const DEPTHS: Array<{ value: ExplanationDepth; label: string }> = [
   { value: "concise", label: "Concise" },

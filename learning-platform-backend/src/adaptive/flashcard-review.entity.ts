@@ -43,6 +43,10 @@ export class FlashcardReview {
   @Column({ name: 'interval_days', type: 'smallint', default: 0 })
   intervalDays: number;
 
+  /** SM-2 ease factor; tightens on HARD/AGAIN, loosens on EASY. Never below 1.3. */
+  @Column({ name: 'ease_factor', type: 'real', default: 2.5 })
+  easeFactor: number;
+
   @Column({ name: 'due_at', type: 'timestamp' })
   dueAt: Date;
 

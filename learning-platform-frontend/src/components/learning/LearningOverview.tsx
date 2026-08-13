@@ -1,79 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback } from "react";
-import { ArrowRight, CheckCircle2, CircleAlert } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { learningUrl } from "@/lib/learning";
 import type { LearningDashboardPayload } from "@/lib/learning-types";
-import { useApiResource } from "@/lib/useApiResource";
 
-export default function LearningOverview() {
-  const fetchOverview = useCallback(
-    () => apiFetch<LearningDashboardPayload>("/api/learning/dashboard"),
-    [],
-  );
-  const { data, loading, error, reload: load } = useApiResource(
-    fetchOverview,
-    "Adaptive learning history could not be loaded.",
-  );
-
+/**
+ * The dashboard page already fetches this exact payload as part of
+ * /api/dashboard/student (see StudentDashboardPayload.learning on the
+ * backend) — this component used to redundantly re-fetch
+ * /api/learning/dashboard itself, doubling the round-trip and DB work on
+ * every dashboard load. It now just renders the data its parent already has.
+ */
+export default function LearningOverview({
+  data,
+}: {
+  data: LearningDashboardPayload;
+}) {
   return (
     <section className="mt-14">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
         <h2 className="font-heading text-2xl font-semibold tracking-tight text-ink">
           Learning progress
         </h2>
-        {data?.history[0] ? (
+        {data.history[0] ? (
           <span className="text-[13px] text-ink-mute">
             Latest checkpoint · {data.history[0].coordinate.label}
           </span>
         ) : null}
       </div>
 
-      {loading ? (
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
-          {[0, 1].map((card) => (
-            <div
-              key={card}
-              className="rounded-2xl bg-surface p-6 hairline elevate-sm"
-            >
-              <div className="h-5 w-40 rounded-full skeleton" />
-              <div className="mt-5 space-y-3">
-                {[0, 1].map((item) => (
-                  <div key={item} className="rounded-xl bg-canvas p-4">
-                    <div className="h-4 w-36 rounded-full skeleton" />
-                    <div className="mt-3 h-3 w-56 rounded-full skeleton" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {error ? (
-        <div
-          className="mt-5 flex items-start gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-800"
-          role="alert"
-        >
-          <CircleAlert className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-          <div>
-            <p className="font-semibold">Route unavailable</p>
-            <p className="mt-1">{error}</p>
-            <button
-              type="button"
-              onClick={() => void load()}
-              className="mt-2 font-semibold underline underline-offset-4"
-            >
-              Try again
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {!loading && !error && data ? (
-        <div className="mt-6 grid gap-4 animate-fade lg:grid-cols-2">
+      <div className="mt-6 grid gap-4 animate-fade lg:grid-cols-2">
           {/* Continue learning */}
           <section className="rounded-2xl bg-surface p-6 hairline elevate-sm">
             <div className="flex items-center justify-between gap-3">
@@ -190,7 +147,6 @@ export default function LearningOverview() {
             )}
           </section>
         </div>
-      ) : null}
     </section>
   );
 }

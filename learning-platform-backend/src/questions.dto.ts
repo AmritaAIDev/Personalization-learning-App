@@ -1,5 +1,9 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
   IsInt,
   IsIn,
   IsOptional,
@@ -82,6 +86,13 @@ export class QuestionBankQueryDto {
   @IsOptional()
   @IsIn(BLOOM_LEVELS)
   bloom_level?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  limit = 200;
 }
 
 export class SearchQuestionCatalogDto {
@@ -148,6 +159,167 @@ export class UpdateQuestionPublicationDto {
   @IsString()
   @MaxLength(1000)
   reviewNotes?: string;
+}
+
+/**
+ * The curated question shape an admin types in by hand or imports in bulk.
+ * `correct_answer` must be one of `options` — checked in QuestionsService
+ * rather than here, since class-validator field decorators can't cross-check
+ * two sibling fields against each other.
+ */
+export class CreateQuestionDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  subject: string;
+
+  @IsString()
+  @MinLength(2)
+  @MaxLength(160)
+  chapter: string;
+
+  @IsString()
+  @MinLength(2)
+  @MaxLength(160)
+  topic: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  subtopic?: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(4000)
+  question_text: string;
+
+  @IsArray()
+  @ArrayMinSize(4)
+  @ArrayMaxSize(4)
+  @ArrayUnique()
+  @IsString({ each: true })
+  options: string[];
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  correct_answer: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(4000)
+  solution: string;
+
+  @IsIn(BLOOM_LEVELS)
+  bloom_level: string;
+
+  @IsIn(QUESTION_DIFFICULTIES)
+  difficulty: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  marks: number;
+
+  @IsInt()
+  @Min(10)
+  @Max(1800)
+  estimated_time_sec: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  concept_tags?: string[];
+}
+
+/** Same shape as CreateQuestionDto, but every field is optional for a partial edit. */
+export class UpdateQuestionDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  subject?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(160)
+  chapter?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(160)
+  topic?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  subtopic?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(4000)
+  question_text?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(4)
+  @ArrayMaxSize(4)
+  @ArrayUnique()
+  @IsString({ each: true })
+  options?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  correct_answer?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(4000)
+  solution?: string;
+
+  @IsOptional()
+  @IsIn(BLOOM_LEVELS)
+  bloom_level?: string;
+
+  @IsOptional()
+  @IsIn(QUESTION_DIFFICULTIES)
+  difficulty?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  marks?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(10)
+  @Max(1800)
+  estimated_time_sec?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  concept_tags?: string[];
+}
+
+/**
+ * Deliberately loose at the request-body level: each row is validated
+ * individually inside QuestionsService (via validateQuestionRow) so a batch
+ * with some bad rows can report per-row errors instead of the whole request
+ * being rejected outright by the global ValidationPipe.
+ */
+export class BulkImportQuestionsDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(500)
+  rows: Record<string, unknown>[];
 }
 
 /** Either questionId (CURATED) or generatedQuestionId (AI_POOL) must be set, matching source. */

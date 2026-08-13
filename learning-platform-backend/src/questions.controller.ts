@@ -2,6 +2,7 @@ import { ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -16,6 +17,8 @@ import { AgentService } from './agent/agent.service';
 import { QuestionsService } from './questions.service';
 import {
   AdminQuestionReviewQueryDto,
+  BulkImportQuestionsDto,
+  CreateQuestionDto,
   GenerateQuestionDraftDto,
   QuestionBankQueryDto,
   QuestionReportQueryDto,
@@ -23,6 +26,7 @@ import {
   ResolveQuestionReportDto,
   SearchQuestionCatalogDto,
   TutorChatDto,
+  UpdateQuestionDto,
   UpdateQuestionPublicationDto,
 } from './questions.dto';
 
@@ -119,6 +123,75 @@ export class QuestionsController {
   @Get('bank/:questionId')
   async getBankQuestion(@Param('questionId') questionId: string) {
     return { data: await this.questionsService.findByQuestionId(questionId) };
+  }
+
+  /**
+   * Hand-typed curated question. Same draft-first rule as AI generation:
+   * this never reaches students until an explicit publish.
+   */
+  @Roles('admin')
+  @Post('bank')
+  async createQuestion(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: CreateQuestionDto,
+  ) {
+    return { data: await this.questionsService.createCurated(user.id, body) };
+  }
+
+  @Roles('admin')
+  @Patch('bank/:questionId')
+  async updateQuestion(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('questionId') questionId: string,
+    @Body() body: UpdateQuestionDto,
+  ) {
+    return {
+      data: await this.questionsService.updateQuestion(
+        questionId,
+        user.id,
+        body,
+      ),
+    };
+  }
+
+  @Roles('admin')
+  @Delete('bank/:questionId')
+  async deleteQuestion(@Param('questionId') questionId: string) {
+    await this.questionsService.deleteQuestion(questionId);
+    return { data: { deleted: true } };
+  }
+
+  /** Read-only: flags published questions whose tagged difficulty doesn't match observed student performance. */
+  @Roles('admin')
+  @Get('calibration')
+  async getDifficultyCalibration() {
+    return { data: await this.questionsService.getDifficultyCalibration() };
+  }
+
+  /** Dry-run: validates every row without writing to the DB, for a bulk-import preview. */
+  @Throttle({ default: { limit: 4, ttl: 60_000 } })
+  @Roles('admin')
+  @Post('bulk-import/validate')
+  async validateBulkImport(@Body() body: BulkImportQuestionsDto) {
+    const results = await Promise.all(
+      body.rows.map((row, index) =>
+        this.questionsService.validateQuestionRow(row, index + 1),
+      ),
+    );
+    return { data: results };
+  }
+
+  /** Inserts every valid row as a DRAFT; invalid rows are reported, not fatal to the batch. */
+  @Throttle({ default: { limit: 4, ttl: 60_000 } })
+  @Roles('admin')
+  @Post('bulk-import/commit')
+  async commitBulkImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: BulkImportQuestionsDto,
+  ) {
+    return {
+      data: await this.questionsService.bulkImportQuestions(user.id, body.rows),
+    };
   }
 
   /**

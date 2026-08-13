@@ -10,7 +10,11 @@ async function main() {
     GROUP BY chapter, topic
     ORDER BY chapter, topic
   `);
-  for (const r of rows) console.log(`CHAPTER=[${r.chapter}] TOPIC=[${r.topic}] total=${r.n}`);
+  for (const r of rows)
+    console.log(`CHAPTER=[${r.chapter}] TOPIC=[${r.topic}] total=${r.n}`);
   await AppDataSource.destroy();
 }
-void main().catch((e) => { console.error(e); process.exit(1); });
+void main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

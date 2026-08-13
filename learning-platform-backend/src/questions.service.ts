@@ -1,9 +1,12 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { randomUUID } from 'node:crypto';
 import { FindOptionsWhere, In, Repository } from 'typeorm';
 import {
@@ -17,9 +20,15 @@ import {
   GeneratedLearningQuestionStatus,
   LearningQuestionSource,
 } from './adaptive/adaptive.types';
-import type {
-  ReportQuestionDto,
-  ResolveQuestionReportDto,
+import { scoreQuestionQuality } from './question-quality.util';
+import { PracticeAnswer } from './practice/practice-answer.entity';
+import { DiagnosticAnswer } from './diagnostics/diagnostic-answer.entity';
+import { MockTestAnswer } from './mock-tests/mock-test-answer.entity';
+import {
+  CreateQuestionDto,
+  type ReportQuestionDto,
+  type ResolveQuestionReportDto,
+  type UpdateQuestionDto,
 } from './questions.dto';
 
 export interface QuestionFilters {
@@ -28,7 +37,10 @@ export interface QuestionFilters {
   topic?: string;
   difficulty?: string;
   bloom_level?: string;
+  limit?: number;
 }
+
+const DEFAULT_QUESTION_BANK_LIMIT = 200;
 
 export interface AdminQuestionFilters extends QuestionFilters {
   status?: QuestionPublicationStatus;
@@ -91,6 +103,44 @@ interface PublicationUpdate {
   reviewNotes?: string;
 }
 
+export interface RowValidationResult {
+  row: number;
+  valid: boolean;
+  errors: string[];
+}
+
+export interface BulkImportCommitResult {
+  inserted: number;
+  failed: { row: number; errors: string[] }[];
+}
+
+export interface DifficultyCalibrationRow {
+  id: string;
+  question_id: string;
+  subject: string;
+  chapter: string;
+  topic: string;
+  question_text: string;
+  difficulty: string;
+  quality_score: number;
+  sampleSize: number;
+  observedAccuracy: number;
+  expectedRange: [number, number];
+  mismatched: boolean;
+}
+
+/**
+ * A tagged difficulty is only ever a guess at creation time (by an admin or
+ * a model). These are the accuracy bands a correctly-tagged question is
+ * expected to fall into once enough students have actually answered it —
+ * anything outside its band is flagged for a human to re-tag or retire.
+ */
+const EXPECTED_ACCURACY_RANGE: Record<string, [number, number]> = {
+  Easy: [0.5, 1],
+  Medium: [0.2, 0.9],
+  Hard: [0, 0.7],
+};
+
 /**
  * Serves the reviewed question bank stored in PostgreSQL.
  *
@@ -122,6 +172,7 @@ export class QuestionsService {
     return this.questionsRepository.find({
       where,
       order: { created_at: 'ASC' },
+      take: filters.limit ?? DEFAULT_QUESTION_BANK_LIMIT,
     });
   }
 
@@ -259,7 +310,7 @@ export class QuestionsService {
       common_errors: [],
       status: QuestionPublicationStatus.DRAFT,
       source: QuestionSource.AI_GENERATED,
-      quality_score: this.scoreGeneratedQuestion(input.generated),
+      quality_score: scoreQuestionQuality(input.generated),
       created_by_user_id: input.createdByUserId,
       reviewed_by_user_id: null,
       reviewed_at: null,
@@ -291,6 +342,235 @@ export class QuestionsService {
   }
 
   /**
+   * A hand-typed or bulk-imported curated question. Lands as DRAFT like every
+   * other creation path (AI drafts included) — publishing is always a
+   * separate, deliberate admin action.
+   */
+  async createCurated(
+    createdByUserId: string,
+    input: CreateQuestionDto,
+  ): Promise<Question> {
+    this.assertCorrectAnswerInOptions(input.options, input.correct_answer);
+    const shortId = randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase();
+    const question = this.questionsRepository.create({
+      question_id: 'MAN-' + shortId,
+      subject: input.subject,
+      chapter: input.chapter,
+      topic: input.topic,
+      subtopic: input.subtopic?.trim() || null,
+      question_text: input.question_text.trim(),
+      options: input.options.map((option) => option.trim()),
+      correct_answer: input.correct_answer.trim(),
+      solution: input.solution.trim(),
+      bloom_level: input.bloom_level,
+      difficulty: input.difficulty,
+      marks: input.marks,
+      estimated_time_sec: input.estimated_time_sec,
+      concept_tags: input.concept_tags ?? [],
+      common_errors: [],
+      status: QuestionPublicationStatus.DRAFT,
+      source: QuestionSource.CURATED,
+      created_by_user_id: createdByUserId,
+    });
+    return this.questionsRepository.save(question);
+  }
+
+  /**
+   * In-place correction (typo, answer-key fix, retagging). Does not touch
+   * publication status — editing a PUBLISHED question keeps it published, this
+   * is not a re-review workflow.
+   */
+  async updateQuestion(
+    questionId: string,
+    reviewerId: string,
+    input: UpdateQuestionDto,
+  ): Promise<Question> {
+    const question = await this.findByQuestionId(questionId);
+    const options = input.options ?? question.options;
+    const correctAnswer = input.correct_answer ?? question.correct_answer;
+    this.assertCorrectAnswerInOptions(options, correctAnswer);
+
+    if (input.subject !== undefined) question.subject = input.subject;
+    if (input.chapter !== undefined) question.chapter = input.chapter;
+    if (input.topic !== undefined) question.topic = input.topic;
+    if (input.subtopic !== undefined)
+      question.subtopic = input.subtopic.trim() || null;
+    if (input.question_text !== undefined)
+      question.question_text = input.question_text.trim();
+    if (input.options !== undefined)
+      question.options = input.options.map((option) => option.trim());
+    if (input.correct_answer !== undefined)
+      question.correct_answer = input.correct_answer.trim();
+    if (input.solution !== undefined) question.solution = input.solution.trim();
+    if (input.bloom_level !== undefined)
+      question.bloom_level = input.bloom_level;
+    if (input.difficulty !== undefined) question.difficulty = input.difficulty;
+    if (input.marks !== undefined) question.marks = input.marks;
+    if (input.estimated_time_sec !== undefined)
+      question.estimated_time_sec = input.estimated_time_sec;
+    if (input.concept_tags !== undefined)
+      question.concept_tags = input.concept_tags;
+
+    question.reviewed_by_user_id = reviewerId;
+    question.reviewed_at = new Date();
+    return this.questionsRepository.save(question);
+  }
+
+  /**
+   * Hard delete is only safe for a question no student has ever encountered.
+   * Anything with attempt history must be archived instead, or the delete
+   * would corrupt past students' analysis/review screens (practice, mock-test,
+   * and diagnostic answers all hold a FK to this row).
+   */
+  async deleteQuestion(questionId: string): Promise<void> {
+    const question = await this.findByQuestionId(questionId);
+    const manager = this.questionsRepository.manager;
+    const [practiceCount, diagnosticCount, mockTestCount] = await Promise.all([
+      manager.count(PracticeAnswer, { where: { questionId: question.id } }),
+      manager.count(DiagnosticAnswer, { where: { questionId: question.id } }),
+      manager.count(MockTestAnswer, { where: { questionId: question.id } }),
+    ]);
+    const referenceCount = practiceCount + diagnosticCount + mockTestCount;
+    if (referenceCount > 0) {
+      throw new ConflictException(
+        `This question is used in ${referenceCount} past attempt${referenceCount === 1 ? '' : 's'} — archive it instead of deleting.`,
+      );
+    }
+    await this.questionsRepository.remove(question);
+  }
+
+  /**
+   * Cross-checks each published question's tagged difficulty against how
+   * students have actually performed on it, so a mistagged item (e.g.
+   * "Easy" that almost nobody gets right) surfaces for a human to re-tag
+   * rather than silently steering the adaptive engine's difficulty
+   * targeting wrong forever. Read-only — nothing here mutates a tag
+   * automatically; that's still an explicit edit via updateQuestion.
+   */
+  async getDifficultyCalibration(
+    minSampleSize = 10,
+  ): Promise<DifficultyCalibrationRow[]> {
+    const rows = await this.questionsRepository.manager.query<
+      Array<{
+        id: string;
+        question_id: string;
+        subject: string;
+        chapter: string;
+        topic: string;
+        question_text: string;
+        difficulty: string;
+        quality_score: number;
+        total_answers: string;
+        correct_answers: string;
+      }>
+    >(
+      `SELECT q.id, q.question_id, q.subject, q.chapter, q.topic, q.question_text,
+              q.difficulty, q.quality_score, s.total_answers, s.correct_answers
+       FROM questions q
+       JOIN (
+         SELECT question_id,
+                COUNT(*) FILTER (WHERE is_correct IS NOT NULL) AS total_answers,
+                COUNT(*) FILTER (WHERE is_correct = true) AS correct_answers
+         FROM (
+           SELECT question_id, is_correct FROM practice_answers
+           UNION ALL
+           SELECT question_id, is_correct FROM diagnostic_answers
+           UNION ALL
+           SELECT question_id, is_correct FROM mock_test_answers
+         ) all_answers
+         GROUP BY question_id
+       ) s ON s.question_id = q.id
+       WHERE q.status = 'PUBLISHED' AND s.total_answers >= $1
+       ORDER BY s.total_answers DESC`,
+      [minSampleSize],
+    );
+
+    return rows.map((row) => {
+      const sampleSize = Number(row.total_answers);
+      const observedAccuracy = Number(row.correct_answers) / sampleSize;
+      const expectedRange = EXPECTED_ACCURACY_RANGE[row.difficulty] ?? [0, 1];
+      const mismatched =
+        observedAccuracy < expectedRange[0] ||
+        observedAccuracy > expectedRange[1];
+      return {
+        id: row.id,
+        question_id: row.question_id,
+        subject: row.subject,
+        chapter: row.chapter,
+        topic: row.topic,
+        question_text: row.question_text,
+        difficulty: row.difficulty,
+        quality_score: row.quality_score,
+        sampleSize,
+        observedAccuracy,
+        expectedRange,
+        mismatched,
+      };
+    });
+  }
+
+  /** Validates one row without writing to the DB, for the bulk-import preview. */
+  async validateQuestionRow(
+    row: Record<string, unknown>,
+    rowNumber: number,
+  ): Promise<RowValidationResult> {
+    const errors = await this.checkQuestionRow(row);
+    return { row: rowNumber, valid: errors.length === 0, errors };
+  }
+
+  /** Inserts every valid row as a DRAFT curated question; invalid rows are skipped, not fatal to the batch. */
+  async bulkImportQuestions(
+    createdByUserId: string,
+    rows: Record<string, unknown>[],
+  ): Promise<BulkImportCommitResult> {
+    let inserted = 0;
+    const failed: { row: number; errors: string[] }[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const rowNumber = i + 1;
+      const errors = await this.checkQuestionRow(rows[i]);
+      if (errors.length > 0) {
+        failed.push({ row: rowNumber, errors });
+        continue;
+      }
+      await this.createCurated(
+        createdByUserId,
+        plainToInstance(CreateQuestionDto, rows[i]),
+      );
+      inserted += 1;
+    }
+    return { inserted, failed };
+  }
+
+  private async checkQuestionRow(
+    row: Record<string, unknown>,
+  ): Promise<string[]> {
+    const instance = plainToInstance(CreateQuestionDto, row);
+    const violations = await validate(instance, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    const errors = violations.flatMap((violation) =>
+      Object.values(violation.constraints ?? {}),
+    );
+    if (
+      errors.length === 0 &&
+      !instance.options?.includes(instance.correct_answer)
+    ) {
+      errors.push('correct_answer must be one of options');
+    }
+    return errors;
+  }
+
+  private assertCorrectAnswerInOptions(
+    options: string[],
+    correctAnswer: string,
+  ): void {
+    if (!options.includes(correctAnswer)) {
+      throw new BadRequestException('correct_answer must be one of options.');
+    }
+  }
+
+  /**
    * Never leak solutions or correct answers through a bank endpoint. Diagnostic
    * scoring is performed by DiagnosticsService after submission.
    */
@@ -309,23 +589,6 @@ export class QuestionsService {
 
   private escapeLike(value: string): string {
     return value.replace(/[\\%_]/g, '\\$&');
-  }
-
-  private scoreGeneratedQuestion(
-    generated: GeneratedQuestionDraftInput['generated'],
-  ): number {
-    const distinctOptions = new Set(
-      generated.options.map((option) => option.trim().toLocaleLowerCase()),
-    ).size;
-    const hasUsefulExplanation = generated.explanation.trim().length >= 40;
-    const hasGroundedPrompt = generated.question_text.trim().length >= 30;
-    return Math.min(
-      100,
-      65 +
-        (distinctOptions === 4 ? 15 : 0) +
-        (hasUsefulExplanation ? 10 : 0) +
-        (hasGroundedPrompt ? 10 : 0),
-    );
   }
 
   /**

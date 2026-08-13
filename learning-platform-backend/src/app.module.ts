@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'node:path';
@@ -43,6 +43,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { MockTestAttempt } from './mock-tests/mock-test-attempt.entity';
 import { MockTestAnswer } from './mock-tests/mock-test-answer.entity';
 import { MockTestsModule } from './mock-tests/mock-tests.module';
+import { HealthModule } from './health/health.module';
+import { RequestContextMiddleware } from './common/middleware/request-context.middleware';
 
 @Module({
   imports: [
@@ -112,8 +114,13 @@ import { MockTestsModule } from './mock-tests/mock-tests.module';
     DoubtsModule,
     DashboardModule,
     MockTestsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestContextMiddleware).forRoutes('*');
+  }
+}

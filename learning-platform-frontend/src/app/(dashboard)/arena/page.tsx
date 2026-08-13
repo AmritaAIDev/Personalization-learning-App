@@ -20,7 +20,7 @@ export default function ArenaPage() {
           <p className="mt-7 text-xs font-medium text-ink-mute">
             Practice needs a topic
           </p>
-          <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight text-ink">
+          <h1 className="mt-3 font-heading page-title text-ink">
             Choose a verified learning unit first.
           </h1>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-ink-soft">

@@ -1495,6 +1495,15 @@ export class AdaptiveService {
     return blocks.join('\n\n');
   }
 
+  /**
+   * SM-2 spaced repetition. Each rating maps to SM-2's 0-5 recall-quality
+   * scale (AGAIN=0 fail, HARD=3, GOOD=4, EASY=5 — this app never asks for
+   * finer-grained self-assessment than four buttons) and updates a
+   * per-card ease factor from it, so a card the learner keeps rating HARD
+   * grows its interval more slowly over time and one they keep rating EASY
+   * grows it faster — unlike a fixed multiplier applied the same way
+   * regardless of that card's actual review history.
+   */
   private nextReviewSchedule(
     current: FlashcardReview | null,
     rating: FlashcardRating,
@@ -1502,43 +1511,47 @@ export class AdaptiveService {
   ) {
     const repetitions = current?.repetitions ?? 0;
     const interval = current?.intervalDays ?? 0;
-    let nextRepetitions = repetitions;
-    let intervalDays = interval;
-    let dueAt: Date;
-    switch (rating) {
-      case FlashcardRating.AGAIN:
-        nextRepetitions = 0;
-        intervalDays = 0;
-        dueAt = new Date(now.getTime() + 10 * 60 * 1000);
-        break;
-      case FlashcardRating.HARD:
-        nextRepetitions = repetitions + 1;
-        intervalDays = Math.max(1, Math.round(Math.max(interval, 1) * 1.2));
-        dueAt = this.addDays(now, intervalDays);
-        break;
-      case FlashcardRating.GOOD:
-        nextRepetitions = repetitions + 1;
-        intervalDays =
-          repetitions === 0
-            ? 1
-            : repetitions === 1
-              ? 3
-              : Math.max(4, interval * 2);
-        dueAt = this.addDays(now, intervalDays);
-        break;
-      case FlashcardRating.EASY:
-        nextRepetitions = repetitions + 1;
-        intervalDays = repetitions === 0 ? 3 : Math.max(6, interval * 3);
-        dueAt = this.addDays(now, intervalDays);
-        break;
+    const easeFactor = current?.easeFactor ?? 2.5;
+
+    if (rating === FlashcardRating.AGAIN) {
+      return {
+        lastRating: rating,
+        repetitions: 0,
+        intervalDays: 0,
+        easeFactor: this.updatedEaseFactor(easeFactor, 0),
+        dueAt: new Date(now.getTime() + 10 * 60 * 1000),
+        lastReviewedAt: now,
+      };
     }
+
+    const quality = {
+      [FlashcardRating.HARD]: 3,
+      [FlashcardRating.GOOD]: 4,
+      [FlashcardRating.EASY]: 5,
+    }[rating];
+    const nextEaseFactor = this.updatedEaseFactor(easeFactor, quality);
+    const nextRepetitions = repetitions + 1;
+    const intervalDays =
+      nextRepetitions === 1
+        ? 1
+        : nextRepetitions === 2
+          ? 6
+          : Math.round(Math.max(interval, 1) * nextEaseFactor);
+
     return {
       lastRating: rating,
       repetitions: nextRepetitions,
       intervalDays,
-      dueAt,
+      easeFactor: nextEaseFactor,
+      dueAt: this.addDays(now, intervalDays),
       lastReviewedAt: now,
     };
+  }
+
+  /** Canonical SM-2 ease-factor update, clamped to SM-2's floor of 1.3. */
+  private updatedEaseFactor(current: number, quality: number): number {
+    const delta = 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02);
+    return Math.max(1.3, Math.round((current + delta) * 100) / 100);
   }
 
   private toFlashcardPayload(

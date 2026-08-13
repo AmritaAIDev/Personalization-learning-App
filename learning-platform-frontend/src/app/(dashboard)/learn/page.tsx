@@ -27,7 +27,7 @@ export default function LearnPage() {
                 <Compass className="h-4 w-4" aria-hidden="true" />
                 Learn
               </p>
-              <h1 className="mt-3 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+              <h1 className="mt-3 font-heading page-title text-ink">
                 Pick a topic to start.
               </h1>
               <p className="mt-4 max-w-lg text-sm leading-6 text-ink-soft">

@@ -46,13 +46,6 @@ const navigation: Array<{
 ];
 
 const overviewLabels = new Set(["Dashboard", "Journey"]);
-const studyLabels = new Set([
-  "Learn",
-  "Practice",
-  "Tests",
-  "Notebook",
-  "Doubts",
-]);
 const planningLabels = new Set(["Content"]);
 const mobileLabels = new Set([
   "Dashboard",
@@ -205,17 +198,6 @@ export default function Sidebar() {
         <SidebarSection
           title="Overview"
           items={navigation.filter((item) => overviewLabels.has(item.label))}
-          pathname={pathname}
-          collapsed={isCollapsed}
-        />
-        <div className="my-3 border-t border-hairline" />
-        <SidebarSection
-          title="Study"
-          items={navigation.filter(
-            (item) =>
-              studyLabels.has(item.label) &&
-              (!item.roles || item.roles.includes(user?.role ?? "student")),
-          )}
           pathname={pathname}
           collapsed={isCollapsed}
         />

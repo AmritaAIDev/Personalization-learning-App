@@ -1,4 +1,5 @@
 import { DataSource, Repository } from 'typeorm';
+import type { GeneratedLearningQuestionPayload } from '../agent/agent.service';
 import { AgentService } from '../agent/agent.service';
 import { Question, QuestionPublicationStatus } from '../question.entity';
 import { Flashcard } from './flashcard.entity';
@@ -6,6 +7,7 @@ import { GeneratedLearningQuestion } from './generated-learning-question.entity'
 import { GenerationJob } from './generation-job.entity';
 import { AdaptiveContentService } from './adaptive-content.service';
 import {
+  GenerationJobStatus,
   LearningQuestionSource,
   type LearningCoordinate,
 } from './adaptive.types';
@@ -152,5 +154,96 @@ describe('AdaptiveContentService question selection', () => {
       totalReady: 2,
       readyForSession: false,
     });
+  });
+});
+
+describe('AdaptiveContentService AI-pool quality gate', () => {
+  const sourceQuestion = {
+    id: 'src-1',
+    question_text: 'Grounded reference question for the topic.',
+    solution: 'Grounded reference solution.',
+    concept_tags: [],
+  } as unknown as Question;
+
+  function buildService(
+    generated: GeneratedLearningQuestionPayload[],
+    save: jest.Mock,
+  ) {
+    const dataSource = {} as DataSource;
+    const agentService = {
+      generateLearningQuestionBatch: jest.fn(async () => generated),
+    } as unknown as AgentService;
+    const questionsRepository = {
+      find: jest.fn(async () => [sourceQuestion]),
+    } as unknown as Repository<Question>;
+    const generatedQuestionsRepository = {
+      create: jest.fn((input) => input),
+      save,
+    } as unknown as Repository<GeneratedLearningQuestion>;
+    const flashcardsRepository = {
+      find: jest.fn(async () => []),
+    } as unknown as Repository<Flashcard>;
+    const jobsRepository = {
+      save: jest.fn(async (input) => input),
+    } as unknown as Repository<GenerationJob>;
+    return new AdaptiveContentService(
+      dataSource,
+      agentService,
+      questionsRepository,
+      generatedQuestionsRepository,
+      jobsRepository,
+      flashcardsRepository,
+    );
+  }
+
+  function job(): GenerationJob {
+    return {
+      id: 'job-1',
+      userId: 'user-1',
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic: 'Gauss Law',
+      bloomLevel: 'Recall',
+      difficulty: 'Easy',
+      targetLevel: 1,
+      requestedCount: 2,
+      status: GenerationJobStatus.PROCESSING,
+      generatedCount: 0,
+    } as unknown as GenerationJob;
+  }
+
+  it('drops a low-quality AI-pool question instead of serving it to a student', async () => {
+    const highQuality: GeneratedLearningQuestionPayload = {
+      question_text: 'A fully grounded, sufficiently detailed prompt.',
+      options: ['A', 'B', 'C', 'D'],
+      correct_answer: 'A',
+      explanation: 'A thorough explanation that clears the quality floor.',
+      hint: 'A useful hint.',
+      concept_tags: ['gauss law'],
+      common_errors: ['assuming symmetry incorrectly'],
+    };
+    const lowQuality: GeneratedLearningQuestionPayload = {
+      question_text: 'Short prompt.',
+      options: ['A', 'A', 'A', 'B'], // only 2 distinct options
+      correct_answer: 'A',
+      explanation: 'Too short.',
+      hint: 'Hint.',
+      concept_tags: ['gauss law'],
+      common_errors: ['error'],
+    };
+    const save = jest.fn(async (records) => records);
+    const service = buildService([highQuality, lowQuality], save);
+    const currentJob = job();
+
+    await service.generateForJob(currentJob);
+
+    expect(save).toHaveBeenCalledTimes(1);
+    const savedRecords = save.mock.calls[0][0] as Array<{
+      questionText: string;
+    }>;
+    expect(savedRecords).toHaveLength(1);
+    expect(savedRecords[0].questionText).toBe(highQuality.question_text);
+    expect(currentJob.generatedCount).toBe(1);
+    expect(currentJob.status).toBe(GenerationJobStatus.COMPLETED);
   });
 });

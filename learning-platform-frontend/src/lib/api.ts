@@ -8,16 +8,26 @@ function normalizeApiUrl(value: string): string {
   return `https://${trimmed}`;
 }
 
-function isProductionFrontendHost(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.location.hostname === "personalization-learning-app.vercel.app";
+function isLocalHost(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1";
 }
 
+/**
+ * NEXT_PUBLIC_API_URL is baked in at build time, so a single Vercel build
+ * can't hardcode a per-domain answer for every host it might be served
+ * from (custom domains, preview deployments, etc). When the var is unset,
+ * fall back to same-origin on any non-local host — this matches
+ * next.config.ts's default `/api/:path*` rewrite to BACKEND_URL, so it
+ * works out of the box wherever the app is deployed. Only real localhost
+ * browsing defaults to the local backend port.
+ */
 function resolveApiUrl(): string {
-  if (isProductionFrontendHost()) return "";
-  return normalizeApiUrl(
-    process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000",
-  );
+  const configured = process.env.NEXT_PUBLIC_API_URL;
+  if (configured) return normalizeApiUrl(configured);
+  if (typeof window !== "undefined" && !isLocalHost(window.location.hostname)) {
+    return "";
+  }
+  return normalizeApiUrl("http://localhost:4000");
 }
 
 type ApiEnvelope<T> = { data: T };

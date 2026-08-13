@@ -72,14 +72,12 @@ export default function DiagnosticStartPage() {
 
   if (loading) {
     return (
-      <div className="grid min-h-screen place-items-center text-sm font-semibold text-ink-soft">
-        <span className="flex items-center gap-3">
-          <LoaderCircle
-            className="h-5 w-5 animate-spin text-primary"
-            aria-hidden="true"
-          />
-          Loading test details…
-        </span>
+      <div
+        className="mx-auto max-w-5xl px-4 pt-6 sm:px-8 sm:pt-8 lg:px-10"
+        aria-label="Loading test details"
+      >
+        <div className="h-4 w-28 rounded-full skeleton" />
+        <div className="mt-4 h-72 rounded-2xl skeleton" />
       </div>
     );
   }
@@ -102,7 +100,7 @@ export default function DiagnosticStartPage() {
           <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">
             Diagnostic readiness
           </p>
-          <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight sm:text-3xl">
+          <h1 className="mt-2 font-heading page-title text-ink">
             {dashboard?.diagnostic.title ?? "Physics diagnostic"}
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">

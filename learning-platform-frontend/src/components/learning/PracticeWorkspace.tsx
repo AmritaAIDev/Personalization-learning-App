@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   ArrowRight,
   BadgeCheck,
@@ -25,7 +26,10 @@ import type {
   LearningSessionTransition,
 } from "@/lib/learning-types";
 import StudyAssistant from "./StudyAssistant";
-import StudyMarkdown from "./StudyMarkdown";
+
+const StudyMarkdown = dynamic(() => import("./StudyMarkdown"), {
+  ssr: false,
+});
 
 type Feedback = LearningAnswerPayload["feedback"] | null;
 

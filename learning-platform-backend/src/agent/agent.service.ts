@@ -242,7 +242,7 @@ export class AgentService {
     });
     return searchResult
       .map((result) => {
-        const payload = (result.payload ?? {}) as Record<string, unknown>;
+        const payload = result.payload ?? {};
         const snippet = typeof payload.text === 'string' ? payload.text : '';
         const title =
           (typeof payload.title === 'string' && payload.title) ||

@@ -182,7 +182,11 @@ describe('DiagnosticsService', () => {
 
   type IntegrityAccess = {
     buildIntegritySignal: (
-      questions: Array<{ id: string; options: string[]; correct_answer: string }>,
+      questions: Array<{
+        id: string;
+        options: string[];
+        correct_answer: string;
+      }>,
       answers: Map<
         string,
         { selectedOption: string | null; elapsedSeconds: number | null }
@@ -198,7 +202,10 @@ describe('DiagnosticsService', () => {
       topicPerformance: Array<{ label: string; status: string; score: number }>,
       weakTopics: string[],
     ) => string;
-    viewAnalysisFor: (analysis: unknown, isAdmin: boolean) => { integrity: unknown };
+    viewAnalysisFor: (
+      analysis: unknown,
+      isAdmin: boolean,
+    ) => { integrity: unknown };
   };
 
   function optionQuestion(id: string, correct: string) {

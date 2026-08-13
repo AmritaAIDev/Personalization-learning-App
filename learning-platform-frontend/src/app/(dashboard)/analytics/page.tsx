@@ -53,7 +53,7 @@ export default function AnalyticsPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
               Analytics
             </p>
-            <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+            <h1 className="mt-2 font-heading page-title text-ink">
               How you&apos;re progressing
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-6 text-ink-mute">

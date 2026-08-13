@@ -481,7 +481,7 @@ function StaggerItemHero({
               <TierIcon className="h-3.5 w-3.5" aria-hidden="true" />
               {model.tier.current.name}
             </span>
-            <h1 className="mt-1.5 truncate font-heading text-2xl font-bold tracking-tight sm:text-3xl">
+            <h1 className="mt-1.5 truncate font-heading page-title text-ink">
               {name}
             </h1>
             {email ? <p className="truncate text-sm text-white/55">{email}</p> : null}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -15,7 +16,6 @@ import {
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import ReportQuestionButton from "@/components/ReportQuestionButton";
-import StudyMarkdown from "@/components/learning/StudyMarkdown";
 import { formatDuration } from "@/lib/format";
 import {
   elapsedPracticeSeconds,
@@ -29,6 +29,11 @@ import {
 } from "@/lib/practice-sync";
 import type { PracticeAttemptPayload } from "@/lib/practice-types";
 import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
+
+const StudyMarkdown = dynamic(
+  () => import("@/components/learning/StudyMarkdown"),
+  { ssr: false },
+);
 
 const IDLE_SYNC: PracticeSyncState = {
   pending: 0,

@@ -23,7 +23,7 @@ export default function PracticePage() {
                 <Timer className="h-3.5 w-3.5" aria-hidden="true" />
                 Practice
               </p>
-              <h1 className="mt-3 font-heading text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+              <h1 className="mt-3 font-heading page-title text-ink">
                 Start a practice set.
               </h1>
             </div>

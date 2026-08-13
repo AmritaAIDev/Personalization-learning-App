@@ -14,7 +14,12 @@ import { Doubt } from './doubt.entity';
 
 @Entity('doubt_threads')
 @Index('IDX_doubt_threads_user_updated', ['userId', 'updatedAt'])
-@Index('IDX_doubt_threads_user_scope', ['userId', 'subject', 'chapter', 'topic'])
+@Index('IDX_doubt_threads_user_scope', [
+  'userId',
+  'subject',
+  'chapter',
+  'topic',
+])
 export class DoubtThread {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -19,7 +20,6 @@ import {
 } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import StudyMarkdown from "@/components/learning/StudyMarkdown";
 import ExplainThis from "@/components/learning/ExplainThis";
 import ConfidenceBadge from "@/components/diagnostic/ConfidenceBadge";
 import type {
@@ -32,6 +32,11 @@ import { formatDateTime } from "@/lib/format";
 import BloomRadar from "@/components/diagnostic/BloomRadar";
 import PerformanceBars from "@/components/diagnostic/PerformanceBars";
 import ScoreRing from "@/components/diagnostic/ScoreRing";
+
+const StudyMarkdown = dynamic(
+  () => import("@/components/learning/StudyMarkdown"),
+  { ssr: false },
+);
 
 const gradeMessage = {
   Excellent:

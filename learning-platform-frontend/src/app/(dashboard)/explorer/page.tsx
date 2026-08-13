@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useRef, useState, useEffect } from "react";
-import { useJourney, Subtopic } from "@/context/JourneyContext";
+import { JourneyProvider, useJourney, Subtopic } from "@/context/JourneyContext";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Play, Network, Brain } from "lucide-react";
@@ -24,6 +24,14 @@ function generateSpiralLayout(nodes: Subtopic[], spacing: number = 200) {
 }
 
 export default function ExplorerBubblePage() {
+  return (
+    <JourneyProvider>
+      <ExplorerBubbleContent />
+    </JourneyProvider>
+  );
+}
+
+function ExplorerBubbleContent() {
   const { journeyNodes, loading, error, refreshJourney } = useJourney();
   const router = useRouter();
 
@@ -104,7 +112,7 @@ export default function ExplorerBubblePage() {
       {/* HUD Header */}
       <header className="absolute top-0 left-0 w-full p-8 z-20 pointer-events-none flex justify-between items-start">
         <div>
-          <h1 className="font-heading text-3xl font-black text-ink flex items-center gap-3 tracking-tight">
+          <h1 className="font-heading page-title text-ink flex items-center gap-3">
             <Network size={28} className="text-primary" />
             Knowledge Universe
           </h1>

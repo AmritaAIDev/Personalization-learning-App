@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import { QuestionPublicationStatus, QuestionSource } from './question.entity';
 import {
   QuestionReportReason,
@@ -9,12 +10,32 @@ import {
 } from './adaptive/adaptive.types';
 import { QuestionsService } from './questions.service';
 
+function validQuestionRow(overrides: Record<string, unknown> = {}) {
+  return {
+    subject: 'Physics',
+    chapter: 'Electric Charges and Fields',
+    topic: "Coulomb's Law and Charge",
+    question_text: 'A hand-typed question long enough for validation.',
+    options: ['A', 'B', 'C', 'D'],
+    correct_answer: 'B',
+    solution: 'A sufficiently detailed worked solution for review.',
+    bloom_level: 'Apply',
+    difficulty: 'Medium',
+    marks: 4,
+    estimated_time_sec: 90,
+    ...overrides,
+  };
+}
+
 describe('QuestionsService', () => {
+  const manager = { count: jest.fn(), query: jest.fn() };
   const questionsRepository = {
     create: jest.fn(),
     save: jest.fn(),
     find: jest.fn(),
     findOne: jest.fn(),
+    remove: jest.fn(),
+    manager,
   };
   const generatedQuestionsRepository = {
     findOne: jest.fn(),
@@ -149,5 +170,163 @@ describe('QuestionsService', () => {
 
     expect(resolved.status).toBe(QuestionReportStatus.RESOLVED);
     expect(resolved.resolvedByUserId).toBe('admin-1');
+  });
+
+  it('persists a hand-typed question as a curated draft, never auto-published', async () => {
+    questionsRepository.create.mockImplementation((input) => input);
+    questionsRepository.save.mockImplementation(async (input) => input);
+
+    const created = await service.createCurated(
+      'admin-1',
+      validQuestionRow() as never,
+    );
+
+    expect(created.status).toBe(QuestionPublicationStatus.DRAFT);
+    expect(created.source).toBe(QuestionSource.CURATED);
+    expect(created.question_id).toMatch(/^MAN-/);
+  });
+
+  it('rejects creating a question whose correct_answer is not one of its options', async () => {
+    await expect(
+      service.createCurated(
+        'admin-1',
+        validQuestionRow({ correct_answer: 'Z' }) as never,
+      ),
+    ).rejects.toThrow('correct_answer must be one of options');
+    expect(questionsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('edits a question in place without touching its publication status', async () => {
+    questionsRepository.findOne.mockResolvedValue({
+      question_id: 'MAN-1',
+      status: QuestionPublicationStatus.PUBLISHED,
+      options: ['A', 'B', 'C', 'D'],
+      correct_answer: 'B',
+    });
+    questionsRepository.save.mockImplementation(async (input) => input);
+
+    const updated = await service.updateQuestion('MAN-1', 'admin-1', {
+      question_text: 'A corrected question wording for the same item.',
+    } as never);
+
+    expect(updated.status).toBe(QuestionPublicationStatus.PUBLISHED);
+    expect(updated.question_text).toBe(
+      'A corrected question wording for the same item.',
+    );
+    expect(updated.reviewed_by_user_id).toBe('admin-1');
+  });
+
+  it('rejects an edit that moves correct_answer outside the (possibly new) options', async () => {
+    questionsRepository.findOne.mockResolvedValue({
+      question_id: 'MAN-1',
+      options: ['A', 'B', 'C', 'D'],
+      correct_answer: 'B',
+    });
+
+    await expect(
+      service.updateQuestion('MAN-1', 'admin-1', {
+        correct_answer: 'Z',
+      } as never),
+    ).rejects.toThrow('correct_answer must be one of options');
+    expect(questionsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('hard-deletes a question with no attempt history', async () => {
+    questionsRepository.findOne.mockResolvedValue({
+      id: 'q-1',
+      question_id: 'MAN-1',
+    });
+    manager.count.mockResolvedValue(0);
+    questionsRepository.remove.mockResolvedValue(undefined);
+
+    await service.deleteQuestion('MAN-1');
+
+    expect(questionsRepository.remove).toHaveBeenCalled();
+  });
+
+  it('refuses to delete a question that has been used in past attempts', async () => {
+    questionsRepository.findOne.mockResolvedValue({
+      id: 'q-1',
+      question_id: 'MAN-1',
+    });
+    manager.count
+      .mockResolvedValueOnce(3) // practice
+      .mockResolvedValueOnce(0) // diagnostic
+      .mockResolvedValueOnce(0); // mock test
+
+    await expect(service.deleteQuestion('MAN-1')).rejects.toThrow(
+      ConflictException,
+    );
+    expect(questionsRepository.remove).not.toHaveBeenCalled();
+  });
+
+  it('flags a bulk-import row with an out-of-range difficulty', async () => {
+    const result = await service.validateQuestionRow(
+      validQuestionRow({ difficulty: 'Extreme' }),
+      1,
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.row).toBe(1);
+  });
+
+  it('imports the valid rows in a batch and reports the rest as failed', async () => {
+    questionsRepository.create.mockImplementation((input) => input);
+    questionsRepository.save.mockImplementation(async (input) => input);
+
+    const result = await service.bulkImportQuestions('admin-1', [
+      validQuestionRow(),
+      validQuestionRow({ correct_answer: 'not-an-option' }),
+    ]);
+
+    expect(result.inserted).toBe(1);
+    expect(result.failed).toEqual([
+      { row: 2, errors: ['correct_answer must be one of options'] },
+    ]);
+  });
+
+  it('flags an Easy-tagged question that almost nobody answers correctly', async () => {
+    manager.query.mockResolvedValue([
+      {
+        id: 'q-1',
+        question_id: 'MAN-1',
+        subject: 'Physics',
+        chapter: 'Electrostatics',
+        topic: 'Gauss Law',
+        question_text: 'A mistagged question.',
+        difficulty: 'Easy',
+        quality_score: 80,
+        total_answers: '20',
+        correct_answers: '4',
+      },
+      {
+        id: 'q-2',
+        question_id: 'MAN-2',
+        subject: 'Physics',
+        chapter: 'Electrostatics',
+        topic: 'Gauss Law',
+        question_text: 'A correctly-tagged question.',
+        difficulty: 'Easy',
+        quality_score: 80,
+        total_answers: '20',
+        correct_answers: '18',
+      },
+    ]);
+
+    const result = await service.getDifficultyCalibration();
+
+    expect(manager.query).toHaveBeenCalledWith(expect.any(String), [10]);
+    expect(result).toEqual([
+      expect.objectContaining({
+        question_id: 'MAN-1',
+        observedAccuracy: 0.2,
+        mismatched: true,
+      }),
+      expect.objectContaining({
+        question_id: 'MAN-2',
+        observedAccuracy: 0.9,
+        mismatched: false,
+      }),
+    ]);
   });
 });

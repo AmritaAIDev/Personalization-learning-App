@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import dynamic from "next/dynamic";
 import {
   CheckCheck,
   CircleAlert,
@@ -31,7 +32,10 @@ import type {
   LearningScope,
 } from "@/lib/learning-types";
 import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
-import StudyMarkdown from "./StudyMarkdown";
+
+const StudyMarkdown = dynamic(() => import("./StudyMarkdown"), {
+  ssr: false,
+});
 
 const RATINGS: Array<{
   value: FlashcardRating;

@@ -21,7 +21,10 @@ async function main() {
      WHERE subject = 'Physics' AND chapter = 'Electric Charges and Fields'
        AND topic = 'Gauss''s Law'`,
   );
-  console.log('moved Electrostatics -> Electric Charges and Fields:', r1?.[1] ?? r1);
+  console.log(
+    'moved Electrostatics -> Electric Charges and Fields:',
+    r1?.[1] ?? r1,
+  );
   console.log("merged Gauss's Law -> Gauss Law:", r2?.[1] ?? r2);
 
   const rows = await AppDataSource.query(`
@@ -30,7 +33,13 @@ async function main() {
       AND chapter = 'Electric Charges and Fields' AND topic = 'Gauss Law'
     GROUP BY difficulty ORDER BY difficulty
   `);
-  for (const r of rows) console.log(`Gauss Law under Electric Charges and Fields -> ${r.difficulty}=${r.n}`);
+  for (const r of rows)
+    console.log(
+      `Gauss Law under Electric Charges and Fields -> ${r.difficulty}=${r.n}`,
+    );
   await AppDataSource.destroy();
 }
-void main().catch((e) => { console.error(e); process.exit(1); });
+void main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

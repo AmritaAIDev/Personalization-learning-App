@@ -12,6 +12,10 @@ import {
 } from '../agent/agent.service';
 import { Question, QuestionPublicationStatus } from '../question.entity';
 import {
+  MIN_SERVABLE_QUALITY_SCORE,
+  scoreQuestionQuality,
+} from '../question-quality.util';
+import {
   BloomLevel,
   bloomLevelAliases,
   DifficultyLevel,
@@ -360,9 +364,9 @@ export class AdaptiveContentService {
       count: job.requestedCount,
       sourceMaterial,
     });
-    await this.persistGeneratedQuestions(job, generated);
+    const persistedCount = await this.persistGeneratedQuestions(job, generated);
     job.status = GenerationJobStatus.COMPLETED;
-    job.generatedCount = generated.length;
+    job.generatedCount = persistedCount;
     job.lastError = null;
     job.completedAt = new Date();
     job.lockedAt = null;
@@ -528,11 +532,27 @@ export class AdaptiveContentService {
     return blocks.join('\n\n');
   }
 
+  /**
+   * The AI pool is served to a student the moment a row lands here — there is
+   * no reviewer in the loop the way there is for curated drafts. A question
+   * scoring below MIN_SERVABLE_QUALITY_SCORE is dropped rather than saved, so
+   * a low-effort generation never reaches a learner in the first place.
+   */
   private async persistGeneratedQuestions(
     job: GenerationJob,
     generated: GeneratedLearningQuestionPayload[],
-  ): Promise<void> {
-    const records = generated.map((question) =>
+  ): Promise<number> {
+    const servable = generated.filter(
+      (question) =>
+        scoreQuestionQuality(question) >= MIN_SERVABLE_QUALITY_SCORE,
+    );
+    const droppedCount = generated.length - servable.length;
+    if (droppedCount > 0) {
+      this.logger.warn(
+        `Dropped ${droppedCount} AI-pool question(s) below the quality floor for job ${job.id}.`,
+      );
+    }
+    const records = servable.map((question) =>
       this.generatedQuestionsRepository.create({
         userId: job.userId,
         generationJobId: job.id,
@@ -553,6 +573,7 @@ export class AdaptiveContentService {
       }),
     );
     await this.generatedQuestionsRepository.save(records);
+    return records.length;
   }
 
   private toCuratedReference(question: Question): LearningQuestionReference {

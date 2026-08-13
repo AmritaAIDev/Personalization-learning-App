@@ -10,7 +10,11 @@ import { Question } from '../question.entity';
 import type { CreateDoubtDto } from './doubts.dto';
 import { Doubt, DoubtStatus } from './doubt.entity';
 import { DoubtThread } from './doubt-thread.entity';
-import type { DoubtCard, DoubtsResponse, DoubtThreadCard } from './doubts.types';
+import type {
+  DoubtCard,
+  DoubtsResponse,
+  DoubtThreadCard,
+} from './doubts.types';
 
 const DEFAULT_LIMIT = 30;
 

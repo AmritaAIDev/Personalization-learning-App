@@ -42,3 +42,19 @@ export interface AdminQuestionRecord {
   created_at: string;
   updated_at: string;
 }
+
+/** A published question whose tagged difficulty may not match how students actually perform on it. */
+export interface DifficultyCalibrationRow {
+  id: string;
+  question_id: string;
+  subject: string;
+  chapter: string;
+  topic: string;
+  question_text: string;
+  difficulty: string;
+  quality_score: number;
+  sampleSize: number;
+  observedAccuracy: number;
+  expectedRange: [number, number];
+  mismatched: boolean;
+}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import {
   AlertCircle,
@@ -14,13 +15,17 @@ import {
   Sparkles,
 } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
-import StudyMarkdown from "@/components/learning/StudyMarkdown";
 import { learningScopeFromSearchParams, learningUrl } from "@/lib/learning";
 import type {
   NotebookConceptGroup,
   NotebookConceptsResponse,
   NotebookMistakeCard,
 } from "@/lib/notebook-types";
+
+const StudyMarkdown = dynamic(
+  () => import("@/components/learning/StudyMarkdown"),
+  { ssr: false },
+);
 
 function practiceHref(group: NotebookConceptGroup) {
   const params = new URLSearchParams({
@@ -335,7 +340,7 @@ export default function NotebookPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
               Notebook
             </p>
-            <h1 className="mt-1 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+            <h1 className="mt-1 font-heading page-title text-ink">
               Repair what actually broke.
             </h1>
           </div>

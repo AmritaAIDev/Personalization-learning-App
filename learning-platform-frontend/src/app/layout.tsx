@@ -3,7 +3,6 @@ import { Urbanist, Poppins } from "next/font/google";
 import "./globals.css";
 import "katex/dist/katex.min.css";
 import { AuthProvider } from "@/context/AuthContext";
-import { JourneyProvider } from "@/context/JourneyContext";
 
 const urbanist = Urbanist({
   subsets: ["latin"],
@@ -37,9 +36,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className="min-h-full flex flex-col font-sans"
       >
-        <AuthProvider>
-          <JourneyProvider>{children}</JourneyProvider>
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

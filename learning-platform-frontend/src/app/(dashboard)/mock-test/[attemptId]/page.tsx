@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,12 +17,46 @@ import {
   XCircle,
 } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
-import StudyMarkdown from "@/components/learning/StudyMarkdown";
 import { formatDuration } from "@/lib/format";
 import type {
   MockTestAttemptPayload,
   MockTestReviewPayload,
 } from "@/lib/mock-test-types";
+
+const StudyMarkdown = dynamic(
+  () => import("@/components/learning/StudyMarkdown"),
+  { ssr: false },
+);
+
+function MockTestAttemptSkeleton() {
+  return (
+    <div className="min-h-screen bg-canvas pb-20">
+      <main
+        className="mx-auto w-full max-w-5xl px-4 pt-6 sm:px-8 sm:pt-8"
+        aria-label="Loading mock test"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline pb-4">
+          <div className="space-y-2">
+            <div className="h-3 w-28 rounded-full skeleton" />
+            <div className="h-4 w-40 rounded-full skeleton" />
+          </div>
+          <div className="h-9 w-24 rounded-xl skeleton" />
+        </div>
+        <div
+          className="mt-4 grid gap-1.5"
+          style={{
+            gridTemplateColumns: "repeat(auto-fill, minmax(2.25rem, 1fr))",
+          }}
+        >
+          {Array.from({ length: 20 }).map((_, index) => (
+            <div key={index} className="h-9 rounded-lg skeleton" />
+          ))}
+        </div>
+        <div className="mt-6 h-64 rounded-[1.5rem] skeleton" />
+      </main>
+    </div>
+  );
+}
 
 function scoreTone(scorePercent: number) {
   if (scorePercent >= 70) return "text-emerald-700";
@@ -140,11 +175,7 @@ export default function MockTestAttemptPage() {
   const answeredCount = Object.keys(answers).length;
 
   if (loading) {
-    return (
-      <div className="grid min-h-screen place-items-center bg-canvas">
-        <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+    return <MockTestAttemptSkeleton />;
   }
 
   if (error && !payload) {
@@ -364,8 +395,23 @@ function MockTestResults({
 
   if (loading || !review) {
     return (
-      <div className="grid min-h-screen place-items-center bg-canvas">
-        <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
+      <div className="min-h-screen bg-canvas pb-20">
+        <main
+          className="mx-auto w-full max-w-4xl px-5 pt-8 sm:px-8 sm:pt-10"
+          aria-label="Loading mock test result"
+        >
+          <div className="h-40 rounded-[1.8rem] skeleton" />
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            <div className="h-28 rounded-2xl skeleton" />
+            <div className="h-28 rounded-2xl skeleton" />
+            <div className="h-28 rounded-2xl skeleton" />
+          </div>
+          <div className="mt-6 space-y-3">
+            <div className="h-20 rounded-2xl skeleton" />
+            <div className="h-20 rounded-2xl skeleton" />
+            <div className="h-20 rounded-2xl skeleton" />
+          </div>
+        </main>
       </div>
     );
   }

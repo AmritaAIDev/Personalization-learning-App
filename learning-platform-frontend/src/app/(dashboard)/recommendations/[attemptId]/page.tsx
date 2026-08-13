@@ -11,7 +11,6 @@ import {
   CircleAlert,
   ClipboardCheck,
   FileText,
-  LoaderCircle,
   PlayCircle,
   Sigma,
 } from "lucide-react";
@@ -131,11 +130,15 @@ export default function RecommendationsPage() {
 
   if (loading)
     return (
-      <div className="grid min-h-screen place-items-center text-sm font-semibold text-ink-soft">
-        <span className="flex items-center gap-3">
-          <LoaderCircle className="h-5 w-5 animate-spin text-primary" />{" "}
-          Building your study plan…
-        </span>
+      <div
+        className="mx-auto max-w-7xl p-5 sm:p-8 lg:p-10"
+        aria-label="Building your study plan"
+      >
+        <div className="h-4 w-32 rounded-full skeleton" />
+        <div className="mt-6 space-y-8">
+          <div className="h-40 rounded-2xl skeleton" />
+          <div className="h-40 rounded-2xl skeleton" />
+        </div>
       </div>
     );
 
@@ -201,12 +204,12 @@ export default function RecommendationsPage() {
         <section className="mt-9 space-y-8">
           {recommendations.topicRecommendations.map((topic) => (
             <article key={topic.topic}>
-              <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 border-b border-hairline pb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-bold text-rose-700">
                     Needs reinforcement
                   </p>
-                  <h2 className="mt-1 font-heading text-2xl font-bold text-slate-950">
+                  <h2 className="mt-1 font-heading text-2xl font-bold text-ink">
                     {topic.topic}
                   </h2>
                 </div>
@@ -224,7 +227,7 @@ export default function RecommendationsPage() {
                   ))}
                 </div>
               ) : (
-                <p className="mt-4 text-sm text-slate-600">
+                <p className="mt-4 text-sm text-ink-soft">
                   No additional resource is available for this topic yet.
                 </p>
               )}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   ArrowRight,
   CheckCircle2,
@@ -10,11 +11,9 @@ import {
   CircleX,
   GraduationCap,
   Lightbulb,
-  LoaderCircle,
   RotateCcw,
   Target,
 } from "lucide-react";
-import StudyMarkdown from "@/components/learning/StudyMarkdown";
 import ExplainThis from "@/components/learning/ExplainThis";
 import ConfidenceBadge from "@/components/diagnostic/ConfidenceBadge";
 import { apiFetch } from "@/lib/api";
@@ -24,6 +23,11 @@ import type {
   PracticePerformanceRow,
   PracticeReviewPayload,
 } from "@/lib/practice-types";
+
+const StudyMarkdown = dynamic(
+  () => import("@/components/learning/StudyMarkdown"),
+  { ssr: false },
+);
 
 type ResultFilter = "all" | "incorrect" | "correct";
 
@@ -138,14 +142,16 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
 
   if (loading) {
     return (
-      <div className="grid min-h-screen place-items-center p-6 text-sm font-semibold text-ink-soft">
-        <span className="flex items-center gap-3">
-          <LoaderCircle
-            className="h-5 w-5 animate-spin text-primary"
-            aria-hidden="true"
-          />
-          Calculating your review…
-        </span>
+      <div
+        className="mx-auto max-w-7xl p-5 sm:p-8 lg:p-10"
+        aria-label="Calculating your review"
+      >
+        <div className="h-24 rounded-2xl skeleton" />
+        <div className="mt-6 space-y-3">
+          <div className="h-20 rounded-2xl skeleton" />
+          <div className="h-20 rounded-2xl skeleton" />
+          <div className="h-20 rounded-2xl skeleton" />
+        </div>
       </div>
     );
   }

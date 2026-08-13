@@ -154,7 +154,7 @@ export default function TestsPage() {
       <main className="mx-auto w-full max-w-6xl px-5 pt-8 sm:px-8 sm:pt-10 lg:px-10">
         <header className="flex flex-col gap-3 border-b border-hairline pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h1 className="font-heading text-xl font-bold tracking-tight text-ink sm:text-2xl">
+            <h1 className="font-heading page-title text-ink">
               Test centre
             </h1>
           </div>

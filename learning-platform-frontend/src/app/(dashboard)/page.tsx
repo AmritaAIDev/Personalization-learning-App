@@ -51,7 +51,7 @@ export default function DashboardPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
               Dashboard
             </p>
-            <h1 className="mt-2 font-heading text-[2rem] font-semibold leading-[1.08] tracking-tight text-ink sm:text-[2.6rem]">
+            <h1 className="mt-2 font-heading page-title text-ink">
               {firstName}&apos;s study plan
             </h1>
           </div>
@@ -88,7 +88,7 @@ export default function DashboardPage() {
         {data ? (
           <>
             <StudentActionCenter data={data} />
-            <LearningOverview />
+            <LearningOverview data={data.learning} />
           </>
         ) : null}
       </main>

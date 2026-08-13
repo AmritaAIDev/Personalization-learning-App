@@ -115,6 +115,90 @@ describe('AdaptiveService flashcard reviews', () => {
     );
   });
 
+  it('shrinks the ease factor on a HARD rating, slowing future interval growth', async () => {
+    const existing = {
+      id: 'review-id',
+      userId: 'user-id',
+      flashcardId: 'card-id',
+      lastRating: FlashcardRating.GOOD,
+      repetitions: 2,
+      intervalDays: 6,
+      easeFactor: 2.5,
+      dueAt: new Date(),
+      lastReviewedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as FlashcardReview;
+    const { service, save } = createService(existing);
+
+    await service.reviewFlashcard('user-id', 'card-id', {
+      rating: FlashcardRating.HARD,
+    });
+
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repetitions: 3,
+        easeFactor: 2.36,
+        // 6 days * the *shrunk* ease factor (2.36), not the old fixed 1.2x step.
+        intervalDays: 14,
+      }),
+    );
+  });
+
+  it('grows the ease factor on repeated EASY ratings, accelerating future intervals', async () => {
+    const existing = {
+      id: 'review-id',
+      userId: 'user-id',
+      flashcardId: 'card-id',
+      lastRating: FlashcardRating.EASY,
+      repetitions: 2,
+      intervalDays: 6,
+      easeFactor: 2.5,
+      dueAt: new Date(),
+      lastReviewedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as FlashcardReview;
+    const { service, save } = createService(existing);
+
+    await service.reviewFlashcard('user-id', 'card-id', {
+      rating: FlashcardRating.EASY,
+    });
+
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repetitions: 3,
+        easeFactor: 2.6,
+        intervalDays: 16,
+      }),
+    );
+  });
+
+  it('never lets the ease factor drop below SM-2s 1.3 floor', async () => {
+    const existing = {
+      id: 'review-id',
+      userId: 'user-id',
+      flashcardId: 'card-id',
+      lastRating: FlashcardRating.HARD,
+      repetitions: 1,
+      intervalDays: 1,
+      easeFactor: 1.3,
+      dueAt: new Date(),
+      lastReviewedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as FlashcardReview;
+    const { service, save } = createService(existing);
+
+    await service.reviewFlashcard('user-id', 'card-id', {
+      rating: FlashcardRating.HARD,
+    });
+
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({ easeFactor: 1.3 }),
+    );
+  });
+
   type FlashcardDeliveryHarness = {
     service: AdaptiveService;
     generateFlashcards: jest.Mock;
@@ -903,9 +987,8 @@ describe('AdaptiveService row-level answer mutations', () => {
       10,
     );
     expect(harness.levelSyncQuery.update).toHaveBeenCalledWith(User);
-    expect(harness.levelSyncQuery.where).toHaveBeenCalledWith(
-      'id = :userId',
-      { userId: 'user-id' },
-    );
+    expect(harness.levelSyncQuery.where).toHaveBeenCalledWith('id = :userId', {
+      userId: 'user-id',
+    });
   });
 });

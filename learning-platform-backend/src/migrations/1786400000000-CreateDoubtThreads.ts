@@ -42,8 +42,12 @@ export class CreateDoubtThreads1786400000000 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE "doubts" DROP CONSTRAINT IF EXISTS "FK_doubts_thread"',
     );
-    await queryRunner.query('ALTER TABLE "doubts" DROP COLUMN IF EXISTS "thread_id"');
-    await queryRunner.query('DROP INDEX IF EXISTS "IDX_doubt_threads_user_scope"');
+    await queryRunner.query(
+      'ALTER TABLE "doubts" DROP COLUMN IF EXISTS "thread_id"',
+    );
+    await queryRunner.query(
+      'DROP INDEX IF EXISTS "IDX_doubt_threads_user_scope"',
+    );
     await queryRunner.query(
       'DROP INDEX IF EXISTS "IDX_doubt_threads_user_updated"',
     );

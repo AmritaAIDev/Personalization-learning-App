@@ -9,6 +9,7 @@ import {
   configuredAllowedOrigins,
   isAllowedBrowserOrigin,
 } from './auth/origin-policy';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
 type CreateNestAppOptions = {
   enableShutdownHooks?: boolean;
@@ -78,6 +79,7 @@ export async function createNestApp(options: CreateNestAppOptions = {}) {
       transformOptions: { enableImplicitConversion: false },
     }),
   );
+  app.useGlobalFilters(new GlobalExceptionFilter());
   // Interactive API docs at /docs (and the OpenAPI spec at /docs-json).
   const swaggerConfig = new DocumentBuilder()
     .setTitle('JEE AI Competency Engine API')

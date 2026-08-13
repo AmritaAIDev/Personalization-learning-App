@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -15,8 +16,12 @@ import {
 import { apiFetch } from "@/lib/api";
 import type { DiagnosticAttemptPayload } from "@/lib/diagnostic-types";
 import { formatDuration } from "@/lib/format";
-import StudyMarkdown from "@/components/learning/StudyMarkdown";
 import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
+
+const StudyMarkdown = dynamic(
+  () => import("@/components/learning/StudyMarkdown"),
+  { ssr: false },
+);
 
 const OPTION_KEYS = ["1", "2", "3", "4", "5", "6"];
 
@@ -252,14 +257,12 @@ export default function DiagnosticAttemptPage() {
 
   if (loading) {
     return (
-      <div className="grid min-h-screen place-items-center text-sm font-semibold text-ink-soft">
-        <span className="flex items-center gap-3">
-          <LoaderCircle
-            className="h-5 w-5 animate-spin text-primary"
-            aria-hidden="true"
-          />
-          Preparing your test…
-        </span>
+      <div
+        className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"
+        aria-label="Preparing your test"
+      >
+        <div className="h-14 rounded-2xl skeleton" />
+        <div className="mt-6 h-80 rounded-[1.5rem] skeleton" />
       </div>
     );
   }

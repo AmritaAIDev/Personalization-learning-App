@@ -86,8 +86,9 @@ describe('AgentService source retrieval (RAG citations)', () => {
       },
       { payload: { title: 'No body', topic: 't', chapter: 'c' } },
     ]);
-    (service as unknown as { qdrantClient: { search: jest.Mock } }).qdrantClient =
-      { search } as never;
+    (
+      service as unknown as { qdrantClient: { search: jest.Mock } }
+    ).qdrantClient = { search } as never;
 
     const sources = await service.retrieveSourcesFromQdrant('Gauss Law');
 
@@ -103,8 +104,9 @@ describe('AgentService source retrieval (RAG citations)', () => {
 
   it('degrades to an empty citation list when retrieval fails (never blocks)', async () => {
     const search = jest.fn().mockRejectedValue(new Error('qdrant down'));
-    (service as unknown as { qdrantClient: { search: jest.Mock } }).qdrantClient =
-      { search } as never;
+    (
+      service as unknown as { qdrantClient: { search: jest.Mock } }
+    ).qdrantClient = { search } as never;
 
     const sources = await service.retrieveSupplementalSources('Gauss Law');
 

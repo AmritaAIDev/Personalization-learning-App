@@ -43,4 +43,14 @@ export default tseslint.config(
       '@typescript-eslint/require-await': 'off',
     },
   },
+  {
+    // One-off data-migration/report scripts run manually via ts-node, never
+    // shipped in the request path. Raw AppDataSource.query() results are
+    // untyped by nature, so the strict no-unsafe-* rules just add noise here.
+    files: ['src/scripts/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+    },
+  },
 );

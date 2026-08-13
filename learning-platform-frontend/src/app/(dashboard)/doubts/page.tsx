@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import {
   AlertCircle,
@@ -22,7 +23,6 @@ import {
   Send,
   Sparkles,
 } from "lucide-react";
-import StudyMarkdown from "@/components/learning/StudyMarkdown";
 import SourceCitations from "@/components/learning/SourceCitations";
 import { ApiError, apiFetch } from "@/lib/api";
 import type {
@@ -34,6 +34,11 @@ import type {
 } from "@/lib/doubts-types";
 import { learningScopeFromSearchParams, scopeToParams } from "@/lib/learning";
 import type { LearningScope } from "@/lib/learning-types";
+
+const StudyMarkdown = dynamic(
+  () => import("@/components/learning/StudyMarkdown"),
+  { ssr: false },
+);
 
 const emptyForm: CreateDoubtPayload = {
   subject: "",
@@ -375,7 +380,7 @@ export default function DoubtsPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
               Doubts
             </p>
-            <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+            <h1 className="mt-2 font-heading page-title text-ink">
               Topic doubt chats.
             </h1>
           </div>

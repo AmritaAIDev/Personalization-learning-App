@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import dynamic from "next/dynamic";
 import {
   BotMessageSquare,
   BookOpen,
@@ -23,7 +24,10 @@ import {
 import { apiFetch, streamApi } from "@/lib/api";
 import type { TutorMessage } from "@/lib/learning-types";
 import { nextTutorPollDelay } from "@/lib/tutor-polling";
-import StudyMarkdown from "./StudyMarkdown";
+
+const StudyMarkdown = dynamic(() => import("./StudyMarkdown"), {
+  ssr: false,
+});
 
 type ConversationPayload = {
   conversationId: string;

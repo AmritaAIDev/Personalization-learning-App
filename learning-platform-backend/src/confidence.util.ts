@@ -11,9 +11,7 @@
  * badge instead of guessing.
  */
 export type ConfidenceCalibration =
-  | 'overconfident'
-  | 'underconfident'
-  | 'calibrated';
+  'overconfident' | 'underconfident' | 'calibrated';
 
 export function calibrationFor(
   confidence: number | null | undefined,

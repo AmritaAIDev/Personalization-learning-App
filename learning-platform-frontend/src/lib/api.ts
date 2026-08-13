@@ -13,21 +13,22 @@ function isLocalHost(hostname: string): boolean {
 }
 
 /**
- * NEXT_PUBLIC_API_URL is baked in at build time, so a single Vercel build
- * can't hardcode a per-domain answer for every host it might be served
- * from (custom domains, preview deployments, etc). When the var is unset,
- * fall back to same-origin on any non-local host — this matches
- * next.config.ts's default `/api/:path*` rewrite to BACKEND_URL, so it
- * works out of the box wherever the app is deployed. Only real localhost
- * browsing defaults to the local backend port.
+ * The session cookie is issued SameSite=None/Secure and scoped to whatever
+ * host actually sets it, so the browser must always talk to the backend
+ * same-origin — otherwise the request becomes cross-site and the cookie can
+ * get dropped by third-party-cookie policies. next.config.ts's `/api/:path*`
+ * rewrite (driven by the server-only BACKEND_URL) already proxies same-origin
+ * traffic to any backend, for any deployed host, so a real (non-local)
+ * browser must never bypass it — even if NEXT_PUBLIC_API_URL happens to be
+ * baked into the build from an old/unrelated config. That var only makes
+ * sense for local dev, where there is no rewrite proxy running.
  */
 function resolveApiUrl(): string {
-  const configured = process.env.NEXT_PUBLIC_API_URL;
-  if (configured) return normalizeApiUrl(configured);
   if (typeof window !== "undefined" && !isLocalHost(window.location.hostname)) {
     return "";
   }
-  return normalizeApiUrl("http://localhost:4000");
+  const configured = process.env.NEXT_PUBLIC_API_URL;
+  return normalizeApiUrl(configured ?? "http://localhost:4000");
 }
 
 type ApiEnvelope<T> = { data: T };

@@ -29,6 +29,8 @@ const MAX_GROUNDED_CONTEXT_CHARACTERS = 14_000;
  * add seconds to a learner-facing generation call.
  */
 const SUPPLEMENTAL_CONTEXT_TIMEOUT_MS = 1_200;
+/** Misconception classification is a nice-to-have refinement over a working deterministic fallback, so it gets a short budget. */
+const MISCONCEPTION_CLASSIFY_TIMEOUT_MS = 3_000;
 const SUPPLEMENTAL_CACHE_TTL_MS = 5 * 60_000;
 const SUPPLEMENTAL_NEGATIVE_CACHE_TTL_MS = 60_000;
 const SUPPLEMENTAL_CACHE_MAX_ENTRIES = 200;
@@ -61,6 +63,21 @@ export interface LearningGenerationRequest {
   count: number;
   /** Reviewed database material, assembled server-side; never browser input. */
   sourceMaterial: string;
+  /**
+   * Optional server-derived steer for on-demand generation: either the exact
+   * misconception to remediate, or a source question to stay isomorphic to.
+   * Left unset for ordinary pool top-up batches.
+   */
+  focusHint?: string;
+}
+
+export interface MisconceptionClassificationContext {
+  questionText: string;
+  options: string[];
+  selectedOption: string;
+  correctAnswer: string;
+  /** Known common-error strings for this question, 0-indexed. */
+  candidates: string[];
 }
 
 export interface GeneratedFlashcardPayload {
@@ -392,6 +409,7 @@ export class AgentService {
         'Return JSON only, matching this schema:',
         '{"questions":[{"question_text":"...","options":["...","...","...","..."],"correct_answer":"...","explanation":"...","hint":"...","concept_tags":["..."],"common_errors":["..."]}]}',
         `Scope: subject=${request.subject}; chapter=${request.chapter}; topic=${topicName}.`,
+        ...(request.focusHint ? [`Focus: ${request.focusHint}`] : []),
         '<trusted-study-material>',
         sourceMaterial,
         '</trusted-study-material>',
@@ -400,6 +418,55 @@ export class AgentService {
       Math.min(4_000, 700 * request.count),
     );
     return this.parseLearningQuestionBatch(raw, request.count);
+  }
+
+  /**
+   * Picks which of a question's known `common_errors` best explains one
+   * specific wrong answer. There is no structured mapping from option to
+   * error in the data model, so this is the only way to tell them apart when
+   * more than one candidate exists. Timeout-bounded; callers must fall back
+   * to a deterministic pick on any rejection (never block the answer-save
+   * path on this).
+   */
+  async classifyMisconception(
+    context: MisconceptionClassificationContext,
+  ): Promise<number> {
+    this.assertConfigured();
+    const raw = await this.withTimeout(
+      this.callJsonModel(
+        [
+          'A student answered a JEE multiple-choice question incorrectly.',
+          `Question: ${context.questionText}`,
+          `Options: ${context.options.join(' | ')}`,
+          `Student selected: ${context.selectedOption}`,
+          `Correct answer: ${context.correctAnswer}`,
+          'Candidate misconceptions (0-indexed):',
+          context.candidates
+            .map((text, index) => `${index}: ${text}`)
+            .join('\n'),
+          'Return JSON only, matching this schema: {"index": <candidate index that best explains the wrong choice>}',
+        ].join('\n'),
+        'You are a strict JSON-only classifier. Return valid JSON without markdown fences or commentary.',
+        120,
+      ),
+      MISCONCEPTION_CLASSIFY_TIMEOUT_MS,
+    );
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      throw new Error('The AI returned a response that was not valid JSON.');
+    }
+    const index = (parsed as { index?: unknown } | null)?.index;
+    const normalized = typeof index === 'number' ? Math.trunc(index) : NaN;
+    if (
+      !Number.isInteger(normalized) ||
+      normalized < 0 ||
+      normalized >= context.candidates.length
+    ) {
+      throw new Error('Model returned an out-of-range misconception index.');
+    }
+    return normalized;
   }
 
   async generateFlashcards(

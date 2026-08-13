@@ -116,3 +116,60 @@ describe('AgentService source retrieval (RAG citations)', () => {
     expect(search).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('AgentService misconception classification', () => {
+  const configService = {
+    get: jest.fn((key: string) =>
+      key === 'QDRANT_URL' ? 'http://localhost:6333' : 'test-key',
+    ),
+  };
+  const embeddingService = {};
+  const topicsRepository = {};
+  let service: AgentService;
+
+  function mockDeepseekResponse(content: string) {
+    const create = jest.fn().mockResolvedValue({
+      choices: [{ message: { content } }],
+    });
+    (
+      service as unknown as {
+        deepseek: { chat: { completions: { create: jest.Mock } } };
+      }
+    ).deepseek = { chat: { completions: { create } } } as never;
+    return create;
+  }
+
+  beforeEach(() => {
+    service = new AgentService(
+      configService as never,
+      embeddingService as never,
+      topicsRepository as never,
+    );
+  });
+
+  const context = {
+    questionText: 'What does electric flux measure?',
+    options: ['A', 'B', 'C', 'D'],
+    selectedOption: 'A',
+    correctAnswer: 'B',
+    candidates: ['Wrong direction.', 'Wrong magnitude formula.'],
+  };
+
+  it('returns the model-chosen candidate index', async () => {
+    mockDeepseekResponse('{"index": 1}');
+
+    await expect(service.classifyMisconception(context)).resolves.toBe(1);
+  });
+
+  it('rejects an out-of-range index from the model', async () => {
+    mockDeepseekResponse('{"index": 7}');
+
+    await expect(service.classifyMisconception(context)).rejects.toThrow();
+  });
+
+  it('rejects a non-JSON response', async () => {
+    mockDeepseekResponse('not json');
+
+    await expect(service.classifyMisconception(context)).rejects.toThrow();
+  });
+});

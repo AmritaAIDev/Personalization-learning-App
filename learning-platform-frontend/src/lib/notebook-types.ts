@@ -55,6 +55,7 @@ export type NotebookConceptGroup = {
     topic: string;
   };
   summarySource: NotebookConceptSummarySource;
+  dominantMisconception: { text: string; count: number } | null;
 };
 
 export type NotebookConceptsResponse = {

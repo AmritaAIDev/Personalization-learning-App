@@ -24,6 +24,7 @@ import { TutorService } from './tutor.service';
 import { Question } from '../question.entity';
 import { Topic } from '../topics/topic.entity';
 import { AgentService } from '../agent/agent.service';
+import { MisconceptionsService } from '../misconceptions/misconceptions.service';
 import { User } from '../users/user.entity';
 
 describe('AdaptiveService flashcard reviews', () => {
@@ -68,6 +69,7 @@ describe('AdaptiveService flashcard reviews', () => {
       {} as GenerationWorkerService,
       {} as TutorService,
       {} as AgentService,
+      {} as MisconceptionsService,
       {} as Repository<LearningTopicState>,
       {} as Repository<LearningSession>,
       flashcards,
@@ -253,6 +255,7 @@ describe('AdaptiveService flashcard reviews', () => {
       {} as GenerationWorkerService,
       {} as TutorService,
       agent,
+      {} as MisconceptionsService,
       {} as Repository<LearningTopicState>,
       {} as Repository<LearningSession>,
       flashcards,
@@ -395,6 +398,9 @@ describe('AdaptiveService second-attempt tutor routing', () => {
       {} as GenerationWorkerService,
       tutor,
       {} as AgentService,
+      {
+        recordFromWrongAnswer: jest.fn().mockResolvedValue(undefined),
+      } as unknown as MisconceptionsService,
       {} as Repository<LearningTopicState>,
       {} as Repository<LearningSession>,
       {} as Repository<Flashcard>,
@@ -484,6 +490,7 @@ describe('AdaptiveService learning state projections', () => {
       {} as GenerationWorkerService,
       {} as TutorService,
       {} as AgentService,
+      {} as MisconceptionsService,
       statesRepository,
       sessionsRepository,
       {} as Repository<Flashcard>,
@@ -878,6 +885,7 @@ describe('AdaptiveService row-level answer mutations', () => {
       {} as GenerationWorkerService,
       {} as TutorService,
       {} as AgentService,
+      {} as MisconceptionsService,
       {} as Repository<LearningTopicState>,
       {} as Repository<LearningSession>,
       {} as Repository<Flashcard>,

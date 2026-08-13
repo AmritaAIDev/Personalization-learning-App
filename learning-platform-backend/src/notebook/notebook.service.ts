@@ -7,6 +7,7 @@ import { GeneratedLearningQuestion } from '../adaptive/generated-learning-questi
 import { PracticeAnswer } from '../practice/practice-answer.entity';
 import { PracticeAttemptStatus } from '../practice/practice.types';
 import { Question } from '../question.entity';
+import { MisconceptionsService } from '../misconceptions/misconceptions.service';
 import { NotebookConceptService } from './notebook-concept.service';
 import { NotebookConceptSummary } from './notebook-concept-summary.entity';
 import type {
@@ -54,6 +55,7 @@ export class NotebookService {
     @InjectRepository(NotebookConceptSummary)
     private readonly conceptSummaryRepository: Repository<NotebookConceptSummary>,
     private readonly conceptService: NotebookConceptService,
+    private readonly misconceptionsService: MisconceptionsService,
   ) {}
 
   async getMistakes(
@@ -84,7 +86,22 @@ export class NotebookService {
   async getConceptGroups(userId: string): Promise<NotebookConceptsResponse> {
     const cards = await this.buildCards(userId, CONCEPT_GROUP_LIMIT);
     const groups = this.groupByTopic(cards);
-    const enriched = await this.enrichGroupsBounded(userId, groups);
+    const [enriched, dominantByTopic] = await Promise.all([
+      this.enrichGroupsBounded(userId, groups),
+      this.misconceptionsService
+        .getDominantByTopic(
+          userId,
+          groups.map((group) => ({
+            subject: group.subject,
+            topic: group.topic,
+          })),
+        )
+        .catch(() => new Map<string, { text: string; count: number }>()),
+    ]);
+    for (const group of enriched) {
+      group.dominantMisconception =
+        dominantByTopic.get(`${group.subject}|${group.topic}`) ?? null;
+    }
     enriched.sort((left, right) => right.mistakeCount - left.mistakeCount);
     return {
       groups: enriched,
@@ -108,7 +125,10 @@ export class NotebookService {
     userId: string,
     groups: Omit<
       NotebookConceptGroup,
-      'conceptLabel' | 'misconceptionSummary' | 'summarySource'
+      | 'conceptLabel'
+      | 'misconceptionSummary'
+      | 'summarySource'
+      | 'dominantMisconception'
     >[],
   ): Promise<NotebookConceptGroup[]> {
     const results = new Array<NotebookConceptGroup>(groups.length);
@@ -153,7 +173,10 @@ export class NotebookService {
     cards: NotebookMistakeCard[],
   ): Omit<
     NotebookConceptGroup,
-    'conceptLabel' | 'misconceptionSummary' | 'summarySource'
+    | 'conceptLabel'
+    | 'misconceptionSummary'
+    | 'summarySource'
+    | 'dominantMisconception'
   >[] {
     const buckets = new Map<string, NotebookMistakeCard[]>();
     for (const card of cards) {
@@ -204,7 +227,10 @@ export class NotebookService {
     userId: string,
     group: Omit<
       NotebookConceptGroup,
-      'conceptLabel' | 'misconceptionSummary' | 'summarySource'
+      | 'conceptLabel'
+      | 'misconceptionSummary'
+      | 'summarySource'
+      | 'dominantMisconception'
     >,
   ): Promise<NotebookConceptGroup> {
     // Singletons are not worth a model call: use a deterministic label/summary
@@ -216,6 +242,7 @@ export class NotebookService {
         conceptLabel: fallback.conceptLabel,
         misconceptionSummary: fallback.misconceptionSummary,
         summarySource: 'FALLBACK',
+        dominantMisconception: null,
       };
     }
     const sourceHash = this.hashGroup(group.cards);
@@ -232,6 +259,7 @@ export class NotebookService {
         conceptLabel: cached.conceptLabel,
         misconceptionSummary: cached.misconceptionSummary,
         summarySource: 'CACHE',
+        dominantMisconception: null,
       };
     }
     const result = await this.conceptService.summariseGroup({
@@ -247,6 +275,7 @@ export class NotebookService {
       conceptLabel: result.conceptLabel,
       misconceptionSummary: result.misconceptionSummary,
       summarySource: result.source,
+      dominantMisconception: null,
     };
   }
 
@@ -266,7 +295,10 @@ export class NotebookService {
     userId: string,
     group: Omit<
       NotebookConceptGroup,
-      'conceptLabel' | 'misconceptionSummary' | 'summarySource'
+      | 'conceptLabel'
+      | 'misconceptionSummary'
+      | 'summarySource'
+      | 'dominantMisconception'
     >,
     sourceHash: string,
     result: {

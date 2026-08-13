@@ -71,6 +71,14 @@ function makeConceptService(
   };
 }
 
+function makeMisconceptionsService() {
+  return {
+    recordFromWrongAnswer: jest.fn().mockResolvedValue(undefined),
+    getDominantForTopic: jest.fn().mockResolvedValue(null),
+    getDominantByTopic: jest.fn().mockResolvedValue(new Map()),
+  };
+}
+
 function practiceAnswer(
   id: string,
   topic: string,
@@ -144,6 +152,7 @@ describe('NotebookService', () => {
       { createQueryBuilder: jest.fn(() => adaptiveQueryBuilder) } as never,
       makeConceptSummaryRepository(),
       makeConceptService() as never,
+      makeMisconceptionsService() as never,
     );
 
     const result = await service.getMistakes('user-1');
@@ -200,6 +209,7 @@ describe('NotebookService', () => {
       { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       makeConceptSummaryRepository(),
       makeConceptService() as never,
+      makeMisconceptionsService() as never,
     );
 
     const result = await service.getMistakes('user-1');
@@ -258,6 +268,7 @@ describe('NotebookService', () => {
       { createQueryBuilder: jest.fn(() => adaptiveQb) } as never,
       makeConceptSummaryRepository(),
       conceptService as never,
+      makeMisconceptionsService() as never,
     );
 
     const result = await service.getConceptGroups('user-1');
@@ -311,6 +322,7 @@ describe('NotebookService', () => {
       { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       summaryRepo,
       conceptService as never,
+      makeMisconceptionsService() as never,
     );
 
     const result = await service.getConceptGroups('user-1');

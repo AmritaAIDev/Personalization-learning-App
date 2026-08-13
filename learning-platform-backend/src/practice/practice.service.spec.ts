@@ -69,6 +69,9 @@ describe('PracticeService', () => {
     generateTutorResponse: jest.fn(),
     retrieveSupplementalSources: jest.fn(),
   };
+  const misconceptionsService = {
+    recordFromWrongAnswer: jest.fn().mockResolvedValue(undefined),
+  };
   let service: PracticeService;
 
   const bank = [
@@ -90,6 +93,7 @@ describe('PracticeService', () => {
       answersRepository as never,
       questionsRepository as never,
       agentService as never,
+      misconceptionsService as never,
     );
     agentService.retrieveSupplementalSources.mockResolvedValue([]);
   });

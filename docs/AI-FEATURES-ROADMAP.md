@@ -102,15 +102,15 @@ Goal: productise the AI infrastructure you already have. Each item reuses
 - [x] Tests: retrieval mocked; citation payload shape; fallback path. — `citation.util.spec.ts`, `agent.service.spec.ts` (mapping + fallback + cache), explain-endpoint source assertions.
 - [x] Docs: `agent` README retrieval contract. — plus practice/diagnostics/doubts + frontend READMEs.
 
-### 2.2 Misconception detection + targeted remediation
-**Modules:** `notebook` · `adaptive` · `agent` · `question` (`common_errors`)
+### 2.2 Misconception detection + targeted remediation ✅
+**Modules:** `notebook` · `adaptive` · `agent` · `question` (`common_errors`) · new `misconceptions` · new `targeted-practice`
 
-- [ ] On each wrong answer, classify it against the question's `common_errors` (deterministic match first, LLM fallback).
-- [ ] Store a per-user `misconception_hits` record (migration for a small table) keyed by (user, topic, misconception).
-- [ ] Notebook concept groups surface the dominant misconception and a one-line targeted remedy.
-- [ ] "Practice this misconception" generates a similar question on that exact gap (reuse generation worker).
-- [ ] Tests: classification accuracy on fixtures; remediation payload.
-- [ ] Docs: `notebook` README + migration.
+- [x] On each wrong answer, classify it against the question's `common_errors` (deterministic match first, LLM fallback). — `MisconceptionsService.classify`; single candidate is deterministic, multiple candidates ask `AgentService.classifyMisconception`, unavailable model falls back to a stable seeded pick.
+- [x] Store a per-user `misconception_hits` record (migration for a small table) keyed by (user, topic, misconception). — `1786900000000-CreateMisconceptionHits`, keyed by `(user, misconceptionHash)` with a running `hitCount`.
+- [x] Notebook concept groups surface the dominant misconception and a one-line targeted remedy. — `dominantMisconception` on `NotebookConceptGroup` (from persisted hits) alongside the existing LLM `misconceptionSummary`.
+- [x] "Practice this misconception" generates a similar question on that exact gap (reuse generation worker). — new shared `targeted-practice` module, grounded via `AdaptiveContentService.buildSourceMaterial` + `AgentService.generateLearningQuestionBatch`'s new `focusHint`.
+- [x] Tests: classification accuracy on fixtures; remediation payload. — `misconceptions.service.spec.ts`, `targeted-practice.service.spec.ts`, `agent.service.spec.ts` classification cases.
+- [x] Docs: `notebook` README + migration. — plus new `misconceptions` and `targeted-practice` module READMEs.
 
 ### 2.3 On-demand "similar question" generation
 **Modules:** `adaptive` generation worker · `agent` · frontend practice/review
@@ -244,7 +244,7 @@ platform. Higher effort, sequenced after Phases 1–2 give a solid base.
 
 ### Phase 2 — Integratable
 - [x] 2.1 RAG-grounded explanations + citations
-- [ ] 2.2 Misconception detection + remediation
+- [x] 2.2 Misconception detection + remediation
 - [ ] 2.3 On-demand similar question
 - [ ] 2.4 FSRS spaced repetition
 - [ ] 2.5 Admin AI auto-tagging pipeline

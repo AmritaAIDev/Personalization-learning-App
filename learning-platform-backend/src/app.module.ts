@@ -45,6 +45,10 @@ import { MockTestAnswer } from './mock-tests/mock-test-answer.entity';
 import { MockTestsModule } from './mock-tests/mock-tests.module';
 import { HealthModule } from './health/health.module';
 import { RequestContextMiddleware } from './common/middleware/request-context.middleware';
+import { MisconceptionHit } from './misconceptions/misconception-hit.entity';
+import { MisconceptionsModule } from './misconceptions/misconceptions.module';
+import { TargetedPracticeQuestion } from './targeted-practice/targeted-practice-question.entity';
+import { TargetedPracticeModule } from './targeted-practice/targeted-practice.module';
 
 @Module({
   imports: [
@@ -93,6 +97,8 @@ import { RequestContextMiddleware } from './common/middleware/request-context.mi
             NotebookConceptSummary,
             MockTestAttempt,
             MockTestAnswer,
+            MisconceptionHit,
+            TargetedPracticeQuestion,
           ],
           migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
           synchronize: false,
@@ -115,6 +121,8 @@ import { RequestContextMiddleware } from './common/middleware/request-context.mi
     DashboardModule,
     MockTestsModule,
     HealthModule,
+    MisconceptionsModule,
+    TargetedPracticeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

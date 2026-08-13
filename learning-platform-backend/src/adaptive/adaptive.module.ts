@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AgentModule } from '../agent/agent.module';
+import { MisconceptionsModule } from '../misconceptions/misconceptions.module';
 import { Question } from '../question.entity';
 import { Topic } from '../topics/topic.entity';
 import { User } from '../users/user.entity';
@@ -24,6 +25,7 @@ import { TutorService } from './tutor.service';
 @Module({
   imports: [
     AgentModule,
+    MisconceptionsModule,
     TypeOrmModule.forFeature([
       User,
       Topic,
@@ -48,6 +50,6 @@ import { TutorService } from './tutor.service';
     GenerationWorkerService,
     TutorService,
   ],
-  exports: [AdaptiveService, CompetencyService],
+  exports: [AdaptiveService, CompetencyService, AdaptiveContentService],
 })
 export class AdaptiveModule {}

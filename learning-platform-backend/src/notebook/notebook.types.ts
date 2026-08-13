@@ -62,6 +62,12 @@ export interface NotebookConceptGroup {
     topic: string;
   };
   summarySource: NotebookConceptSummarySource;
+  /**
+   * The most-repeated classified misconception for this (user, topic), from
+   * persisted hit counts rather than the first common_errors entry on any
+   * one card. Null until at least one wrong answer has been classified.
+   */
+  dominantMisconception: { text: string; count: number } | null;
 }
 
 export interface NotebookConceptsResponse {

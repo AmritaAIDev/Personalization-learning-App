@@ -55,3 +55,16 @@ on every page load.
 - `notebook.service.ts` — card building, topic grouping, cache orchestration.
 - `notebook-concept.service.ts` — the only place that calls the LLM.
 - `notebook-concept-summary.entity.ts` — durable summary cache.
+
+### Dominant misconception and targeted remediation
+
+Each concept group also carries `dominantMisconception` (`{ text, count } | null`):
+the most-repeated *classified* misconception for that `(user, topic)`, sourced
+from the `misconceptions` module rather than just the first `common_errors`
+entry on any one card — see `../misconceptions/README.md`. It is `null` until
+at least one wrong answer in that topic has been classified.
+
+When present, the frontend offers "Practice this misconception," which
+generates one on-demand question focused on that exact gap via the shared
+`targeted-practice` module (`../targeted-practice/README.md`) — the same
+generation primitive used for the "try a similar one" action elsewhere.

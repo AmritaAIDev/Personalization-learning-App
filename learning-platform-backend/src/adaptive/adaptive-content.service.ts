@@ -492,7 +492,13 @@ export class AdaptiveContentService {
     };
   }
 
-  private async buildSourceMaterial(scope: LearningScope): Promise<string> {
+  /**
+   * Assembles the reviewed database material a generation prompt is grounded
+   * in for a topic. Public so on-demand callers outside the pool worker
+   * (targeted-practice) can reuse the exact same grounding instead of
+   * duplicating this query.
+   */
+  async buildSourceMaterial(scope: LearningScope): Promise<string> {
     const [questions, flashcards] = await Promise.all([
       this.questionsRepository.find({
         where: {

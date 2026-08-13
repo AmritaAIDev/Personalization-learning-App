@@ -16,6 +16,7 @@ import {
 } from '../adaptive/adaptive.types';
 import { AgentService, RetrievedSource } from '../agent/agent.service';
 import { calibrationFor } from '../confidence.util';
+import { MisconceptionsService } from '../misconceptions/misconceptions.service';
 import { ExplanationResult, toCitations } from '../citation.util';
 import { Question, QuestionPublicationStatus } from '../question.entity';
 import { PracticeAnswer } from './practice-answer.entity';
@@ -79,6 +80,7 @@ export class PracticeService {
     @InjectRepository(Question)
     private readonly questionsRepository: Repository<Question>,
     private readonly agentService: AgentService,
+    private readonly misconceptionsService: MisconceptionsService,
   ) {}
 
   async createOrResume(
@@ -242,6 +244,7 @@ export class PracticeService {
     if (changedAnswers.length > 0) {
       await this.answersRepository.save(changedAnswers);
     }
+    this.recordMisconceptions(userId, questions, changedAnswers);
 
     const analysis = this.buildAnalysis(
       questions,
@@ -388,6 +391,41 @@ export class PracticeService {
         grounded: false,
         sources: toCitations(sources),
       };
+    }
+  }
+
+  /**
+   * Best-effort, fire-and-forget misconception classification for every
+   * newly-wrong answer in a submitted attempt. Never awaited by the caller:
+   * a slow or failed classification must not delay the submit response.
+   */
+  private recordMisconceptions(
+    userId: string,
+    questions: Question[],
+    changedAnswers: PracticeAnswer[],
+  ): void {
+    const questionById = new Map(
+      questions.map((question) => [question.id, question]),
+    );
+    for (const answer of changedAnswers) {
+      if (answer.isCorrect || !answer.selectedOption) continue;
+      const question = questionById.get(answer.questionId);
+      if (!question) continue;
+      void this.misconceptionsService
+        .recordFromWrongAnswer({
+          userId,
+          subject: question.subject,
+          chapter: question.chapter,
+          topic: question.topic,
+          questionId: question.id,
+          questionText: question.question_text,
+          options: question.options,
+          selectedOption: answer.selectedOption,
+          correctAnswer: question.correct_answer,
+          commonErrors: question.common_errors ?? [],
+          source: 'PRACTICE',
+        })
+        .catch(() => undefined);
     }
   }
 

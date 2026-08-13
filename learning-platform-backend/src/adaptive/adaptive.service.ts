@@ -13,6 +13,7 @@ import { Topic } from '../topics/topic.entity';
 import { User } from '../users/user.entity';
 import { XP_PER_PROFILE_LEVEL } from '../users/user-progress';
 import { AgentService } from '../agent/agent.service';
+import { MisconceptionsService } from '../misconceptions/misconceptions.service';
 import {
   AskTutorDto,
   CreateLearningSessionDto,
@@ -203,6 +204,7 @@ export class AdaptiveService {
     private readonly generationWorker: GenerationWorkerService,
     private readonly tutorService: TutorService,
     private readonly agentService: AgentService,
+    private readonly misconceptionsService: MisconceptionsService,
     @InjectRepository(LearningTopicState)
     private readonly statesRepository: Repository<LearningTopicState>,
     @InjectRepository(LearningSession)
@@ -417,6 +419,23 @@ export class AdaptiveService {
 
     const tutorPending =
       mutation.kind === 'SOCRATIC_HINT' || mutation.shouldExplainSecondFailure;
+    if (tutorPending) {
+      void this.misconceptionsService
+        .recordFromWrongAnswer({
+          userId,
+          subject: mutation.session.subject,
+          chapter: mutation.session.chapter,
+          topic: mutation.session.topic,
+          questionId: mutation.question.id,
+          questionText: mutation.question.questionText,
+          options: mutation.question.options,
+          selectedOption: mutation.selectedOption,
+          correctAnswer: mutation.question.correctAnswer,
+          commonErrors: mutation.question.commonErrors ?? [],
+          source: 'ADAPTIVE',
+        })
+        .catch(() => undefined);
+    }
     // Marked before the background write starts so the very next conversation
     // read already reports "writing" instead of an empty thread.
     if (tutorPending) this.tutorService.markPending(sessionId);

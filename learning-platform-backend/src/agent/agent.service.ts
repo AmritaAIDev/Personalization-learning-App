@@ -329,12 +329,17 @@ export class AgentService {
     });
   }
 
-  /** Backward-compatible single-question path used by the protected admin queue. */
+  /**
+   * Single-question path used by the protected admin review queue. Returns
+   * the full generation payload (hint/concept_tags/common_errors included,
+   * not just the narrower GeneratedQuestion shape) so the reviewer sees
+   * AI-suggested tags pre-filled instead of an empty/placeholder draft.
+   */
   async generateDynamicQuestion(
     topic: string,
     bloomLevel = 'Comprehension',
     difficulty = 'Medium',
-  ): Promise<GeneratedQuestion> {
+  ): Promise<GeneratedLearningQuestionPayload> {
     this.assertConfigured();
     const topicName = await this.resolveTopicName(topic.trim());
     let contextText = '';
@@ -370,12 +375,7 @@ export class AgentService {
         'The AI could not produce a usable question for this topic.',
       );
     }
-    return {
-      question_text: question.question_text,
-      options: question.options,
-      correct_answer: question.correct_answer,
-      explanation: question.explanation,
-    };
+    return question;
   }
 
   /**

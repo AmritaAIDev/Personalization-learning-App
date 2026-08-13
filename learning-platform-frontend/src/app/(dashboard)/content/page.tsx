@@ -709,6 +709,41 @@ export default function ContentReviewPage() {
                           <p className="mt-1 text-sm leading-6 text-ink-soft">
                             {record.solution}
                           </p>
+                          {record.concept_tags.length > 0 ? (
+                            <>
+                              <p className="mt-4 text-xs font-medium text-ink-mute">
+                                Concept tags
+                                {record.source === "AI_GENERATED"
+                                  ? " (AI-suggested)"
+                                  : ""}
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {record.concept_tags.map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="rounded-full bg-primary-tint px-2.5 py-1 text-xs font-semibold text-primary-strong"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            </>
+                          ) : null}
+                          {record.common_errors.length > 0 ? (
+                            <>
+                              <p className="mt-4 text-xs font-medium text-ink-mute">
+                                Common wrong-answer patterns
+                                {record.source === "AI_GENERATED"
+                                  ? " (AI-suggested)"
+                                  : ""}
+                              </p>
+                              <ul className="mt-2 space-y-1 text-sm leading-5 text-ink-soft">
+                                {record.common_errors.map((commonError) => (
+                                  <li key={commonError}>• {commonError}</li>
+                                ))}
+                              </ul>
+                            </>
+                          ) : null}
                         </div>
                       </details>
                     </>

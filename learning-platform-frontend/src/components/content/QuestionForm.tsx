@@ -21,6 +21,7 @@ export interface QuestionFormPayload {
   marks: number;
   estimated_time_sec: number;
   concept_tags?: string[];
+  common_errors?: string[];
 }
 
 function toFormState(initial?: Partial<AdminQuestionRecord>) {
@@ -39,6 +40,7 @@ function toFormState(initial?: Partial<AdminQuestionRecord>) {
     marks: initial?.marks ?? 4,
     estimated_time_sec: initial?.estimated_time_sec ?? 90,
     concept_tags: (initial?.concept_tags ?? []).join(", "),
+    common_errors: (initial?.common_errors ?? []).join(", "),
   };
 }
 
@@ -113,6 +115,10 @@ export default function QuestionForm({
       concept_tags: form.concept_tags
         .split(",")
         .map((tag) => tag.trim())
+        .filter(Boolean),
+      common_errors: form.common_errors
+        .split(",")
+        .map((error) => error.trim())
         .filter(Boolean),
     });
   };
@@ -287,12 +293,27 @@ export default function QuestionForm({
         <span className="mb-2 block text-sm font-bold text-ink">
           Concept tags{" "}
           <span className="font-medium text-ink-mute">
-            (comma-separated, optional)
+            (comma-separated, optional{initial?.source === "AI_GENERATED" ? " — AI-suggested" : ""})
           </span>
         </span>
         <input
           value={form.concept_tags}
           onChange={(event) => set("concept_tags", event.target.value)}
+          className="w-full rounded-xl border border-hairline px-3 py-2.5 text-sm text-ink focus:border-primary focus:ring-4 focus:ring-primary/10"
+        />
+      </label>
+
+      <label className="block">
+        <span className="mb-2 block text-sm font-bold text-ink">
+          Common wrong-answer patterns{" "}
+          <span className="font-medium text-ink-mute">
+            (comma-separated, optional{initial?.source === "AI_GENERATED" ? " — AI-suggested" : ""})
+          </span>
+        </span>
+        <input
+          value={form.common_errors}
+          onChange={(event) => set("common_errors", event.target.value)}
+          placeholder="e.g. Using 1/r instead of 1/r²"
           className="w-full rounded-xl border border-hairline px-3 py-2.5 text-sm text-ink focus:border-primary focus:ring-4 focus:ring-primary/10"
         />
       </label>

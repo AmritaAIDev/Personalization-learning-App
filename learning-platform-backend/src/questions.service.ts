@@ -95,7 +95,18 @@ interface GeneratedQuestionDraftInput {
     options: string[];
     correct_answer: string;
     explanation: string;
+    /** AI-suggested tags for the reviewer to confirm/edit — never auto-published. */
+    concept_tags?: string[];
+    common_errors?: string[];
   };
+}
+
+/**
+ * Deterministic starting point for a generated draft's marks, scaled by
+ * difficulty — a reviewer-editable suggestion, not a graded judgement.
+ */
+function suggestMarks(difficulty: string): number {
+  return { Easy: 3, Medium: 4, Hard: 5 }[difficulty] ?? 4;
 }
 
 interface PublicationUpdate {
@@ -304,10 +315,14 @@ export class QuestionsService {
       solution: input.generated.explanation.trim(),
       bloom_level: input.bloomLevel,
       difficulty: input.difficulty,
-      marks: 4,
+      marks: suggestMarks(input.difficulty),
       estimated_time_sec: input.difficulty === 'Hard' ? 150 : 90,
-      concept_tags: [input.topic],
-      common_errors: [],
+      // AI-suggested, reviewer-editable — falls back to the topic name only
+      // if the model returned no usable tags.
+      concept_tags: input.generated.concept_tags?.length
+        ? input.generated.concept_tags
+        : [input.topic],
+      common_errors: input.generated.common_errors ?? [],
       status: QuestionPublicationStatus.DRAFT,
       source: QuestionSource.AI_GENERATED,
       quality_score: scoreQuestionQuality(input.generated),
@@ -367,7 +382,7 @@ export class QuestionsService {
       marks: input.marks,
       estimated_time_sec: input.estimated_time_sec,
       concept_tags: input.concept_tags ?? [],
-      common_errors: [],
+      common_errors: input.common_errors ?? [],
       status: QuestionPublicationStatus.DRAFT,
       source: QuestionSource.CURATED,
       created_by_user_id: createdByUserId,
@@ -410,6 +425,8 @@ export class QuestionsService {
       question.estimated_time_sec = input.estimated_time_sec;
     if (input.concept_tags !== undefined)
       question.concept_tags = input.concept_tags;
+    if (input.common_errors !== undefined)
+      question.common_errors = input.common_errors;
 
     question.reviewed_by_user_id = reviewerId;
     question.reviewed_at = new Date();

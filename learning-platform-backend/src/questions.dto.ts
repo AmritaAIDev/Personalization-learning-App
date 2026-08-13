@@ -230,6 +230,12 @@ export class CreateQuestionDto {
   @IsArray()
   @IsString({ each: true })
   concept_tags?: string[];
+
+  /** AI-suggested (or reviewer-authored) common wrong-answer patterns; never auto-published. */
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  common_errors?: string[];
 }
 
 /** Same shape as CreateQuestionDto, but every field is optional for a partial edit. */
@@ -307,6 +313,11 @@ export class UpdateQuestionDto {
   @IsArray()
   @IsString({ each: true })
   concept_tags?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  common_errors?: string[];
 }
 
 /**

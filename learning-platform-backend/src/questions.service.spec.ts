@@ -84,6 +84,60 @@ describe('QuestionsService', () => {
     expect(draft.quality_score).toBeGreaterThanOrEqual(80);
   });
 
+  it('falls back to the topic as a concept tag when the model suggests none', async () => {
+    questionsRepository.create.mockImplementation((input) => input);
+    questionsRepository.save.mockImplementation(async (input) => input);
+
+    const draft = await service.createGeneratedDraft({
+      createdByUserId: 'admin-1',
+      subject: 'Physics',
+      chapter: 'Electric Charges and Fields',
+      topic: "Coulomb's Law and Charge",
+      bloomLevel: 'Apply',
+      difficulty: 'Medium',
+      generated: {
+        question_text: 'A generated question long enough for quality checks.',
+        options: ['A', 'B', 'C', 'D'],
+        correct_answer: 'B',
+        explanation:
+          'A sufficiently detailed explanation that supports a reviewer decision.',
+      },
+    });
+
+    expect(draft.concept_tags).toEqual(["Coulomb's Law and Charge"]);
+    expect(draft.common_errors).toEqual([]);
+  });
+
+  it('pre-fills AI-suggested concept tags, common errors, and difficulty-scaled marks — still landing as an unpublished draft', async () => {
+    questionsRepository.create.mockImplementation((input) => input);
+    questionsRepository.save.mockImplementation(async (input) => input);
+
+    const draft = await service.createGeneratedDraft({
+      createdByUserId: 'admin-1',
+      subject: 'Physics',
+      chapter: 'Electric Charges and Fields',
+      topic: "Coulomb's Law and Charge",
+      bloomLevel: 'Apply',
+      difficulty: 'Hard',
+      generated: {
+        question_text: 'A generated question long enough for quality checks.',
+        options: ['A', 'B', 'C', 'D'],
+        correct_answer: 'B',
+        explanation:
+          'A sufficiently detailed explanation that supports a reviewer decision.',
+        concept_tags: ['Coulomb force', 'inverse-square law'],
+        common_errors: ['Using 1/r instead of 1/r²'],
+      },
+    });
+
+    expect(draft.concept_tags).toEqual(['Coulomb force', 'inverse-square law']);
+    expect(draft.common_errors).toEqual(['Using 1/r instead of 1/r²']);
+    expect(draft.marks).toBe(5);
+    // The suggestions are pre-filled, never auto-published.
+    expect(draft.status).toBe(QuestionPublicationStatus.DRAFT);
+    expect(draft.published_at).toBeNull();
+  });
+
   it('keeps draft answer keys inside the admin-only review query', async () => {
     questionsRepository.find.mockResolvedValue([{ id: 'draft-1' }]);
 
@@ -214,6 +268,28 @@ describe('QuestionsService', () => {
       'A corrected question wording for the same item.',
     );
     expect(updated.reviewed_by_user_id).toBe('admin-1');
+  });
+
+  it('lets a reviewer edit AI-suggested common errors and concept tags', async () => {
+    questionsRepository.findOne.mockResolvedValue({
+      question_id: 'AI-1',
+      status: QuestionPublicationStatus.DRAFT,
+      options: ['A', 'B', 'C', 'D'],
+      correct_answer: 'B',
+      concept_tags: ['Coulomb force'],
+      common_errors: ['Using 1/r instead of 1/r²'],
+    });
+    questionsRepository.save.mockImplementation(async (input) => input);
+
+    const updated = await service.updateQuestion('AI-1', 'admin-1', {
+      concept_tags: ['Coulomb force', 'superposition'],
+      common_errors: ['Forgetting the sign of the charge'],
+    } as never);
+
+    expect(updated.concept_tags).toEqual(['Coulomb force', 'superposition']);
+    expect(updated.common_errors).toEqual([
+      'Forgetting the sign of the charge',
+    ]);
   });
 
   it('rejects an edit that moves correct_answer outside the (possibly new) options', async () => {

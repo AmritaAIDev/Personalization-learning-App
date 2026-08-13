@@ -137,13 +137,13 @@ treatment. Both can reuse `TargetedPracticeCard` once wired.
 - [x] Tests: FSRS next-date math over a fixture history. — `fsrs.util.spec.ts` (init weights, monotonicity/bounds invariants, forgetting-curve and interval-modifier identities) + `adaptive.service.spec.ts` flashcard-review cases.
 - [x] Docs: `adaptive` README flashcard section.
 
-### 2.5 AI auto-tagging + review pipeline for admins
+### 2.5 AI auto-tagging + review pipeline for admins ✅
 **Modules:** `questions` admin review · `agent`
 
-- [ ] On candidate generation, auto-suggest `concept_tags`, `bloom_level`, `difficulty`, `marks`, `common_errors` for the reviewer to confirm.
-- [ ] Reviewer UI shows AI-suggested tags as pre-filled, editable.
-- [ ] Tests: tagger prompt shape; suggestions never auto-publish.
-- [ ] Docs: `questions` README (admin flow).
+- [x] On candidate generation, auto-suggest `concept_tags`, `bloom_level`, `difficulty`, `marks`, `common_errors` for the reviewer to confirm. — `bloom_level`/`difficulty` were already reviewer-chosen generation targets; `AgentService.generateDynamicQuestion` now returns the full generation payload (previously narrowed to just text/options/answer/explanation, discarding the model's own `concept_tags`/`common_errors`/`hint`), and `marks` gets a difficulty-scaled starting suggestion.
+- [x] Reviewer UI shows AI-suggested tags as pre-filled, editable. — `QuestionForm` gained a `common_errors` field alongside `concept_tags` (both pre-filled from the draft); the review-queue's collapsed detail view now shows both, labeled "AI-suggested" for generated drafts.
+- [x] Tests: tagger prompt shape; suggestions never auto-publish. — `questions.service.spec.ts`: topic-fallback when the model suggests no tags, full AI-suggestion pass-through, difficulty-scaled marks, and an explicit assertion that a suggestion-filled draft still lands `DRAFT`/unpublished; a reviewer-edit case for `common_errors`/`concept_tags`.
+- [x] Docs: `questions` README (admin flow). — backend `README.md` API reference (no dedicated `questions` module folder/README exists; it lives directly under `src/`).
 
 ### 2.6 Photo-to-question (OCR + solve/match)
 **Modules:** new `vision`/OCR path in `agent` · `doubts` · frontend upload
@@ -253,7 +253,7 @@ platform. Higher effort, sequenced after Phases 1–2 give a solid base.
 - [x] 2.2 Misconception detection + remediation
 - [x] 2.3 On-demand similar question (practice review + notebook; diagnostics/Learn tutor board still open)
 - [x] 2.4 FSRS spaced repetition
-- [ ] 2.5 Admin AI auto-tagging pipeline
+- [x] 2.5 Admin AI auto-tagging pipeline
 - [ ] 2.6 Photo-to-question (OCR + solve)
 
 ### Phase 3 — Strategic

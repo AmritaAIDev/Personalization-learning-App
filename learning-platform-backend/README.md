@@ -40,6 +40,7 @@ Checks: `npm test` (unit), `npm run build` (production compile). Do **not** run 
 - Answers, correct options, and solutions live in PostgreSQL and are never sent to a student diagnostic/practice endpoint before submission.
 - Restrictive credentialed CORS, Helmet, origin checks for unsafe cookie requests, `@nestjs/throttler` rate limits, and role guards are global.
 - AI-generated questions land as `DRAFT`; only an admin can inspect keys and publish/archive. Learner-private generated questions never bypass the global review workflow.
+- `POST /questions/generate` pre-fills the draft's `concept_tags`, `common_errors`, and a difficulty-scaled `marks` suggestion from the model's own generation output (previously discarded) — all reviewer-editable via `PATCH /questions/bank/:questionId`, never auto-applied to a published question.
 
 ## Interactive API docs
 

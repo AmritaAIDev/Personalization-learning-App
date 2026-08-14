@@ -72,6 +72,43 @@ describe('DiagnosticsService', () => {
     expect(answersRepository.save).not.toHaveBeenCalled();
   });
 
+  it("includes each question's subject and chapter in the review payload, for similar-question generation scope", async () => {
+    attemptsRepository.findOne.mockResolvedValue({
+      id: 'attempt-1',
+      userId: 'student-1',
+      questionIds: ['question-1'],
+      status: DiagnosticAttemptStatus.SUBMITTED,
+      analysis: { grade: 'B' },
+      submittedAt: new Date(),
+      answers: [{ questionId: 'question-1', selectedOption: 'B. Wrong' }],
+    });
+    questionsRepository.find.mockResolvedValue([
+      {
+        id: 'question-1',
+        question_id: 'Q1',
+        subject: 'Physics',
+        chapter: 'Electrostatics',
+        topic: 'Gauss Law',
+        difficulty: 'Medium',
+        bloom_level: 'Apply',
+        marks: 4,
+        question_text: 'Question text',
+        options: ['A. Correct', 'B. Wrong'],
+        correct_answer: 'A. Correct',
+        solution: 'Solution',
+      },
+    ]);
+
+    const { data } = await service.getReview('student-1', 'attempt-1');
+
+    expect(data.questions[0]).toMatchObject({
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic: 'Gauss Law',
+      isCorrect: false,
+    });
+  });
+
   it('calculates result data on the server from stored answer selections', async () => {
     const firstAnswer = {
       questionId: 'question-1',

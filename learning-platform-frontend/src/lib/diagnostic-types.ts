@@ -149,6 +149,8 @@ export interface DiagnosticReviewItem {
   /** Internal question UUID used to target the explain endpoint. */
   id: string;
   questionId: string;
+  subject: string;
+  chapter: string;
   topic: string;
   difficulty: string;
   bloomLevel: string;

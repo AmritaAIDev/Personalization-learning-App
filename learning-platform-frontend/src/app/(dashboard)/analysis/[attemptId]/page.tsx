@@ -21,6 +21,7 @@ import {
 import { ApiError, apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import ExplainThis from "@/components/learning/ExplainThis";
+import TargetedPracticeCard from "@/components/learning/TargetedPracticeCard";
 import ConfidenceBadge from "@/components/diagnostic/ConfidenceBadge";
 import type {
   AnalysisPayload,
@@ -528,6 +529,21 @@ function ReviewSection({ attemptId }: { attemptId: string }) {
                   <ExplainThis
                     endpoint={`/api/diagnostics/${attemptId}/questions/${item.id}/explain`}
                   />
+                  {!item.isCorrect ? (
+                    <TargetedPracticeCard
+                      reason="SIMILAR"
+                      focusText={item.questionText}
+                      scope={{
+                        subject: item.subject,
+                        chapter: item.chapter,
+                        topic: item.topic,
+                      }}
+                      sourceQuestionId={item.id}
+                      bloomLevel={item.bloomLevel}
+                      difficulty={item.difficulty}
+                      triggerLabel="Try a similar one"
+                    />
+                  ) : null}
                 </li>
               ))}
             </ol>

@@ -283,6 +283,8 @@ export class DiagnosticsService {
           position: index + 1,
           id: question.id,
           questionId: question.question_id,
+          subject: question.subject,
+          chapter: question.chapter,
           topic: question.topic,
           difficulty: question.difficulty,
           bloomLevel: question.bloom_level,

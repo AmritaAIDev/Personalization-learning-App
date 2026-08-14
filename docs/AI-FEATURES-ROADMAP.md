@@ -122,11 +122,13 @@ Goal: productise the AI infrastructure you already have. Each item reuses
 - [x] Tests: generation prompt shape; rate-limit; fallback. — `targeted-practice.service.spec.ts` SIMILAR-reason case (isomorphic phrasing, bloom/difficulty threading); rate-limit is the same `@Throttle` pattern used elsewhere in this codebase, not independently unit-tested.
 - [x] Docs: `adaptive` README. — see `targeted-practice` README instead (the module lives outside `adaptive` since it's shared with `notebook`/2.2).
 
-Still open: the diagnostic-test analysis review and the live adaptive tutor
-board (Learn) don't offer "try a similar one" yet — `DiagnosticReviewItem`
-lacks `subject`/`chapter` needed for the generation scope, and the adaptive
-session hides the answer until a second attempt, which needs its own UX
-treatment. Both can reuse `TargetedPracticeCard` once wired.
+Both follow-up surfaces are now wired too: the diagnostic-test analysis
+review (`DiagnosticReviewItem` gained `subject`/`chapter`) and the live
+adaptive Learn session, where a miss (REINFORCE/DEMOTED) now pauses the
+round-outcome screen's auto-continue — previously ~2s, not enough to use
+the card — and shows the missed question with "try a similar one" plus an
+explicit Continue button. Mastery and prerequisite-route outcomes were
+already explicit-choice; this adds misses to that set.
 
 ### 2.4 Modern spaced repetition (FSRS) ✅
 **Modules:** `adaptive` flashcard review
@@ -158,7 +160,7 @@ treatment. Both can reuse `TargetedPracticeCard` once wired.
 ### Phase 2 exit criteria
 - [x] Tutor and doubt answers are grounded with citations.
 - [x] Misconceptions are detected and drive targeted practice.
-- [x] Learners can request a similar question on demand (practice review + notebook; diagnostics review and the live Learn tutor board still open, see 2.3).
+- [x] Learners can request a similar question on demand (practice review, notebook, diagnostic review, and the live Learn session).
 - [x] Flashcards use FSRS; admins get AI tag suggestions.
 - [x] Photo-to-question available on doubts.
 - [x] All features have tests + module READMEs.
@@ -251,7 +253,7 @@ platform. Higher effort, sequenced after Phases 1–2 give a solid base.
 ### Phase 2 — Integratable
 - [x] 2.1 RAG-grounded explanations + citations
 - [x] 2.2 Misconception detection + remediation
-- [x] 2.3 On-demand similar question (practice review + notebook; diagnostics/Learn tutor board still open)
+- [x] 2.3 On-demand similar question (practice review, notebook, diagnostic review, and the live Learn session)
 - [x] 2.4 FSRS spaced repetition
 - [x] 2.5 Admin AI auto-tagging pipeline
 - [x] 2.6 Photo-to-question (OCR + solve)

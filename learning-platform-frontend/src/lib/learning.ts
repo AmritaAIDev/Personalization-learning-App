@@ -42,6 +42,18 @@ export function learningUrl(
   return `/learn?${params.toString()}`;
 }
 
+/**
+ * Transitions reachable only by a wrong (second-attempt) answer — as
+ * opposed to ADVANCED/MASTERED (a hit) or ROUTED (already stops for an
+ * explicit choice regardless). Used to pause the round-outcome screen's
+ * auto-continue so "try a similar one" is actually usable.
+ */
+export function isMissTransition(
+  transition: LearningSessionTransition,
+): boolean {
+  return transition === "REINFORCE" || transition === "DEMOTED";
+}
+
 export type RoundOutcome = {
   title: string;
   detail: string;

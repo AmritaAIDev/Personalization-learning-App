@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ChevronRight, CircleAlert, Map } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import { learningUrl } from "@/lib/learning";
+import { isMissTransition, learningUrl } from "@/lib/learning";
 import type {
   LearningAnswerPayload,
   LearningDashboardPayload,
@@ -78,6 +78,14 @@ export default function AdaptiveStudySession({
   const [feedback, setFeedback] = useState<
     LearningAnswerPayload["feedback"] | null
   >(null);
+  /**
+   * The question that was just answered wrong, kept around only for the
+   * round-outcome screen's "try a similar one" — `currentItem` itself is
+   * gone by then (the round has moved past it).
+   */
+  const [missedItem, setMissedItem] = useState<
+    LearningSessionPayload["currentItem"]
+  >(null);
   const [loading, setLoading] = useState(false);
   const [answering, setAnswering] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -149,6 +157,7 @@ export default function AdaptiveStudySession({
       );
       setPayload(next);
       setFeedback(null);
+      setMissedItem(null);
       void refreshDashboard();
     } catch (reason) {
       setError(
@@ -164,6 +173,7 @@ export default function AdaptiveStudySession({
   const answer = useCallback(
     async (selectedOption: string) => {
       if (!payload?.currentItem || answering) return;
+      const answeredItem = payload.currentItem;
       setAnswering(true);
       setError(null);
       try {
@@ -173,6 +183,9 @@ export default function AdaptiveStudySession({
         );
         setPayload(next);
         setFeedback(next.feedback);
+        setMissedItem(
+          isMissTransition(next.session.transition) ? answeredItem : null,
+        );
         if (next.session.status !== "ACTIVE") void refreshDashboard();
       } catch (reason) {
         setError(
@@ -197,6 +210,7 @@ export default function AdaptiveStudySession({
   const stopPractice = () => {
     setPayload(null);
     setFeedback(null);
+    setMissedItem(null);
     setError(null);
     selectTab("overview");
   };
@@ -281,6 +295,8 @@ export default function AdaptiveStudySession({
           <PracticeWorkspace
             payload={payload}
             feedback={feedback}
+            missedItem={missedItem}
+            scope={scope}
             loading={loading}
             answering={answering}
             error={error}

@@ -23,7 +23,8 @@ Overview and practice both stay mounted while hidden, so switching tabs is insta
 - Two attempts per question. A first miss triggers a Socratic hint and the answer stays hidden; the option already tried is struck through so the retry is a real second choice.
 - Selecting an option updates immediately and shows an inline pending state; answers are graded server-side only. A ruled-out (wrong) option is shown in red with an X marker.
 - Options can be answered with the `1`–`4` keys.
-- Rounds auto-advance: when a round completes, an inline RoundOutcome banner shows the transition (advance, reinforce, rebuild, prerequisite route, or mastery) and starts the next round after a short beat - no required click. Only terminal states (mastery, prerequisite route) stop for an explicit choice. A persistent "Stop" control is always available. A failed "continue" surfaces inline rather than silently doing nothing.
+- Rounds auto-advance: when a round completes, an inline RoundOutcome banner shows the transition (advance, reinforce, rebuild, prerequisite route, or mastery) and starts the next round after a short beat - no required click. A persistent "Stop" control is always available. A failed "continue" surfaces inline rather than silently doing nothing.
+- Three cases stop for an explicit choice instead of auto-continuing: mastery, a prerequisite route, and — since AI Phase 2.3 — a miss (REINFORCE/DEMOTED). `AdaptiveStudySession` snapshots the just-answered question (`currentItem` is gone once the round moves on) into `missedItem` when the resulting transition is a miss; `RoundOutcome` shows it with a `TargetedPracticeCard` ("try a similar one") and a manual Continue button, since the old ~2s auto-advance wasn't enough time to actually use it.
 
 ## Flashcards
 

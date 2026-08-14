@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   describeRoundOutcome,
+  isMissTransition,
   learningTabFromSearchParams,
   learningUrl,
 } from "./learning";
@@ -62,5 +63,19 @@ describe("round outcome copy", () => {
         describeRoundOutcome(transition).continueLabel.length,
       ).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("isMissTransition", () => {
+  it("treats REINFORCE and DEMOTED as a miss", () => {
+    expect(isMissTransition("REINFORCE")).toBe(true);
+    expect(isMissTransition("DEMOTED")).toBe(true);
+  });
+
+  it("does not treat a hit or a terminal transition as a miss", () => {
+    expect(isMissTransition("ADVANCED")).toBe(false);
+    expect(isMissTransition("MASTERED")).toBe(false);
+    expect(isMissTransition("PREREQUISITE")).toBe(false);
+    expect(isMissTransition("NONE")).toBe(false);
   });
 });

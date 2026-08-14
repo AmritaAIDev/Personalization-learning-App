@@ -18,10 +18,12 @@ import {
   Target,
   Trophy,
 } from "lucide-react";
-import { describeRoundOutcome, learningUrl } from "@/lib/learning";
+import { describeRoundOutcome, isMissTransition, learningUrl } from "@/lib/learning";
 import ReportQuestionButton from "@/components/ReportQuestionButton";
+import TargetedPracticeCard from "./TargetedPracticeCard";
 import type {
   LearningAnswerPayload,
+  LearningScope,
   LearningSessionPayload,
   LearningSessionTransition,
 } from "@/lib/learning-types";
@@ -32,10 +34,14 @@ const StudyMarkdown = dynamic(() => import("./StudyMarkdown"), {
 });
 
 type Feedback = LearningAnswerPayload["feedback"] | null;
+type MissedItem = LearningSessionPayload["currentItem"];
 
 export type PracticeWorkspaceProps = {
   payload: LearningSessionPayload | null;
   feedback: Feedback;
+  /** The question just answered wrong, kept for the round-outcome's "try a similar one". */
+  missedItem: MissedItem;
+  scope: LearningScope;
   loading: boolean;
   answering: boolean;
   error: string | null;
@@ -51,6 +57,8 @@ const OPTION_KEYS = ["1", "2", "3", "4", "5", "6"];
 export default function PracticeWorkspace({
   payload,
   feedback,
+  missedItem,
+  scope,
   loading,
   answering,
   error,
@@ -81,6 +89,8 @@ export default function PracticeWorkspace({
             <RoundOutcome
               payload={payload}
               feedback={feedback}
+              missedItem={missedItem}
+              scope={scope}
               loading={loading}
               error={error}
               onContinue={onContinue}
@@ -399,6 +409,8 @@ const CONTINUABLE_TRANSITIONS = new Set<LearningSessionTransition>([
 function RoundOutcome({
   payload,
   feedback,
+  missedItem,
+  scope,
   loading,
   error,
   onContinue,
@@ -407,6 +419,8 @@ function RoundOutcome({
 }: {
   payload: LearningSessionPayload;
   feedback: Feedback;
+  missedItem: MissedItem;
+  scope: LearningScope;
   loading: boolean;
   error: string | null;
   onContinue: () => void;
@@ -416,8 +430,14 @@ function RoundOutcome({
   const transition = payload.session.transition;
   const routed = Boolean(feedback?.route);
   const mastered = transition === "MASTERED";
+  // A miss (REINFORCE/DEMOTED) normally auto-continues like a hit does, but
+  // that only gives ~2s — not enough to actually use "try a similar one".
+  // Pause auto-continue and require an explicit Continue once there's a
+  // missed question to show; fall back to the old behaviour if it's somehow
+  // unavailable so the round can never get stuck.
+  const isMiss = isMissTransition(transition) && Boolean(missedItem);
   const continuable =
-    !routed && !mastered && CONTINUABLE_TRANSITIONS.has(transition);
+    !routed && !mastered && !isMiss && CONTINUABLE_TRANSITIONS.has(transition);
   const outcome = describeRoundOutcome(transition);
   const advancedRef = useRef(false);
 
@@ -474,6 +494,26 @@ function RoundOutcome({
         </p>
       ) : null}
 
+      {isMiss && missedItem ? (
+        <div className="mt-5 w-full max-w-md text-left">
+          <p className="text-xs font-semibold text-ink-mute">
+            {missedItem.bloomLevel} · {missedItem.difficulty}
+          </p>
+          <StudyMarkdown className="mt-1 text-sm font-semibold leading-6 text-ink">
+            {missedItem.questionText}
+          </StudyMarkdown>
+          <TargetedPracticeCard
+            reason="SIMILAR"
+            focusText={missedItem.questionText}
+            scope={scope}
+            sourceQuestionId={missedItem.questionRefId}
+            bloomLevel={missedItem.bloomLevel}
+            difficulty={missedItem.difficulty}
+            triggerLabel="Try a similar one"
+          />
+        </div>
+      ) : null}
+
       {error ? (
         <p
           className="mt-4 flex max-w-md items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-left text-sm font-medium text-rose-700"
@@ -502,9 +542,10 @@ function RoundOutcome({
             <Layers3 className="h-4 w-4" aria-hidden="true" />
             {outcome.continueLabel}
           </button>
-        ) : continuable ? (
+        ) : continuable || isMiss ? (
           // Always available, so the learner can skip the short auto-continue
-          // wait and can never be stranded if it does not fire.
+          // wait (or, on a miss, explicitly move on after reviewing/practising)
+          // and can never be stranded if auto-continue does not fire.
           <button
             type="button"
             onClick={onContinue}

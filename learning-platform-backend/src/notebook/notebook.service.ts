@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { LearningAnswer } from '../adaptive/learning-answer.entity';
 import { GeneratedLearningQuestion } from '../adaptive/generated-learning-question.entity';
+import { DiagnosticAnswer } from '../diagnostics/diagnostic-answer.entity';
 import { PracticeAnswer } from '../practice/practice-answer.entity';
 import { PracticeAttemptStatus } from '../practice/practice.types';
 import { Question } from '../question.entity';
@@ -52,6 +53,8 @@ export class NotebookService {
     private readonly practiceAnswerRepository: Repository<PracticeAnswer>,
     @InjectRepository(LearningAnswer)
     private readonly learningAnswerRepository: Repository<LearningAnswer>,
+    @InjectRepository(DiagnosticAnswer)
+    private readonly diagnosticAnswerRepository: Repository<DiagnosticAnswer>,
     @InjectRepository(NotebookConceptSummary)
     private readonly conceptSummaryRepository: Repository<NotebookConceptSummary>,
     private readonly conceptService: NotebookConceptService,
@@ -70,6 +73,8 @@ export class NotebookService {
         practiceMistakes: cards.filter((card) => card.source === 'PRACTICE')
           .length,
         adaptiveMistakes: cards.filter((card) => card.source === 'ADAPTIVE')
+          .length,
+        diagnosticMistakes: cards.filter((card) => card.source === 'DIAGNOSTIC')
           .length,
         weakTopics: this.getWeakTopics(cards),
       },
@@ -112,6 +117,8 @@ export class NotebookService {
           .length,
         adaptiveMistakes: cards.filter((card) => card.source === 'ADAPTIVE')
           .length,
+        diagnosticMistakes: cards.filter((card) => card.source === 'DIAGNOSTIC')
+          .length,
       },
     };
   }
@@ -150,17 +157,26 @@ export class NotebookService {
     userId: string,
     limit: number,
   ): Promise<NotebookMistakeCard[]> {
-    const [practiceAnswers, adaptiveAnswers] = await Promise.all([
-      this.getPracticeMistakes(userId, limit),
-      this.getAdaptiveMistakes(userId, limit),
-    ]);
+    const [practiceAnswers, adaptiveAnswers, diagnosticAnswers] =
+      await Promise.all([
+        this.getPracticeMistakes(userId, limit),
+        this.getAdaptiveMistakes(userId, limit),
+        this.getDiagnosticMistakes(userId, limit),
+      ]);
     const practiceCards = practiceAnswers.map((answer) =>
       this.toPracticeCard(answer),
     );
     const adaptiveCards = adaptiveAnswers
       .map((answer) => this.toAdaptiveCard(answer))
       .filter((card): card is NotebookMistakeCard => card !== null);
-    return this.dedupeLatest([...practiceCards, ...adaptiveCards])
+    const diagnosticCards = diagnosticAnswers.map((answer) =>
+      this.toDiagnosticCard(answer),
+    );
+    return this.dedupeLatest([
+      ...practiceCards,
+      ...adaptiveCards,
+      ...diagnosticCards,
+    ])
       .sort(
         (left, right) =>
           new Date(right.occurredAt).getTime() -
@@ -371,6 +387,28 @@ export class NotebookService {
       .orderBy('answer.created_at', 'DESC')
       .take(limit)
       .getMany();
+  }
+
+  private getDiagnosticMistakes(userId: string, limit: number) {
+    return this.diagnosticAnswerRepository
+      .createQueryBuilder('answer')
+      .innerJoinAndSelect('answer.attempt', 'attempt')
+      .innerJoinAndSelect('answer.question', 'question')
+      .where('attempt.user_id = :userId', { userId })
+      .andWhere('answer.is_correct = false')
+      .andWhere('answer.selected_option IS NOT NULL')
+      .orderBy('answer.updated_at', 'DESC')
+      .take(limit)
+      .getMany();
+  }
+
+  private toDiagnosticCard(answer: DiagnosticAnswer): NotebookMistakeCard {
+    return this.toCard(
+      `diagnostic:${answer.id}`,
+      'DIAGNOSTIC',
+      this.fromCuratedQuestion(answer.question, answer.selectedOption),
+      answer.updatedAt,
+    );
   }
 
   private toPracticeCard(answer: PracticeAnswer): NotebookMistakeCard {

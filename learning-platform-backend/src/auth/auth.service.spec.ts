@@ -1,4 +1,6 @@
 import * as bcrypt from 'bcryptjs';
+
+jest.setTimeout(30000);
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 

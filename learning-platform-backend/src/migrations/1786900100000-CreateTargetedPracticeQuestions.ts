@@ -6,9 +6,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * adaptive session/state-machine tables: each row is answered once,
  * standalone, and never advances a learning level.
  */
-export class CreateTargetedPracticeQuestions1786900100000
-  implements MigrationInterface
-{
+export class CreateTargetedPracticeQuestions1786900100000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE "targeted_practice_questions" (

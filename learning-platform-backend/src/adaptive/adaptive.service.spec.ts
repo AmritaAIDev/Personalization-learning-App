@@ -1,4 +1,4 @@
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import {
   AdaptiveContentService,
   LearningQuestionReference,
@@ -539,7 +539,9 @@ describe('AdaptiveService learning state projections', () => {
       states: [activeState, masteredState],
       sessions: [completedSession],
       questionsRepository: {
-        createQueryBuilder: jest.fn(() => queryBuilder),
+        createQueryBuilder: jest.fn(
+          () => queryBuilder as unknown as SelectQueryBuilder<Question>,
+        ),
       },
       topicsRepository: {
         find: jest.fn(async () => []),

@@ -150,6 +150,7 @@ describe('NotebookService', () => {
     const service = new NotebookService(
       { createQueryBuilder: jest.fn(() => practiceQueryBuilder) } as never,
       { createQueryBuilder: jest.fn(() => adaptiveQueryBuilder) } as never,
+      { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       makeConceptSummaryRepository(),
       makeConceptService() as never,
       makeMisconceptionsService() as never,
@@ -206,6 +207,7 @@ describe('NotebookService', () => {
       {
         createQueryBuilder: jest.fn(() => makeQueryBuilder([older, latest])),
       } as never,
+      { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       makeConceptSummaryRepository(),
       makeConceptService() as never,
@@ -266,6 +268,7 @@ describe('NotebookService', () => {
     const service = new NotebookService(
       { createQueryBuilder: jest.fn(() => practiceQb) } as never,
       { createQueryBuilder: jest.fn(() => adaptiveQb) } as never,
+      { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       makeConceptSummaryRepository(),
       conceptService as never,
       makeMisconceptionsService() as never,
@@ -319,6 +322,7 @@ describe('NotebookService', () => {
     });
     const service = new NotebookService(
       { createQueryBuilder: jest.fn(() => practiceQb) } as never,
+      { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       summaryRepo,
       conceptService as never,

@@ -1,6 +1,8 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
+  OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -28,7 +30,9 @@ export interface AuthResult {
 }
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
@@ -37,6 +41,10 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
+  async onModuleInit(): Promise<void> {
+    await this.seedAdminFromEnv();
+  }
+
   async register(input: RegisterDto): Promise<AuthResult> {
     const email = this.normalizeEmail(input.email);
     const existing = await this.usersRepository.findOne({ where: { email } });
@@ -44,11 +52,20 @@ export class AuthService {
       throw new ConflictException('An account with this email already exists.');
     }
 
+    // If this email matches the configured admin email, create as admin.
+    const configuredAdminEmail = this.normalizeEmail(
+      this.configService.get<string>('ADMIN_EMAIL') ?? '',
+    );
+    const role =
+      configuredAdminEmail && email === configuredAdminEmail
+        ? 'admin'
+        : 'student';
+
     const user = this.usersRepository.create({
       name: input.name.trim(),
       email,
       passwordHash: await bcrypt.hash(input.password, BCRYPT_ROUNDS),
-      role: 'student',
+      role,
     });
 
     try {
@@ -60,6 +77,10 @@ export class AuthService {
         );
       }
       throw error;
+    }
+
+    if (role === 'admin') {
+      this.logger.log(`Admin account created for ${email}`);
     }
 
     return this.createAuthenticatedSession(user);
@@ -161,6 +182,45 @@ export class AuthService {
       sessionToken,
       expiresAt,
     };
+  }
+
+  /**
+   * If ADMIN_EMAIL and ADMIN_PASSWORD are set in env, ensure an admin account
+   * exists (creates it if missing). This gives teams a reliable bootstrap path
+   * instead of being locked out of admin functionality.
+   */
+  private async seedAdminFromEnv(): Promise<void> {
+    const email = this.normalizeEmail(
+      this.configService.get<string>('ADMIN_EMAIL') ?? '',
+    );
+    const password = this.configService.get<string>('ADMIN_PASSWORD') ?? '';
+    const name =
+      this.configService.get<string>('ADMIN_NAME') ?? 'Administrator';
+
+    if (!email || !password) {
+      return;
+    }
+
+    const existing = await this.usersRepository.findOne({ where: { email } });
+    if (existing) {
+      if (existing.role !== 'admin') {
+        existing.role = 'admin';
+        await this.usersRepository.save(existing);
+        this.logger.log(`Promoted ${email} to admin from environment config.`);
+      }
+      return;
+    }
+
+    const user = this.usersRepository.create({
+      name,
+      email,
+      passwordHash: await bcrypt.hash(password, BCRYPT_ROUNDS),
+      role: 'admin',
+    });
+    await this.usersRepository.save(user);
+    this.logger.log(
+      `Seeded admin account for ${email} from environment config.`,
+    );
   }
 
   private normalizeEmail(email: string): string {

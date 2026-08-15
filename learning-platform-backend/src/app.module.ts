@@ -54,6 +54,7 @@ import { TargetedPracticeModule } from './targeted-practice/targeted-practice.mo
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: [join(__dirname, '..', '.env'), '.env'],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

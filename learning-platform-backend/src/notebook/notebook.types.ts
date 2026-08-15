@@ -1,4 +1,4 @@
-export type NotebookMistakeSource = 'PRACTICE' | 'ADAPTIVE';
+export type NotebookMistakeSource = 'PRACTICE' | 'ADAPTIVE' | 'DIAGNOSTIC';
 
 export interface NotebookMistakeCard {
   id: string;
@@ -31,6 +31,7 @@ export interface NotebookMistakesResponse {
   summary: {
     practiceMistakes: number;
     adaptiveMistakes: number;
+    diagnosticMistakes: number;
     weakTopics: string[];
   };
 }
@@ -77,5 +78,6 @@ export interface NotebookConceptsResponse {
   summary: {
     practiceMistakes: number;
     adaptiveMistakes: number;
+    diagnosticMistakes: number;
   };
 }

@@ -1,6 +1,6 @@
 export type NotebookMistakeCard = {
   id: string;
-  source: "PRACTICE" | "ADAPTIVE";
+  source: "PRACTICE" | "ADAPTIVE" | "DIAGNOSTIC";
   subject: string;
   chapter: string;
   topic: string;
@@ -29,6 +29,7 @@ export type NotebookMistakesResponse = {
   summary: {
     practiceMistakes: number;
     adaptiveMistakes: number;
+    diagnosticMistakes: number;
     weakTopics: string[];
   };
 };
@@ -65,5 +66,6 @@ export type NotebookConceptsResponse = {
   summary: {
     practiceMistakes: number;
     adaptiveMistakes: number;
+    diagnosticMistakes: number;
   };
 };

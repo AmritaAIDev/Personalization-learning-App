@@ -117,7 +117,7 @@ function ExplorerBubbleContent() {
             Knowledge Universe
           </h1>
           <p className="text-sm text-ink-mute mt-2 font-medium tracking-wide">
-            Drag to explore. Topics near the center are your closest focus.
+            Drag to explore. Topics near the center are your closest focus. Start a diagnostic or learning session to see your knowledge map grow.
           </p>
         </div>
       </header>
@@ -183,7 +183,7 @@ function ExplorerBubbleContent() {
 
           return (
             <div
-              key={node.id}
+              key={node.id ?? node.name}
               role="button"
               tabIndex={isLocked ? -1 : 0}
               aria-disabled={isLocked}

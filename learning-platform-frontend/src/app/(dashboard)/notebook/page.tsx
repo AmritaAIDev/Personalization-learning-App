@@ -99,7 +99,7 @@ function MistakeDetail({ card }: { card: NotebookMistakeCard }) {
     <article className="rounded-xl border border-hairline bg-canvas p-4">
       <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em]">
         <span className="rounded-full bg-primary-tint px-2.5 py-0.5 text-primary">
-          {card.source === "ADAPTIVE" ? "Learn" : "Practice"}
+          {card.source === "ADAPTIVE" ? "Learn" : card.source === "DIAGNOSTIC" ? "Diagnostic" : "Practice"}
         </span>
         <span className="text-ink-mute">
           {card.bloomLevel} {"\u00B7"} {card.difficulty}

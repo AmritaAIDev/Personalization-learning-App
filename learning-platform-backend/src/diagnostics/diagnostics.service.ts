@@ -17,6 +17,8 @@ import {
   TutorMessageType,
 } from '../adaptive/adaptive.types';
 import { AgentService, RetrievedSource } from '../agent/agent.service';
+import { User } from '../users/user.entity';
+import { levelForXp } from '../users/user-progress';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { calibrationFor } from '../confidence.util';
 import { ExplanationResult, toCitations } from '../citation.util';
@@ -29,6 +31,12 @@ import {
   SaveDiagnosticAnswerDto,
 } from './diagnostic.dto';
 import { LearningResource } from './learning-resource.entity';
+// XP awarded per submitted diagnostic.
+const XP_PER_DIAGNOSTIC_SUBMITTED = 50;
+const XP_PER_CORRECT_ANSWER = 10;
+const XP_HIGH_SCORE_BONUS = 20;
+const XP_MINIMUM_ATTEMPT = 15;
+
 import {
   DiagnosticAnalysis,
   DiagnosticAttemptMode,
@@ -70,6 +78,8 @@ export class DiagnosticsService {
     private readonly resourcesRepository: Repository<LearningResource>,
     @InjectRepository(LearningTopicState)
     private readonly topicStatesRepository: Repository<LearningTopicState>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
     private readonly agentService: AgentService,
   ) {}
 
@@ -718,6 +728,14 @@ export class DiagnosticsService {
       : DiagnosticAttemptStatus.SUBMITTED;
     attempt.submittedAt = new Date();
     await this.attemptsRepository.save(attempt);
+    if (!expired) {
+      await this.awardXpAndStreak(
+        attempt.userId,
+        correctCount,
+        analysis.scorePercent,
+      );
+      await this.syncTopicStatesFromDiagnostic(attempt, analysis);
+    }
     if (attempt.mode === DiagnosticAttemptMode.TOPIC_PLACEMENT && !expired) {
       await this.applyTopicPlacement(attempt);
     }
@@ -753,6 +771,68 @@ export class DiagnosticsService {
     await this.topicStatesRepository.save(state);
   }
 
+  private async awardXpAndStreak(
+    userId: string,
+    correctCount: number,
+    scorePercent: number,
+  ): Promise<void> {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) return;
+    const correctXp = correctCount * XP_PER_CORRECT_ANSWER;
+    const bonusXp = scorePercent >= 80 ? XP_HIGH_SCORE_BONUS : 0;
+    const xpEarned = Math.max(
+      XP_MINIMUM_ATTEMPT,
+      XP_PER_DIAGNOSTIC_SUBMITTED + correctXp + bonusXp,
+    );
+    user.xp += xpEarned;
+    user.level = levelForXp(user.xp);
+    user.streak += 1;
+    await this.usersRepository.save(user);
+  }
+
+  private async syncTopicStatesFromDiagnostic(
+    attempt: DiagnosticAttempt,
+    analysis: DiagnosticAnalysis,
+  ): Promise<void> {
+    if (!analysis.topicPerformance || analysis.topicPerformance.length === 0)
+      return;
+    for (const row of analysis.topicPerformance) {
+      const chapter = row.chapter ?? attempt.chapterScope[0] ?? '';
+      const topic = row.topic ?? row.label;
+      const existing = await this.topicStatesRepository.findOne({
+        where: {
+          userId: attempt.userId,
+          subject: attempt.subject,
+          chapter,
+          topic,
+        },
+      });
+      if (existing && existing.totalAnswered >= row.total) continue;
+      const state =
+        existing ??
+        this.topicStatesRepository.create({
+          userId: attempt.userId,
+          subject: attempt.subject,
+          chapter,
+          topic,
+          streakCounter: 0,
+          totalAnswered: 0,
+          totalCorrect: 0,
+          masteredAt: null,
+        });
+      state.totalAnswered = row.total;
+      state.totalCorrect = row.correct;
+      state.status = LearningTopicStatus.ACTIVE;
+      state.lastActivityAt = new Date();
+      if (!existing) {
+        state.currentLevel = this.placementLevel(
+          row.total > 0 ? (row.correct / row.total) * 100 : 0,
+        );
+      }
+      await this.topicStatesRepository.save(state);
+    }
+  }
+
   private placementLevel(score: number): number {
     if (score >= 85) return 9;
     if (score >= 70) return 7;
@@ -766,13 +846,21 @@ export class DiagnosticsService {
     answers: Map<string, DiagnosticAnswer>,
     correctCount: number,
   ): DiagnosticAnalysis {
-    const topics = new Map<string, { correct: number; total: number }>();
+    const topics = new Map<
+      string,
+      { correct: number; total: number; chapter?: string; subject?: string }
+    >();
     const blooms = new Map<string, { correct: number; total: number }>();
 
     for (const question of questions) {
       const correct =
         answers.get(question.id)?.selectedOption === question.correct_answer;
-      const topic = topics.get(question.topic) ?? { correct: 0, total: 0 };
+      const topic = topics.get(question.topic) ?? {
+        correct: 0,
+        total: 0,
+        chapter: question.chapter,
+        subject: question.subject,
+      };
       topic.total += 1;
       if (correct) topic.correct += 1;
       topics.set(question.topic, topic);
@@ -802,11 +890,19 @@ export class DiagnosticsService {
       totalMarks > 0 ? Math.round((earnedMarks / totalMarks) * 100) : 0;
     const makePerformance = (
       label: string,
-      values: { correct: number; total: number },
+      values: {
+        correct: number;
+        total: number;
+        chapter?: string;
+        subject?: string;
+      },
     ): PerformanceRow => {
       const score = Math.round((values.correct / values.total) * 100);
       return {
         label,
+        subject: values.subject,
+        chapter: values.chapter,
+        topic: label,
         correct: values.correct,
         total: values.total,
         score,

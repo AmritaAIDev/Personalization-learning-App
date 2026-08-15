@@ -45,6 +45,9 @@ export interface DiagnosticAttemptPayload {
 
 export interface PerformanceRow {
   label: string;
+  subject?: string;
+  chapter?: string;
+  topic?: string;
   correct: number;
   total: number;
   score: number;

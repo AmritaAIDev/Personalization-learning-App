@@ -14,6 +14,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   PenLine,
+  ShieldCheck,
   SquarePen,
   Timer,
   UserRound,
@@ -43,10 +44,11 @@ const navigation: Array<{
   { label: "Notebook", href: "/notebook", icon: NotebookTabs },
   { label: "Doubts", href: "/doubts", icon: HelpCircle },
   { label: "Content", href: "/content", icon: PenLine, roles: ["admin"] },
+  { label: "Admin", href: "/admin", icon: ShieldCheck, roles: ["admin"] },
 ];
 
 const overviewLabels = new Set(["Dashboard", "Journey"]);
-const planningLabels = new Set(["Content"]);
+const planningLabels = new Set(["Content", "Admin"]);
 const mobileLabels = new Set([
   "Dashboard",
   "Journey",
@@ -209,7 +211,7 @@ export default function Sidebar() {
             (!item.roles || item.roles.includes(user?.role ?? "student")),
         ) ? (
           <SidebarSection
-            title="Admin"
+            title="Manage"
             items={navigation.filter(
               (item) =>
                 planningLabels.has(item.label) &&

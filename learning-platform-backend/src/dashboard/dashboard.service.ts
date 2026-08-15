@@ -76,7 +76,12 @@ const EMPTY_DIAGNOSTICS_DASHBOARD: DiagnosticsDashboard = {
 const EMPTY_NOTEBOOK_MISTAKES: NotebookMistakes = {
   cards: [],
   total: 0,
-  summary: { practiceMistakes: 0, adaptiveMistakes: 0, weakTopics: [] },
+  summary: {
+    practiceMistakes: 0,
+    adaptiveMistakes: 0,
+    diagnosticMistakes: 0,
+    weakTopics: [],
+  },
 };
 
 /**
@@ -145,6 +150,14 @@ export class DashboardService {
     const dueCards = notebook.cards.filter(
       (card) => card.reviewState === 'DUE',
     );
+    const latestDiagnostic = diagnostics.recentAttempts[0];
+    const weakTopicFromDiagnostic =
+      latestDiagnostic && latestDiagnostic.weakTopics.length > 0
+        ? this.weakTopicToScope(
+            latestDiagnostic.weakTopics[0],
+            diagnostics.diagnostic,
+          )
+        : null;
     const revisionTopics = this.toRevisionTopics(dueCards);
     const activeTopic = learning.activeTopics.find(
       (topic) => topic.status === LearningTopicStatus.ACTIVE,
@@ -155,6 +168,7 @@ export class DashboardService {
       activeTopic,
       dueCount: dueCards.length,
       suggestedTopic,
+      weakTopicFromDiagnostic,
     });
 
     return {
@@ -191,6 +205,7 @@ export class DashboardService {
           activeTopic,
           dueCount: dueCards.length,
           suggestedTopic,
+          weakTopicFromDiagnostic,
         }),
       },
       activity: this.getActivity(learning.history, diagnostics.recentAttempts),
@@ -336,6 +351,7 @@ export class DashboardService {
     activeTopic: LearningScope | null | undefined;
     dueCount: number;
     suggestedTopic: LearningScope | null | undefined;
+    weakTopicFromDiagnostic: LearningScope | null | undefined;
   }): DashboardAction {
     if (input.activeAttempt) {
       return {
@@ -372,6 +388,15 @@ export class DashboardService {
         scope: input.suggestedTopic,
       };
     }
+    if (input.weakTopicFromDiagnostic) {
+      return {
+        id: 'repair-diagnostic-weak-topic',
+        kind: 'CONTINUE_LEARNING',
+        title: `Practise ${input.weakTopicFromDiagnostic.topic}`,
+        detail: 'Your weakest topic from the diagnostic — repair it now.',
+        scope: input.weakTopicFromDiagnostic,
+      };
+    }
     return {
       id: 'find-topic',
       kind: 'FIND_TOPIC',
@@ -385,6 +410,7 @@ export class DashboardService {
     activeTopic: LearningScope | null | undefined;
     dueCount: number;
     suggestedTopic: LearningScope | null | undefined;
+    weakTopicFromDiagnostic: LearningScope | null | undefined;
   }): DashboardAction[] {
     const actions = [input.primary];
     if (input.dueCount > 0 && input.primary.kind !== 'REVIEW_MISTAKES') {
@@ -416,7 +442,33 @@ export class DashboardService {
         scope: input.suggestedTopic,
       });
     }
+    if (
+      input.weakTopicFromDiagnostic &&
+      input.primary.scope?.topic !== input.weakTopicFromDiagnostic.topic &&
+      actions.length < 3
+    ) {
+      actions.push({
+        id: 'repair-weak-topic',
+        kind: 'CONTINUE_LEARNING',
+        title: `Practise ${input.weakTopicFromDiagnostic.topic}`,
+        detail: 'Your weakest topic from the diagnostic.',
+        scope: input.weakTopicFromDiagnostic,
+      });
+    }
     return actions.slice(0, 3);
+  }
+
+  /** Maps a weak topic string from the diagnostic analysis to a LearningScope. */
+  private weakTopicToScope(
+    weakTopic: string,
+    diagnostic: { chapters: string[] },
+  ): LearningScope | null {
+    const chapter = diagnostic.chapters[0] ?? 'Electric Charges and Fields';
+    return {
+      subject: 'Physics',
+      chapter,
+      topic: weakTopic,
+    };
   }
 
   private toRevisionTopics(

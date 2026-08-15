@@ -6,9 +6,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * long) with a running hit count, so the notebook can surface the dominant
  * recurring gap for a topic instead of just the first common_errors entry.
  */
-export class CreateMisconceptionHits1786900000000
-  implements MigrationInterface
-{
+export class CreateMisconceptionHits1786900000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE "misconception_hits" (

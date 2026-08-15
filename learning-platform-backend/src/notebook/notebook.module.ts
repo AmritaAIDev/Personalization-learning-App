@@ -4,6 +4,7 @@ import { LearningAnswer } from '../adaptive/learning-answer.entity';
 import { MisconceptionsModule } from '../misconceptions/misconceptions.module';
 import { NotebookConceptSummary } from './notebook-concept-summary.entity';
 import { NotebookConceptService } from './notebook-concept.service';
+import { DiagnosticAnswer } from '../diagnostics/diagnostic-answer.entity';
 import { PracticeAnswer } from '../practice/practice-answer.entity';
 import { NotebookController } from './notebook.controller';
 import { NotebookService } from './notebook.service';
@@ -13,6 +14,7 @@ import { NotebookService } from './notebook.service';
     TypeOrmModule.forFeature([
       PracticeAnswer,
       LearningAnswer,
+      DiagnosticAnswer,
       NotebookConceptSummary,
     ]),
     MisconceptionsModule,

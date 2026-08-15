@@ -112,6 +112,10 @@ export default function AnalysisPage() {
     if (!params.attemptId) return;
     setLoading(true);
     setError(null);
+    const timeout = setTimeout(() => {
+      setLoading(false);
+      setError("The review is taking longer than expected. Please try again.");
+    }, 15000);
     try {
       setResult(
         await apiFetch<AnalysisPayload>(
@@ -125,6 +129,7 @@ export default function AnalysisPage() {
           : "Unable to load this analysis.",
       );
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   }, [params.attemptId]);

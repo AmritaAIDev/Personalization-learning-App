@@ -110,7 +110,10 @@ export default function SignupPage() {
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-[15px] font-semibold text-white transition duration-200 hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-70"
         >
           {submitting ? (
-            <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" />
+            <span className="flex items-center gap-2">
+              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+              Creating account…
+            </span>
           ) : (
             <>
               Create account{" "}

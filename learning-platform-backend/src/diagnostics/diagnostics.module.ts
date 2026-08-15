@@ -8,6 +8,7 @@ import { DiagnosticAttempt } from './diagnostic-attempt.entity';
 import { DiagnosticsController } from './diagnostics.controller';
 import { DiagnosticsService } from './diagnostics.service';
 import { LearningResource } from './learning-resource.entity';
+import { User } from '../users/user.entity';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { LearningResource } from './learning-resource.entity';
       LearningResource,
       Question,
       LearningTopicState,
+      User,
     ]),
     AgentModule,
   ],

@@ -30,6 +30,10 @@ describe('DiagnosticsService', () => {
     create: jest.fn(),
     save: jest.fn(),
   };
+  const usersRepository = {
+    findOne: jest.fn(),
+    save: jest.fn(),
+  };
   const agentService = {
     generateTutorResponse: jest.fn(),
     retrieveSupplementalSources: jest.fn(),
@@ -44,6 +48,7 @@ describe('DiagnosticsService', () => {
       questionsRepository as never,
       resourcesRepository as never,
       topicStatesRepository as never,
+      usersRepository as never,
       agentService as never,
     );
     agentService.retrieveSupplementalSources.mockResolvedValue([]);
@@ -131,6 +136,8 @@ describe('DiagnosticsService', () => {
       correctCount: 0,
       scorePercent: 0,
       submittedAt: null,
+      subject: 'Physics',
+      chapterScope: ['Electric Charges and Fields'],
     };
     attemptsRepository.findOne.mockResolvedValue(attempt);
     questionsRepository.find.mockResolvedValue([
@@ -151,6 +158,17 @@ describe('DiagnosticsService', () => {
     attemptsRepository.save.mockImplementation(
       async (savedAttempt) => savedAttempt,
     );
+
+    topicStatesRepository.findOne.mockResolvedValue(null);
+    usersRepository.findOne.mockResolvedValue({
+      id: 'student-1',
+      xp: 0,
+      level: 1,
+      streak: 0,
+    });
+    topicStatesRepository.create.mockImplementation((data) => data);
+    topicStatesRepository.save.mockImplementation(async (data) => data);
+    usersRepository.save.mockImplementation(async (data) => data);
 
     const result = await service.submitAttempt('student-1', 'attempt-1');
 

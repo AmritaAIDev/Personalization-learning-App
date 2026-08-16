@@ -43,6 +43,14 @@ export interface AdminQuestionRecord {
   updated_at: string;
 }
 
+/** Header counts for the content studio dashboard. */
+export interface ContentStats {
+  drafts: number;
+  published: number;
+  archived: number;
+  openReports: number;
+}
+
 /** A published question whose tagged difficulty may not match how students actually perform on it. */
 export interface DifficultyCalibrationRow {
   id: string;

@@ -16,6 +16,7 @@ import {
 } from './question.entity';
 import { QuestionReport, QuestionReportStatus } from './question-report.entity';
 import { GeneratedLearningQuestion } from './adaptive/generated-learning-question.entity';
+import { TopicsService } from './topics/topics.service';
 import {
   GeneratedLearningQuestionStatus,
   LearningQuestionSource,
@@ -167,7 +168,115 @@ export class QuestionsService {
     private readonly generatedQuestionsRepository: Repository<GeneratedLearningQuestion>,
     @InjectRepository(QuestionReport)
     private readonly questionReportsRepository: Repository<QuestionReport>,
+    private readonly topicsService: TopicsService,
   ) {}
+
+  /**
+   * Syllabus topics with fewer published questions than `threshold`, sorted
+   * thinnest-first, so the content studio can point admins at real gaps
+   * instead of guessing what to generate next.
+   */
+  async getCoverageGaps(
+    threshold = 3,
+    limit = 20,
+  ): Promise<
+    Array<{
+      subjectId: string;
+      subject: string;
+      chapterId: string;
+      chapter: string;
+      topicId: string;
+      topic: string;
+      publishedCount: number;
+    }>
+  > {
+    const tree = await this.topicsService.getTopicTree();
+    const triples: Array<{
+      subjectId: string;
+      subject: string;
+      chapterId: string;
+      chapter: string;
+      topicId: string;
+      topic: string;
+    }> = [];
+    for (const subjectNode of tree) {
+      for (const chapterNode of subjectNode.children) {
+        for (const topicNode of chapterNode.children) {
+          triples.push({
+            subjectId: subjectNode.id,
+            subject: subjectNode.name,
+            chapterId: chapterNode.id,
+            chapter: chapterNode.name,
+            topicId: topicNode.id,
+            topic: topicNode.name,
+          });
+        }
+      }
+    }
+    if (triples.length === 0) return [];
+
+    const counts = await this.questionsRepository
+      .createQueryBuilder('question')
+      .select('question.subject', 'subject')
+      .addSelect('question.chapter', 'chapter')
+      .addSelect('question.topic', 'topic')
+      .addSelect('COUNT(*)', 'count')
+      .where('question.status = :status', {
+        status: QuestionPublicationStatus.PUBLISHED,
+      })
+      .groupBy('question.subject')
+      .addGroupBy('question.chapter')
+      .addGroupBy('question.topic')
+      .getRawMany<{
+        subject: string;
+        chapter: string;
+        topic: string;
+        count: string;
+      }>();
+
+    const countMap = new Map<string, number>();
+    for (const row of counts) {
+      countMap.set(
+        `${row.subject}|${row.chapter}|${row.topic}`,
+        Number(row.count),
+      );
+    }
+
+    return triples
+      .map((triple) => ({
+        ...triple,
+        publishedCount:
+          countMap.get(`${triple.subject}|${triple.chapter}|${triple.topic}`) ??
+          0,
+      }))
+      .filter((triple) => triple.publishedCount < threshold)
+      .sort((a, b) => a.publishedCount - b.publishedCount)
+      .slice(0, limit);
+  }
+
+  /** Header counts for the content studio dashboard. */
+  async getContentStats(): Promise<{
+    drafts: number;
+    published: number;
+    archived: number;
+    openReports: number;
+  }> {
+    const [drafts, published, archived, openReports] = await Promise.all([
+      this.questionsRepository.count({
+        where: { status: QuestionPublicationStatus.DRAFT },
+      }),
+      this.questionsRepository.count({
+        where: { status: QuestionPublicationStatus.PUBLISHED },
+      }),
+      this.questionsRepository.count({
+        where: { status: QuestionPublicationStatus.ARCHIVED },
+      }),
+      this.questionReportsRepository.count({
+        where: { status: QuestionReportStatus.OPEN },
+      }),
+    ]);
+    return { drafts, published, archived, openReports };
+  }
 
   /** Fetch bank questions, optionally filtered by the tagged dimensions. */
   async findAll(filters: QuestionFilters = {}): Promise<Question[]> {

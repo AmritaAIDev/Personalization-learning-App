@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Archive,
   CheckCircle2,
@@ -16,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ApiError, apiFetch } from "@/lib/api";
 import type {
   AdminQuestionRecord,
+  ContentStats,
   QuestionReport,
   QuestionReviewStatus,
 } from "@/lib/question-review-types";
@@ -24,6 +25,8 @@ import QuestionForm, {
 } from "@/components/content/QuestionForm";
 import BulkImportPanel from "@/components/content/BulkImportPanel";
 import CalibrationPanel from "@/components/content/CalibrationPanel";
+import GenerationStudio from "@/components/content/GenerationStudio";
+import SyllabusPanel from "@/components/content/SyllabusPanel";
 
 const REPORT_REASON_LABELS: Record<QuestionReport["reason"], string> = {
   WRONG_ANSWER: "Answer key looks wrong",
@@ -37,10 +40,9 @@ const statusOptions: QuestionReviewStatus[] = [
   "PUBLISHED",
   "ARCHIVED",
 ];
-const bloomLevels = ["Recall", "Comprehension", "Application", "Higher-Order"];
-const difficulties = ["Easy", "Medium", "Hard"];
 
 type ContentTab =
+  | "syllabus"
   | "review"
   | "generate"
   | "add"
@@ -49,8 +51,9 @@ type ContentTab =
   | "reports";
 
 const TABS: Array<{ value: ContentTab; label: string }> = [
+  { value: "generate", label: "AI studio" },
+  { value: "syllabus", label: "Syllabus" },
   { value: "review", label: "Review queue" },
-  { value: "generate", label: "Generate" },
   { value: "add", label: "Add question" },
   { value: "bulk", label: "Bulk import" },
   { value: "calibration", label: "Calibration" },
@@ -59,11 +62,11 @@ const TABS: Array<{ value: ContentTab; label: string }> = [
 
 export default function ContentReviewPage() {
   const { user } = useAuth();
-  const [tab, setTab] = useState<ContentTab>("review");
+  const [tab, setTab] = useState<ContentTab>("generate");
   const [status, setStatus] = useState<QuestionReviewStatus>("DRAFT");
   const [records, setRecords] = useState<AdminQuestionRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
+  const [stats, setStats] = useState<ContentStats | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [savingEditId, setSavingEditId] = useState<string | null>(null);
@@ -72,13 +75,6 @@ export default function ContentReviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({
-    subject: "Physics",
-    chapter: "Electric Charges and Fields",
-    topic: "Coulomb's Law and Charge",
-    bloomLevel: "Application",
-    difficulty: "Medium",
-  });
   const [reports, setReports] = useState<QuestionReport[]>([]);
   const [reportsLoading, setReportsLoading] = useState(true);
   const [resolvingReportId, setResolvingReportId] = useState<string | null>(
@@ -151,33 +147,16 @@ export default function ContentReviewPage() {
     }
   };
 
-  const generateDraft = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setGenerating(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const draft = await apiFetch<AdminQuestionRecord>(
-        "/api/questions/generate",
-        {
-          method: "POST",
-          body: JSON.stringify(form),
-        },
-      );
-      if (status === "DRAFT") setRecords((current) => [draft, ...current]);
-      setNotice(
-        "A generated question was saved as a draft. Review it before publishing.",
-      );
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "The draft could not be generated.",
-      );
-    } finally {
-      setGenerating(false);
-    }
+  const loadStats = () => {
+    if (user?.role !== "admin") return;
+    void apiFetch<ContentStats>("/api/questions/stats", { memoryCacheTtlMs: 0 })
+      .then((data) => setStats(data))
+      .catch(() => {
+        // Non-critical header panel; the tabs below still function without it.
+      });
   };
+
+  useEffect(loadStats, [user?.role]);
 
   const createQuestion = async (payload: QuestionFormPayload) => {
     setCreating(true);
@@ -313,10 +292,11 @@ export default function ContentReviewPage() {
             Content governance
           </p>
           <h1 className="mt-2 font-heading page-title text-ink">
-            Question review studio
+            Content studio
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
-            Add, edit, import, and publish learner-ready questions.
+            Generate, review, and publish learner-ready questions — batch AI
+            drafting first, hand-authoring and imports when you need them.
           </p>
         </div>
         <span className="inline-flex items-center gap-2 self-start rounded-full bg-primary-tint px-3 py-2 text-xs font-bold text-emerald-800 lg:self-auto">
@@ -324,6 +304,29 @@ export default function ContentReviewPage() {
           workflow
         </span>
       </header>
+
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <ContentStatCard
+          icon={<FilePenLine className="h-4 w-4" aria-hidden="true" />}
+          label="Drafts"
+          value={stats?.drafts ?? "—"}
+        />
+        <ContentStatCard
+          icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+          label="Published"
+          value={stats?.published ?? "—"}
+        />
+        <ContentStatCard
+          icon={<Archive className="h-4 w-4" aria-hidden="true" />}
+          label="Archived"
+          value={stats?.archived ?? "—"}
+        />
+        <ContentStatCard
+          icon={<Flag className="h-4 w-4" aria-hidden="true" />}
+          label="Open reports"
+          value={stats?.openReports ?? "—"}
+        />
+      </div>
 
       <nav
         role="tablist"
@@ -367,126 +370,10 @@ export default function ContentReviewPage() {
         </p>
       ) : null}
 
+      {tab === "syllabus" ? <SyllabusPanel /> : null}
+
       {tab === "generate" ? (
-        <section className="mt-6 rounded-[1.75rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:p-6">
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary-tint text-primary">
-              <FilePenLine className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div>
-              <h2 className="font-heading text-xl font-bold text-ink">
-                Generate a review draft
-              </h2>
-              <p className="mt-0.5 text-sm text-ink-soft">
-                The model must return four validated options and a reasoned
-                explanation.
-              </p>
-            </div>
-          </div>
-          <form
-            onSubmit={(event) => void generateDraft(event)}
-            className="mt-6 grid max-w-xl gap-4"
-          >
-            <label className="block">
-              <span className="mb-2 block text-sm font-bold text-ink">
-                Subject
-              </span>
-              <input
-                required
-                value={form.subject}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    subject: event.target.value,
-                  }))
-                }
-                className="w-full rounded-xl border border-hairline px-3 py-2.5 text-sm text-ink focus:border-primary focus:ring-4 focus:ring-primary/10"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm font-bold text-ink">
-                Chapter
-              </span>
-              <input
-                required
-                value={form.chapter}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    chapter: event.target.value,
-                  }))
-                }
-                className="w-full rounded-xl border border-hairline px-3 py-2.5 text-sm text-ink focus:border-primary focus:ring-4 focus:ring-primary/10"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm font-bold text-ink">
-                Topic
-              </span>
-              <input
-                required
-                value={form.topic}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    topic: event.target.value,
-                  }))
-                }
-                className="w-full rounded-xl border border-hairline px-3 py-2.5 text-sm text-ink focus:border-primary focus:ring-4 focus:ring-primary/10"
-              />
-            </label>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-2 block text-sm font-bold text-ink">
-                  Bloom level
-                </span>
-                <select
-                  value={form.bloomLevel}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      bloomLevel: event.target.value,
-                    }))
-                  }
-                  className="w-full rounded-xl border border-hairline bg-surface px-3 py-2.5 text-sm text-ink focus:border-primary focus:ring-4 focus:ring-primary/10"
-                >
-                  {bloomLevels.map((level) => (
-                    <option key={level}>{level}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <span className="mb-2 block text-sm font-bold text-ink">
-                  Difficulty
-                </span>
-                <select
-                  value={form.difficulty}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      difficulty: event.target.value,
-                    }))
-                  }
-                  className="w-full rounded-xl border border-hairline bg-surface px-3 py-2.5 text-sm text-ink focus:border-primary focus:ring-4 focus:ring-primary/10"
-                >
-                  {difficulties.map((difficulty) => (
-                    <option key={difficulty}>{difficulty}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <button
-              type="submit"
-              disabled={generating}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(20,20,30,0.22)] transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {generating ? (
-                <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" />
-              ) : null}{" "}
-              Generate draft
-            </button>
-          </form>
-        </section>
+        <GenerationStudio onQuestionPublished={loadStats} />
       ) : null}
 
       {tab === "add" ? (
@@ -858,6 +745,28 @@ export default function ContentReviewPage() {
           )}
         </section>
       ) : null}
+    </div>
+  );
+}
+
+function ContentStatCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: number | string;
+}) {
+  return (
+    <div className="rounded-2xl border border-hairline bg-surface p-4">
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-ink-mute">
+        <span className="grid h-6 w-6 place-items-center rounded-lg bg-primary-tint text-primary">
+          {icon}
+        </span>
+        {label}
+      </p>
+      <p className="mt-2 font-heading text-2xl font-bold text-ink">{value}</p>
     </div>
   );
 }

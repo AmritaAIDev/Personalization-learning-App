@@ -6,6 +6,7 @@ import { Question } from './question.entity';
 import { QuestionReport } from './question-report.entity';
 import { GeneratedLearningQuestion } from './adaptive/generated-learning-question.entity';
 import { AgentModule } from './agent/agent.module';
+import { TopicsModule } from './topics/topics.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AgentModule } from './agent/agent.module';
       GeneratedLearningQuestion,
     ]),
     AgentModule,
+    TopicsModule,
   ],
   controllers: [QuestionsController],
   providers: [QuestionsService],

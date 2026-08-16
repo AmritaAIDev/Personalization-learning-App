@@ -36,13 +36,13 @@ const navigation: Array<{
   icon: LucideIcon;
   roles?: readonly UserRole[];
 }> = [
-  { label: "Dashboard", href: "/", icon: Home },
-  { label: "Journey", href: "/journey", icon: Map },
-  { label: "Learn", href: "/learn", icon: Compass },
-  { label: "Practice", href: "/practice", icon: SquarePen },
-  { label: "Tests", href: "/tests", icon: Timer },
-  { label: "Notebook", href: "/notebook", icon: NotebookTabs },
-  { label: "Doubts", href: "/doubts", icon: HelpCircle },
+  { label: "Dashboard", href: "/", icon: Home, roles: ["student"] },
+  { label: "Journey", href: "/journey", icon: Map, roles: ["student"] },
+  { label: "Learn", href: "/learn", icon: Compass, roles: ["student"] },
+  { label: "Practice", href: "/practice", icon: SquarePen, roles: ["student"] },
+  { label: "Tests", href: "/tests", icon: Timer, roles: ["student"] },
+  { label: "Notebook", href: "/notebook", icon: NotebookTabs, roles: ["student"] },
+  { label: "Doubts", href: "/doubts", icon: HelpCircle, roles: ["student"] },
   { label: "Content", href: "/content", icon: PenLine, roles: ["admin"] },
   { label: "Admin", href: "/admin", icon: ShieldCheck, roles: ["admin"] },
 ];
@@ -55,6 +55,8 @@ const mobileLabels = new Set([
   "Learn",
   "Practice",
   "Tests",
+  "Content",
+  "Admin",
 ]);
 
 type CompactNavItem = {
@@ -197,21 +199,35 @@ export default function Sidebar() {
       </nav>
 
       <div className="hidden w-full lg:block">
-        <SidebarSection
-          title="Overview"
-          items={navigation.filter((item) => overviewLabels.has(item.label))}
-          pathname={pathname}
-          collapsed={isCollapsed}
-        />
-        <div className="my-3 border-t border-hairline" />
-        <WorkspaceSelector compact={isCollapsed} />
+        {navigation.some(
+          (item) =>
+            overviewLabels.has(item.label) &&
+            (!item.roles || item.roles.includes(user?.role ?? "student")),
+        ) ? (
+          <>
+            <SidebarSection
+              title="Overview"
+              items={navigation.filter(
+                (item) =>
+                  overviewLabels.has(item.label) &&
+                  (!item.roles || item.roles.includes(user?.role ?? "student")),
+              )}
+              pathname={pathname}
+              collapsed={isCollapsed}
+            />
+            <div className="my-3 border-t border-hairline" />
+          </>
+        ) : null}
+        {user?.role !== "admin" ? (
+          <WorkspaceSelector compact={isCollapsed} />
+        ) : null}
         {navigation.some(
           (item) =>
             planningLabels.has(item.label) &&
             (!item.roles || item.roles.includes(user?.role ?? "student")),
         ) ? (
           <SidebarSection
-            title="Manage"
+            title={user?.role === "admin" ? "Console" : "Manage"}
             items={navigation.filter(
               (item) =>
                 planningLabels.has(item.label) &&

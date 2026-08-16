@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Topic } from './topic.entity';
@@ -46,9 +50,47 @@ export class TopicsService {
   }
 
   // Create a new topic (Subject, Chapter, etc.)
-  async createTopic(data: Partial<Topic>): Promise<Topic> {
-    const topic = this.topicsRepository.create(data);
+  async createTopic(data: {
+    name: string;
+    description?: string;
+    level: Topic['level'];
+    parentId?: string;
+  }): Promise<Topic> {
+    const topic = this.topicsRepository.create({
+      name: data.name,
+      description: data.description,
+      level: data.level,
+      parent: data.parentId ? { id: data.parentId } : undefined,
+    });
     return this.topicsRepository.save(topic);
+  }
+
+  // Update a topic's name, description, or position in the hierarchy
+  async updateTopic(
+    id: string,
+    data: { name?: string; description?: string; parentId?: string | null },
+  ): Promise<Topic> {
+    const topic = await this.topicsRepository.findOne({ where: { id } });
+    if (!topic) {
+      throw new NotFoundException('Topic not found.');
+    }
+    if (data.name !== undefined) topic.name = data.name;
+    if (data.description !== undefined) topic.description = data.description;
+    if (data.parentId !== undefined) {
+      if (data.parentId === id) {
+        throw new BadRequestException('A topic cannot be its own parent.');
+      }
+      topic.parent = data.parentId ? ({ id: data.parentId } as Topic) : null;
+    }
+    return this.topicsRepository.save(topic);
+  }
+
+  // Delete a topic. Child topics cascade-delete at the database level.
+  async deleteTopic(id: string): Promise<void> {
+    const result = await this.topicsRepository.delete(id);
+    if (!result.affected) {
+      throw new NotFoundException('Topic not found.');
+    }
   }
 
   // Get prerequisites for a specific topic (Fallback logic)

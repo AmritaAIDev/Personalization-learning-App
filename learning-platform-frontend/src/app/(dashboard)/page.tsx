@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { CircleAlert } from "lucide-react";
 import StudentActionCenter from "@/components/dashboard/StudentActionCenter";
 import LearningOverview from "@/components/learning/LearningOverview";
 import TopicSearch from "@/components/search/TopicSearch";
+import { useAuth } from "@/context/AuthContext";
 import { LEARNING_DATA_UPDATED_EVENT, apiFetch } from "@/lib/api";
 import type { StudentDashboardPayload } from "@/lib/student-dashboard-types";
 import { useApiResource } from "@/lib/useApiResource";
@@ -22,6 +24,8 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  const router = useRouter();
   const fetchDashboard = useCallback(
     () => apiFetch<StudentDashboardPayload>("/api/dashboard/student"),
     [],
@@ -41,7 +45,15 @@ export default function DashboardPage() {
       );
   }, [loadDashboard]);
 
+  useEffect(() => {
+    if (user?.role === "admin") router.replace("/admin");
+  }, [user?.role, router]);
+
   const firstName = data?.student.name.split(" ")[0] || "learner";
+
+  if (user?.role === "admin") {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className="min-h-screen bg-canvas pb-20">

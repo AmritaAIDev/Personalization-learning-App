@@ -49,6 +49,7 @@ import { MisconceptionHit } from './misconceptions/misconception-hit.entity';
 import { MisconceptionsModule } from './misconceptions/misconceptions.module';
 import { TargetedPracticeQuestion } from './targeted-practice/targeted-practice-question.entity';
 import { TargetedPracticeModule } from './targeted-practice/targeted-practice.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -124,6 +125,7 @@ import { TargetedPracticeModule } from './targeted-practice/targeted-practice.mo
     HealthModule,
     MisconceptionsModule,
     TargetedPracticeModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

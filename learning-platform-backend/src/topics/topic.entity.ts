@@ -42,7 +42,7 @@ export class Topic {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'parent_id' })
-  parent: Topic;
+  parent: Topic | null;
 
   @OneToMany(() => Topic, (topic) => topic.parent)
   children: Topic[];

@@ -45,6 +45,34 @@ export class QuestionsController {
     return { data: await this.questionsService.findAdminAll(filters) };
   }
 
+  /** Header counts for the content studio dashboard. */
+  @Get('stats')
+  @Roles('admin')
+  async getContentStats() {
+    return { data: await this.questionsService.getContentStats() };
+  }
+
+  /** Syllabus topics thinnest on published questions, for the studio's "fill this gap" flow. */
+  @Get('coverage-gaps')
+  @Roles('admin')
+  async getCoverageGaps(
+    @Query('threshold') threshold?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsedThreshold = Number(threshold);
+    const parsedLimit = Number(limit);
+    return {
+      data: await this.questionsService.getCoverageGaps(
+        Number.isFinite(parsedThreshold) && parsedThreshold > 0
+          ? parsedThreshold
+          : undefined,
+        Number.isFinite(parsedLimit) && parsedLimit > 0
+          ? parsedLimit
+          : undefined,
+      ),
+    };
+  }
+
   @Get('catalog')
   async getCatalog(@Query() query: SearchQuestionCatalogDto) {
     const data = await this.questionsService.searchCatalog(

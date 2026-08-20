@@ -22,7 +22,48 @@ import type {
   NotebookConceptsResponse,
   NotebookMistakeCard,
 } from "@/lib/notebook-types";
+import type { FlashcardRating } from "@/lib/learning-types";
+import AttemptResultQuestionRow from "@/components/results/AttemptResultQuestionRow";
 import TargetedPracticeCard from "@/components/learning/TargetedPracticeCard";
+
+type ReviewResult = { dueReviewAt: string; reviewState: "UPCOMING" };
+type OnReviewed = (cardId: string, next: ReviewResult) => void;
+
+// Mirrors FlashcardDeck.tsx's RATINGS — same labels/captions/tone colors,
+// so recall-rating reads as one consistent pattern across the app.
+const MISTAKE_RATINGS: Array<{
+  value: FlashcardRating;
+  label: string;
+  caption: string;
+  className: string;
+}> = [
+  {
+    value: "AGAIN",
+    label: "Again",
+    caption: "Show soon",
+    className: "border-danger/25 bg-danger-tint text-danger hover:opacity-80",
+  },
+  {
+    value: "HARD",
+    label: "Hard",
+    caption: "Shaky",
+    className:
+      "border-warning/25 bg-warning-tint text-warning hover:opacity-80",
+  },
+  {
+    value: "GOOD",
+    label: "Good",
+    caption: "Recalled",
+    className:
+      "border-success/25 bg-success-tint text-success hover:opacity-80",
+  },
+  {
+    value: "EASY",
+    label: "Easy",
+    caption: "Instant",
+    className: "border-info/25 bg-info-tint text-info hover:opacity-80",
+  },
+];
 
 const StudyMarkdown = dynamic(
   () => import("@/components/learning/StudyMarkdown"),
@@ -59,9 +100,9 @@ function NotebookSkeleton() {
           key={item}
           className="rounded-2xl border border-hairline bg-surface p-4"
         >
-          <div className="h-4 w-2/5 animate-pulse rounded-full bg-ink/10" />
-          <div className="mt-3 h-3 w-full animate-pulse rounded-full bg-ink/8" />
-          <div className="mt-2 h-3 w-3/4 animate-pulse rounded-full bg-ink/8" />
+          <div className="h-4 w-2/5 animate-pulse rounded-full bg-ink-solid/10" />
+          <div className="mt-3 h-3 w-full animate-pulse rounded-full bg-ink-solid/8" />
+          <div className="mt-2 h-3 w-3/4 animate-pulse rounded-full bg-ink-solid/8" />
         </div>
       ))}
     </div>
@@ -84,7 +125,7 @@ function EmptyNotebook() {
       <div className="mt-5 flex justify-center">
         <Link
           href="/practice"
-          className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink/90"
+          className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-ink-solid px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink-solid/90"
         >
           Start practice
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -94,7 +135,30 @@ function EmptyNotebook() {
   );
 }
 
-function MistakeDetail({ card }: { card: NotebookMistakeCard }) {
+function MistakeDetail({
+  card,
+  onReviewed,
+}: {
+  card: NotebookMistakeCard;
+  onReviewed: OnReviewed;
+}) {
+  const [submitting, setSubmitting] = useState<FlashcardRating | null>(null);
+
+  const rate = async (rating: FlashcardRating) => {
+    setSubmitting(rating);
+    try {
+      const result = await apiFetch<{ data: ReviewResult }>(
+        `/api/notebook/mistakes/${card.source}/${card.questionId}/review`,
+        { method: "POST", body: JSON.stringify({ rating }) },
+      );
+      onReviewed(card.id, result.data);
+    } catch {
+      // A failed rating just leaves the card due — safe to retry.
+    } finally {
+      setSubmitting(null);
+    }
+  };
+
   return (
     <article className="rounded-xl border border-hairline bg-canvas p-4">
       <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em]">
@@ -113,26 +177,15 @@ function MistakeDetail({ card }: { card: NotebookMistakeCard }) {
         {card.questionText}
       </StudyMarkdown>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <div className="rounded-xl border border-rose-200/60 bg-rose-50 px-3 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-rose-500">
-            Your answer
-          </p>
-          <StudyMarkdown className="mt-0.5 text-[13px] font-semibold text-rose-800">
-            {card.selectedOption ?? "Not answered"}
-          </StudyMarkdown>
-        </div>
-        <div className="rounded-xl border border-emerald-200/70 bg-emerald-50 px-3 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-600">
-            Correct answer
-          </p>
-          <StudyMarkdown className="mt-0.5 text-[13px] font-semibold text-emerald-800">
-            {card.correctOption}
-          </StudyMarkdown>
-        </div>
-      </div>
+      <AttemptResultQuestionRow
+        isCorrect={false}
+        yourAnswer={
+          <StudyMarkdown>{card.selectedOption ?? "Not answered"}</StudyMarkdown>
+        }
+        correctAnswer={<StudyMarkdown>{card.correctOption}</StudyMarkdown>}
+      />
 
-      <div className="mt-3 flex items-start gap-2 rounded-xl border border-hairline bg-white px-3 py-2">
+      <div className="mt-3 flex items-start gap-2 rounded-xl border border-hairline bg-canvas px-3 py-2">
         <Brain
           className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary"
           aria-hidden="true"
@@ -142,7 +195,7 @@ function MistakeDetail({ card }: { card: NotebookMistakeCard }) {
         </p>
       </div>
 
-      <details className="mt-2 rounded-xl border border-hairline bg-white px-3 py-2">
+      <details className="mt-2 rounded-xl border border-hairline bg-canvas px-3 py-2">
         <summary className="cursor-pointer text-[13px] font-semibold text-ink">
           View worked solution
         </summary>
@@ -150,6 +203,30 @@ function MistakeDetail({ card }: { card: NotebookMistakeCard }) {
           {card.solution}
         </StudyMarkdown>
       </details>
+
+      {card.reviewState === "DUE" ? (
+        <div className="mt-3 border-t border-hairline pt-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-mute">
+            How well did you recall this?
+          </p>
+          <div className="mt-2 grid grid-cols-4 gap-2">
+            {MISTAKE_RATINGS.map((rating) => (
+              <button
+                key={rating.value}
+                type="button"
+                disabled={submitting !== null}
+                onClick={() => void rate(rating.value)}
+                className={`min-h-11 rounded-xl border px-2 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${rating.className}`}
+              >
+                <span className="block">{rating.label}</span>
+                <span className="mt-0.5 block text-[10px] font-semibold opacity-70">
+                  {submitting === rating.value ? "Saving…" : rating.caption}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -187,7 +264,13 @@ function MisconceptionPractice({ group }: { group: NotebookConceptGroup }) {
   );
 }
 
-function ConceptGroupRow({ group }: { group: NotebookConceptGroup }) {
+function ConceptGroupRow({
+  group,
+  onReviewed,
+}: {
+  group: NotebookConceptGroup;
+  onReviewed: (groupId: string, cardId: string, next: ReviewResult) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const dueLabel =
     group.dueCount > 0 ? `${group.dueCount} due for review` : "Up to date";
@@ -212,7 +295,7 @@ function ConceptGroupRow({ group }: { group: NotebookConceptGroup }) {
           </span>
           <span
             className={`px-1 ${
-              group.dueCount > 0 ? "text-amber-700" : "text-ink-mute"
+              group.dueCount > 0 ? "text-warning" : "text-ink-mute"
             }`}
           >
             {dueLabel}
@@ -257,7 +340,7 @@ function ConceptGroupRow({ group }: { group: NotebookConceptGroup }) {
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-hairline pt-3">
         <Link
           href={practiceHref(group)}
-          className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-ink px-3.5 py-2 text-[13px] font-semibold text-white transition hover:bg-ink/90"
+          className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-ink-solid px-3.5 py-2 text-[13px] font-semibold text-white transition hover:bg-ink-solid/90"
         >
           Practice this concept
           <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
@@ -281,7 +364,13 @@ function ConceptGroupRow({ group }: { group: NotebookConceptGroup }) {
       {expanded ? (
         <div className="mt-3 grid gap-3">
           {group.cards.map((card) => (
-            <MistakeDetail key={card.id} card={card} />
+            <MistakeDetail
+              key={card.id}
+              card={card}
+              onReviewed={(cardId, next) =>
+                onReviewed(group.id, cardId, next)
+              }
+            />
           ))}
         </div>
       ) : null}
@@ -369,6 +458,32 @@ export default function NotebookPage() {
 
   const priority = sortedGroups[0] ?? null;
 
+  const handleReviewed = useCallback(
+    (groupId: string, cardId: string, next: ReviewResult) => {
+      setConcepts((current) => {
+        if (!current) return current;
+        const groups = current.groups.map((group) => {
+          if (group.id !== groupId) return group;
+          const cards = group.cards.map((card) =>
+            card.id === cardId
+              ? {
+                  ...card,
+                  dueReviewAt: next.dueReviewAt,
+                  reviewState: next.reviewState,
+                }
+              : card,
+          );
+          const dueCount = cards.filter(
+            (card) => card.reviewState === "DUE",
+          ).length;
+          return { ...group, cards, dueCount };
+        });
+        return { ...current, groups };
+      });
+    },
+    [],
+  );
+
   return (
     <div className="min-h-screen bg-canvas pb-20">
       <main className="mx-auto w-full max-w-6xl px-4 pt-6 sm:px-8 sm:pt-8 lg:px-10">
@@ -393,7 +508,7 @@ export default function NotebookPage() {
             ) : null}
             <Link
               href="/practice"
-              className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink/90"
+              className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-ink-solid px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink-solid/90"
             >
               Practice weak topics
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -422,7 +537,7 @@ export default function NotebookPage() {
         {loading ? <NotebookSkeleton /> : null}
 
         {!loading && error ? (
-          <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-800">
+          <div className="mt-5 rounded-2xl border border-danger/25 bg-danger-tint p-5 text-danger">
             <div className="flex items-start gap-3">
               <AlertCircle
                 className="mt-0.5 h-5 w-5 shrink-0"
@@ -434,7 +549,7 @@ export default function NotebookPage() {
                 <button
                   type="button"
                   onClick={() => void loadConcepts()}
-                  className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-bold text-white transition hover:bg-rose-700"
+                  className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg bg-danger px-3 py-1.5 text-sm font-bold text-white transition hover:opacity-90"
                 >
                   <RotateCcw className="h-4 w-4" aria-hidden="true" />
                   Try again
@@ -468,7 +583,7 @@ export default function NotebookPage() {
               <div className="mt-5 grid gap-5 lg:grid-cols-[20rem_minmax(0,1fr)]">
                 <aside className="space-y-3">
                   {priority ? (
-                    <section className="rounded-[1.5rem] bg-ink p-5 text-white shadow-[0_16px_34px_rgba(20,20,30,0.14)]">
+                    <section className="rounded-[1.5rem] bg-ink-solid p-5 text-white shadow-[0_16px_34px_rgba(20,20,30,0.14)]">
                       <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">
                         Repair priority
                       </p>
@@ -521,7 +636,11 @@ export default function NotebookPage() {
 
                 <section className="grid gap-3">
                   {sortedGroups.map((group) => (
-                    <ConceptGroupRow key={group.id} group={group} />
+                    <ConceptGroupRow
+                      key={group.id}
+                      group={group}
+                      onReviewed={handleReviewed}
+                    />
                   ))}
                   <p className="mt-1 flex items-center justify-center gap-1.5 text-[11px] font-medium text-ink-mute">
                     <CircleDot className="h-3 w-3" aria-hidden="true" />

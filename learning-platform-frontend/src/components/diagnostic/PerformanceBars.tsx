@@ -3,9 +3,9 @@
 import type { PerformanceRow } from "@/lib/diagnostic-types";
 
 const statusStyles = {
-  strong: "bg-emerald-100 text-emerald-800",
-  average: "bg-amber-100 text-amber-800",
-  weak: "bg-rose-100 text-rose-800",
+  strong: "bg-success-tint text-success",
+  average: "bg-warning-tint text-warning",
+  weak: "bg-danger-tint text-danger",
 };
 
 export default function PerformanceBars({
@@ -18,7 +18,7 @@ export default function PerformanceBars({
   rows: PerformanceRow[];
 }) {
   return (
-    <section className="rounded-2xl border border-hairline bg-white p-5 shadow-[0_8px_22px_rgba(20,20,30,0.04)] sm:p-6">
+    <section className="rounded-2xl border border-hairline bg-surface p-5 shadow-[0_8px_22px_rgba(20,20,30,0.04)] sm:p-6">
       <h2 className="font-heading text-lg font-bold text-ink">{title}</h2>
       <p className="mt-1 text-sm leading-6 text-ink-soft">{description}</p>
       <div className="mt-6 space-y-5">
@@ -33,11 +33,11 @@ export default function PerformanceBars({
               </span>
             </div>
             <div
-              className="h-2.5 overflow-hidden rounded-full bg-[#edf0f1]"
+              className="h-2.5 overflow-hidden rounded-full bg-canvas"
               aria-label={`${row.label}: ${row.score}%`}
             >
               <div
-                className={`h-full rounded-full ${row.status === "strong" ? "bg-emerald-500" : row.status === "average" ? "bg-amber-500" : "bg-rose-500"}`}
+                className={`h-full rounded-full ${row.status === "strong" ? "bg-success" : row.status === "average" ? "bg-warning" : "bg-danger"}`}
                 style={{ width: `${row.score}%` }}
               />
             </div>

@@ -94,7 +94,7 @@ export default function TopicPlacementGate({
             </p>
             {error ? (
               <p
-                className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800"
+                className="mt-4 rounded-xl bg-danger-tint px-4 py-3 text-sm text-danger"
                 role="alert"
               >
                 {error}
@@ -105,7 +105,7 @@ export default function TopicPlacementGate({
                 type="button"
                 onClick={() => void startPlacement()}
                 disabled={launching}
-                className="rounded-2xl bg-ink p-5 text-left text-white transition hover:-translate-y-0.5 hover:bg-primary disabled:opacity-60"
+                className="rounded-2xl bg-ink-solid p-5 text-left text-white transition hover:-translate-y-0.5 hover:bg-primary disabled:opacity-60"
               >
                 <span className="flex items-center justify-between text-sm font-semibold">
                   Take placement check{" "}
@@ -140,7 +140,7 @@ export default function TopicPlacementGate({
           <button
             type="button"
             onClick={startAtLevelOne}
-            className="rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-xl bg-ink-solid px-4 py-2 text-sm font-semibold text-white"
           >
             Start at Level 1
           </button>

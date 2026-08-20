@@ -319,7 +319,7 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
           <h1 className="min-w-0 truncate font-heading text-sm font-bold tracking-tight text-ink sm:text-base">
             {payload.attempt.title}
           </h1>
-          <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-ink px-2.5 py-1 text-[11px] font-bold text-white">
+          <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-ink-solid px-2.5 py-1 text-[11px] font-bold text-white">
             <Timer className="h-3 w-3" aria-hidden="true" />
             {formatDuration(elapsedSeconds)}
           </span>
@@ -348,7 +348,7 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
 
       {error && (
         <p
-          className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
+          className="mt-5 flex items-start gap-2 rounded-2xl border border-danger/20 bg-danger-tint px-4 py-3 text-sm font-medium text-danger"
           role="alert"
         >
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -443,7 +443,7 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
                 aria-pressed={isMarked}
                 className={`inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${
                   isMarked
-                    ? "border-amber-200 bg-amber-50 text-amber-800"
+                    ? "border-warning/25 bg-warning-tint text-warning"
                     : "border-hairline text-ink-soft hover:bg-canvas"
                 }`}
               >
@@ -482,7 +482,7 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
                 type="button"
                 onClick={() => goTo(currentIndex + 1)}
                 disabled={submitting}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-5 py-2.5 text-sm font-bold text-white transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink-solid px-5 py-2.5 text-sm font-bold text-white transition hover:bg-ink-solid/90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Next
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -520,14 +520,14 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
                     isCurrent
                       ? "bg-primary text-white ring-2 ring-primary/30"
                       : isAnswered
-                        ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        ? "bg-success-tint text-success hover:bg-success-tint"
                         : "bg-canvas text-ink-soft hover:bg-primary-tint"
                   }`}
                 >
                   {index + 1}
                   {isFlagged ? (
                     <span
-                      className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-500"
+                      className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-warning"
                       aria-hidden="true"
                     />
                   ) : null}
@@ -668,7 +668,7 @@ function SyncStatus({
 }) {
   if (sync.failed) {
     return (
-      <p className="flex items-center gap-2 text-xs font-semibold text-rose-700">
+      <p className="flex items-center gap-2 text-xs font-semibold text-danger">
         <CircleAlert className="h-4 w-4" aria-hidden="true" />
         {sync.pending} answer{sync.pending === 1 ? "" : "s"} not saved yet —
         retrying.
@@ -732,7 +732,7 @@ function SubmitConfirmation({
 
   return (
     <div
-      className="fixed inset-0 z-[80] grid place-items-end bg-ink/45 p-0 backdrop-blur-sm sm:place-items-center sm:p-6"
+      className="fixed inset-0 z-[80] grid place-items-end bg-ink-solid/45 p-0 backdrop-blur-sm sm:place-items-center sm:p-6"
       role="presentation"
       onClick={onCancel}
     >
@@ -799,7 +799,7 @@ function SubmitConfirmation({
         ) : null}
 
         {pendingSaves > 0 ? (
-          <p className="mt-5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+          <p className="mt-5 flex items-start gap-2 rounded-xl border border-warning/25 bg-warning-tint px-4 py-3 text-sm font-medium text-warning">
             <CircleAlert
               className="mt-0.5 h-4 w-4 shrink-0"
               aria-hidden="true"

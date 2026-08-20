@@ -366,7 +366,7 @@ export default function JourneyMap() {
   if (journeyError && journeyNodes.length === 0) {
     return (
       <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-5 py-10 text-center">
-        <CircleAlert className="h-9 w-9 text-rose-600" aria-hidden="true" />
+        <CircleAlert className="h-9 w-9 text-danger" aria-hidden="true" />
         <h1 className="mt-4 font-heading text-2xl font-bold text-ink">
           Your journey could not be loaded
         </h1>
@@ -460,7 +460,7 @@ export default function JourneyMap() {
                     className={`animate-rise group relative overflow-hidden rounded-2xl border p-4 text-left transition-[border-color,background-color,transform,box-shadow] duration-300 hover:-translate-y-0.5 ${
                       selected
                         ? "border-primary/35 bg-primary-tint shadow-[0_12px_24px_rgba(20,20,30,0.07)]"
-                        : "border-hairline bg-white hover:border-primary/25 hover:shadow-[0_12px_24px_rgba(20,20,30,0.055)]"
+                        : "border-hairline bg-surface hover:border-primary/25 hover:shadow-[0_12px_24px_rgba(20,20,30,0.055)]"
                     }`}
                     style={{ animationDelay: `${40 + index * 55}ms` }}
                   >
@@ -479,7 +479,7 @@ export default function JourneyMap() {
                         </span>
                       </span>
                       <span
-                        className={`rounded-full bg-white px-2 py-1 text-[10px] font-bold ${visual.badge}`}
+                        className={`rounded-full bg-surface px-2 py-1 text-[10px] font-bold ${visual.badge}`}
                       >
                         {summary.average}%
                       </span>
@@ -513,7 +513,7 @@ export default function JourneyMap() {
 
         <main className="min-w-0 space-y-5 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto lg:pr-2 lg:custom-scrollbar">
           <section
-            className="overflow-hidden rounded-[1.75rem] bg-ink p-6 text-white animate-rise elevate sm:p-7"
+            className="overflow-hidden rounded-[1.75rem] bg-ink-solid p-6 text-white animate-rise elevate sm:p-7"
             style={{ animationDelay: "80ms" }}
           >
             <div className="flex items-start justify-between gap-4">

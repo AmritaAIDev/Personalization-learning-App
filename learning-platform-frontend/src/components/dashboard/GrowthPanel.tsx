@@ -229,7 +229,7 @@ export default function GrowthPanel() {
     return (
       <section className="mt-10">
         <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-          <CircleAlert className="h-4 w-4 text-rose-500" aria-hidden="true" />
+          <CircleAlert className="h-4 w-4 text-danger" aria-hidden="true" />
           Readiness map unavailable
         </div>
         <p className="mt-4 rounded-2xl bg-surface p-5 text-sm text-ink-soft hairline">
@@ -486,7 +486,7 @@ export default function GrowthPanel() {
                       {chapter.subject} • weakest: {chapter.weakestTopic.topic}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-ink-soft hairline">
+                  <span className="shrink-0 rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink-soft hairline">
                     {chapter.score}%
                   </span>
                 </div>

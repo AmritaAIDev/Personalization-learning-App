@@ -78,18 +78,18 @@ export default function WorkspaceSelector({
       <div
         className={`rounded-[1.35rem] border transition ${compact ? "border-transparent bg-transparent p-0" : "p-1.5"} ${
           isWorkspaceRoute
-            ? "border-primary/25 bg-white shadow-[0_12px_30px_rgba(28,78,56,0.07)]"
+            ? "border-primary/25 bg-surface shadow-[0_12px_30px_rgba(28,78,56,0.07)]"
             : "border-hairline bg-canvas/50"
         }`}
       >
         <button
           type="button"
           onClick={() => setPickerOpen(true)}
-          className={`flex w-full items-center gap-2.5 rounded-[0.95rem] bg-[linear-gradient(135deg,#fff,#f7faf8)] text-left ring-1 ring-hairline transition hover:bg-primary-tint/45 hover:ring-primary/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${compact ? "mx-auto h-10 w-10 justify-center p-0" : "p-2.5"}`}
+          className={`flex w-full items-center gap-2.5 rounded-[0.95rem] bg-surface text-left ring-1 ring-hairline transition hover:bg-primary-tint/45 hover:ring-primary/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${compact ? "mx-auto h-10 w-10 justify-center p-0" : "p-2.5"}`}
           aria-haspopup="dialog"
           aria-expanded={pickerOpen}
         >
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-ink text-white shadow-sm">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-ink-solid text-white shadow-sm">
             <Layers3 className="h-4 w-4" aria-hidden="true" />
           </span>
           <span className={compact ? "sr-only" : "min-w-0 flex-1"}>
@@ -198,8 +198,8 @@ function WorkspaceLink({
         featured
           ? "bg-primary font-semibold text-white shadow-[0_7px_18px_rgba(63,111,87,0.2)] hover:bg-primary-strong"
           : active
-            ? "bg-white font-semibold text-primary shadow-[0_3px_10px_rgba(20,20,30,0.06)] ring-1 ring-primary/15"
-            : "font-semibold text-ink-soft hover:bg-white hover:text-ink"
+            ? "bg-surface font-semibold text-primary shadow-[0_3px_10px_rgba(20,20,30,0.06)] ring-1 ring-primary/15"
+            : "font-semibold text-ink-soft hover:bg-surface hover:text-ink"
       }`}
     >
       <Icon

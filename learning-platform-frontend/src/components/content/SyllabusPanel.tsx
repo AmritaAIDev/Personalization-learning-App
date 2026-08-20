@@ -169,7 +169,7 @@ export default function SyllabusPanel() {
 
       {error ? (
         <p
-          className="mt-4 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700"
+          className="mt-4 flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-3 py-3 text-sm font-semibold text-danger"
           role="alert"
         >
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -178,7 +178,7 @@ export default function SyllabusPanel() {
       ) : null}
       {notice ? (
         <p
-          className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-800"
+          className="mt-4 rounded-xl border border-success/20 bg-success-tint px-3 py-3 text-sm font-semibold text-success"
           role="status"
         >
           {notice}
@@ -266,7 +266,7 @@ function TopicNode({
           <button
             type="button"
             onClick={() => setExpanded((value) => !value)}
-            className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-ink-mute hover:bg-white hover:text-ink"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-ink-mute hover:bg-canvas hover:text-ink"
             aria-label={expanded ? "Collapse" : "Expand"}
           >
             {expanded ? (
@@ -299,7 +299,7 @@ function TopicNode({
               type="button"
               onClick={() => setAddingChild((value) => !value)}
               title={`Add ${LEVEL_LABEL[childLevel]}`}
-              className="grid h-7 w-7 place-items-center rounded-lg text-ink-mute hover:bg-white hover:text-primary"
+              className="grid h-7 w-7 place-items-center rounded-lg text-ink-mute hover:bg-canvas hover:text-primary"
             >
               <Plus className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
@@ -308,7 +308,7 @@ function TopicNode({
             type="button"
             onClick={() => setEditing((value) => !value)}
             title="Edit"
-            className="grid h-7 w-7 place-items-center rounded-lg text-ink-mute hover:bg-white hover:text-ink"
+            className="grid h-7 w-7 place-items-center rounded-lg text-ink-mute hover:bg-canvas hover:text-ink"
           >
             <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -317,7 +317,7 @@ function TopicNode({
             onClick={() => void onDelete(node)}
             disabled={busy}
             title="Delete"
-            className="grid h-7 w-7 place-items-center rounded-lg text-ink-mute hover:bg-rose-50 hover:text-rose-700 disabled:opacity-60"
+            className="grid h-7 w-7 place-items-center rounded-lg text-ink-mute hover:bg-danger-tint hover:text-danger disabled:opacity-60"
           >
             {busy ? (
               <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -425,7 +425,7 @@ function TopicForm({
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder={`${LEVEL_LABEL[level]} name`}
-          className="w-full rounded-lg border border-hairline bg-white px-3 py-1.5 text-sm outline-none focus:border-primary"
+          className="w-full rounded-lg border border-hairline bg-surface px-3 py-1.5 text-sm outline-none focus:border-primary"
           autoFocus
         />
         <input
@@ -433,10 +433,10 @@ function TopicForm({
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder="Description (optional)"
-          className="w-full rounded-lg border border-hairline bg-white px-3 py-1.5 text-sm outline-none focus:border-primary"
+          className="w-full rounded-lg border border-hairline bg-surface px-3 py-1.5 text-sm outline-none focus:border-primary"
         />
         {formError ? (
-          <p className="text-xs font-semibold text-rose-700">{formError}</p>
+          <p className="text-xs font-semibold text-danger">{formError}</p>
         ) : null}
       </div>
       <div className="flex shrink-0 gap-1.5">
@@ -451,7 +451,7 @@ function TopicForm({
         <button
           type="button"
           onClick={onCancel}
-          className="inline-flex min-h-8 items-center rounded-lg border border-hairline px-3 py-1.5 text-xs font-bold text-ink-soft hover:bg-white"
+          className="inline-flex min-h-8 items-center rounded-lg border border-hairline px-3 py-1.5 text-xs font-bold text-ink-soft hover:bg-canvas"
         >
           Cancel
         </button>

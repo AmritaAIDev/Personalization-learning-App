@@ -128,7 +128,7 @@ export default function QuestionForm({
       {validationError ? (
         <p
           role="alert"
-          className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2.5 text-sm font-semibold text-rose-700"
+          className="rounded-xl border border-danger/20 bg-danger-tint px-3 py-2.5 text-sm font-semibold text-danger"
         >
           {validationError}
         </p>

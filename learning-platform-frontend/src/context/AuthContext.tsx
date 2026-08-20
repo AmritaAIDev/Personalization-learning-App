@@ -152,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
       {xpToast ? (
         <div
-          className="fixed right-4 top-4 z-[80] rounded-2xl border border-primary/20 bg-ink px-4 py-3 text-sm font-bold text-white shadow-[0_18px_40px_rgba(20,20,30,0.24)] animate-rise"
+          className="fixed right-4 top-4 z-[80] rounded-2xl border border-primary/20 bg-ink-solid px-4 py-3 text-sm font-bold text-white shadow-[0_18px_40px_rgba(20,20,30,0.24)] animate-rise"
           role="status"
           aria-live="polite"
         >

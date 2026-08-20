@@ -123,7 +123,7 @@ export default function LearningOverview({
               <h3 className="text-[15px] font-semibold text-ink">
                 Completed topics
               </h3>
-              <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-success">
                 <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                 {data.completedTopics.length} mastered
               </span>
@@ -138,7 +138,7 @@ export default function LearningOverview({
                   <Link
                     key={topic.id}
                     href={learningUrl(topic, { tab: "overview" })}
-                    className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100"
+                    className="rounded-lg bg-success-tint px-3 py-2 text-xs font-medium text-success transition hover:bg-success-tint"
                   >
                     {topic.topic}
                   </Link>

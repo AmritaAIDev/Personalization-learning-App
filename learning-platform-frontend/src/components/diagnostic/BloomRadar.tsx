@@ -40,7 +40,7 @@ export default function BloomRadar({ rows }: { rows: PerformanceRow[] }) {
     .join(" ");
 
   return (
-    <section className="rounded-2xl border border-hairline bg-white p-5 shadow-[0_8px_22px_rgba(20,20,30,0.04)] sm:p-6">
+    <section className="rounded-2xl border border-hairline bg-surface p-5 shadow-[0_8px_22px_rgba(20,20,30,0.04)] sm:p-6">
       <h2 className="font-heading text-lg font-bold text-ink">
         Cognitive skill profile
       </h2>
@@ -109,7 +109,7 @@ export default function BloomRadar({ rows }: { rows: PerformanceRow[] }) {
       </div>
       <dl className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
         {rows.map((row) => (
-          <div key={row.label} className="rounded-lg bg-[#f4f4f6] px-2.5 py-2">
+          <div key={row.label} className="rounded-lg bg-canvas px-2.5 py-2">
             <dt className="truncate text-ink-soft">{row.label}</dt>
             <dd className="mt-1 font-bold text-ink">{row.score}%</dd>
           </div>

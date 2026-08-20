@@ -299,7 +299,7 @@ export default function ContentReviewPage() {
             drafting first, hand-authoring and imports when you need them.
           </p>
         </div>
-        <span className="inline-flex items-center gap-2 self-start rounded-full bg-primary-tint px-3 py-2 text-xs font-bold text-emerald-800 lg:self-auto">
+        <span className="inline-flex items-center gap-2 self-start rounded-full bg-primary-tint px-3 py-2 text-xs font-bold text-primary lg:self-auto">
           <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Admin-only
           workflow
         </span>
@@ -353,7 +353,7 @@ export default function ContentReviewPage() {
 
       {error ? (
         <p
-          className="mt-6 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700"
+          className="mt-6 flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-3 py-3 text-sm font-semibold text-danger"
           role="alert"
         >
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -362,7 +362,7 @@ export default function ContentReviewPage() {
       ) : null}
       {notice ? (
         <p
-          className="mt-6 flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-800"
+          className="mt-6 flex items-start gap-2 rounded-xl border border-success/20 bg-success-tint px-3 py-3 text-sm font-semibold text-success"
           role="status"
         >
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -550,7 +550,7 @@ export default function ContentReviewPage() {
                               type="button"
                               disabled={deletingId === record.question_id}
                               onClick={() => void deleteQuestion(record.question_id)}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-danger/25 px-3 py-2 text-xs font-bold text-danger hover:bg-danger-tint disabled:opacity-60"
                             >
                               {deletingId === record.question_id ? (
                                 <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -563,7 +563,7 @@ export default function ContentReviewPage() {
                         </div>
                       </div>
                       {deleteErrors[record.question_id] ? (
-                        <p className="mt-3 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                        <p className="mt-3 rounded-xl border border-danger/20 bg-danger-tint px-3 py-2 text-xs font-semibold text-danger">
                           {deleteErrors[record.question_id]}
                         </p>
                       ) : null}
@@ -584,10 +584,10 @@ export default function ContentReviewPage() {
                               <li key={option}>{option}</li>
                             ))}
                           </ul>
-                          <p className="mt-4 text-[13px] font-medium text-emerald-700">
+                          <p className="mt-4 text-[13px] font-medium text-success">
                             Correct answer
                           </p>
-                          <p className="mt-1 text-sm font-semibold text-emerald-900">
+                          <p className="mt-1 text-sm font-semibold text-success">
                             {record.correct_answer}
                           </p>
                           <p className="mt-4 text-xs font-medium text-ink-mute">
@@ -645,7 +645,7 @@ export default function ContentReviewPage() {
       {tab === "reports" ? (
         <section className="mt-6 rounded-[1.75rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:p-6">
           <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-rose-50 text-rose-600">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-danger-tint text-danger">
               <Flag className="h-5 w-5" aria-hidden="true" />
             </span>
             <div>
@@ -678,7 +678,7 @@ export default function ContentReviewPage() {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap gap-2 text-xs font-bold">
-                        <span className="rounded-full bg-rose-50 px-2.5 py-1 text-rose-700">
+                        <span className="rounded-full bg-danger-tint px-2.5 py-1 text-danger">
                           {REPORT_REASON_LABELS[report.reason]}
                         </span>
                         <span className="rounded-full bg-canvas px-2.5 py-1 text-ink-soft">

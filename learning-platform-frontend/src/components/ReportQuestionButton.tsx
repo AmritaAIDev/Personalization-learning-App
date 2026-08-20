@@ -89,8 +89,8 @@ export default function ReportQuestionButton({
         title="Report an issue with this question"
         className={
           compact
-            ? "grid h-7 w-7 shrink-0 place-items-center rounded-lg text-ink-mute transition hover:bg-rose-50 hover:text-rose-700"
-            : "inline-flex h-9 items-center gap-1.5 rounded-xl border border-hairline px-3 text-xs font-bold text-ink-mute transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+            ? "grid h-7 w-7 shrink-0 place-items-center rounded-lg text-ink-mute transition hover:bg-danger-tint hover:text-danger"
+            : "inline-flex h-9 items-center gap-1.5 rounded-xl border border-hairline px-3 text-xs font-bold text-ink-mute transition hover:border-danger/25 hover:bg-danger-tint hover:text-danger"
         }
       >
         <Flag className="h-3.5 w-3.5" aria-hidden="true" />
@@ -98,9 +98,9 @@ export default function ReportQuestionButton({
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-20 mt-2 w-72 rounded-2xl border border-hairline bg-white p-4 shadow-[0_18px_48px_rgba(20,20,30,0.12)]">
+        <div className="absolute right-0 z-20 mt-2 w-72 rounded-2xl border border-hairline bg-surface p-4 shadow-[0_18px_48px_rgba(20,20,30,0.12)]">
           {submitted ? (
-            <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+            <p className="flex items-center gap-2 text-sm font-semibold text-success">
               <CircleAlert className="h-4 w-4" aria-hidden="true" />
               Thanks — a reviewer will take a look.
             </p>
@@ -140,7 +140,7 @@ export default function ReportQuestionButton({
                 className="mt-3 w-full resize-none rounded-xl border border-hairline bg-canvas px-2.5 py-2 text-xs text-ink outline-none placeholder:text-ink-mute focus:border-primary/40"
               />
               {error ? (
-                <p className="mt-2 text-xs font-semibold text-rose-700">
+                <p className="mt-2 text-xs font-semibold text-danger">
                   {error}
                 </p>
               ) : null}

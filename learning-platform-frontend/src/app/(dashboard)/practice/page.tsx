@@ -43,7 +43,7 @@ export default function PracticePage() {
         </section>
 
         <section className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <article className="rounded-[1.5rem] border border-hairline bg-ink p-6 text-white shadow-[0_18px_45px_rgba(20,20,30,0.12)]">
+          <article className="rounded-[1.5rem] border border-hairline bg-ink-solid p-6 text-white shadow-[0_18px_45px_rgba(20,20,30,0.12)]">
             <div className="flex items-start gap-4">
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/10">
                 <ShieldCheck className="h-6 w-6" aria-hidden="true" />

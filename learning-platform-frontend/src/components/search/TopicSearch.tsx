@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
-import TopicPickerDialog from "./TopicPickerDialog";
+import { useCommandPalette } from "@/context/CommandPaletteContext";
 
 export default function TopicSearch({
   destination = "learn",
@@ -11,25 +10,14 @@ export default function TopicSearch({
   destination?: "learn" | "practice";
   compact?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    const openWithShortcut = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setOpen(true);
-      }
-    };
-    window.addEventListener("keydown", openWithShortcut);
-    return () => window.removeEventListener("keydown", openWithShortcut);
-  }, []);
+  const { openPalette } = useCommandPalette();
 
   return (
     <section className="mx-auto w-full">
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        className={`group flex w-full items-center rounded-xl border border-hairline bg-surface text-left text-ink shadow-[0_8px_24px_rgba(20,20,30,0.025)] transition hover:border-primary/30 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${compact ? "h-11 px-4 text-sm" : "h-13 px-4 text-[15px]"}`}
+        onClick={() => openPalette(destination)}
+        className={`group flex w-full items-center rounded-xl border border-hairline bg-surface text-left text-ink shadow-[0_8px_24px_rgba(20,20,30,0.025)] transition hover:border-primary/30 hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${compact ? "h-11 px-4 text-sm" : "h-13 px-4 text-[15px]"}`}
         aria-haspopup="dialog"
         aria-label="Find a topic. Press Control K to open search."
       >
@@ -46,11 +34,6 @@ export default function TopicSearch({
           Ctrl K
         </kbd>
       </button>
-      <TopicPickerDialog
-        open={open}
-        onClose={() => setOpen(false)}
-        destination={destination}
-      />
     </section>
   );
 }

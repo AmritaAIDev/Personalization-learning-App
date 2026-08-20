@@ -120,9 +120,24 @@
   --color-ink: #1a1a1f;
   --color-ink-soft: #52525b;
   --color-ink-mute: #86868b;
+  /* Deliberately theme-invariant: every existing bg-ink usage is an
+     always-near-black card/overlay (paired with text-white), never body
+     text — so it must NOT flip in dark mode the way --color-ink does. */
+  --color-ink-solid: #1a1a1f;
   --color-surface: #ffffff;
   --color-canvas: #fbfbfd;
   --color-hairline: #ececf0;
+
+  /* Success/danger/warning/info — semantic status chips (correct/incorrect/
+     due/informational) used across result, notebook, and flashcard UI. */
+  --color-success: #15803d;
+  --color-success-tint: #eaf6ee;
+  --color-danger: #be123c;
+  --color-danger-tint: #fbebee;
+  --color-warning: #b45309;
+  --color-warning-tint: #fef3e2;
+  --color-info: #1d4ed8;
+  --color-info-tint: #eaf1fd;
 
   /* Motion — a single expressive easing curve, used consistently. */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
@@ -135,6 +150,34 @@
 :root {
   --background: #fbfbfd;
   --foreground: #1a1a1f;
+}
+
+/* Dark theme — overrides the same custom properties @theme defined above.
+   Tailwind's bg-canvas/text-ink/etc utilities read these vars, so anything
+   already using semantic tokens themes automatically once this is set. */
+[data-theme="dark"] {
+  --color-primary: #5f9a7d;
+  --color-primary-strong: #79b699;
+  --color-primary-tint: #1c2b23;
+
+  --color-ink: #f2f2f4;
+  --color-ink-soft: #c4c4cc;
+  --color-ink-mute: #8b8b93;
+  --color-surface: #1c1c22;
+  --color-canvas: #121216;
+  --color-hairline: #2b2b33;
+
+  --color-success: #4ade80;
+  --color-success-tint: #163223;
+  --color-danger: #fb7185;
+  --color-danger-tint: #3a1620;
+  --color-warning: #fbbf24;
+  --color-warning-tint: #3d2c0f;
+  --color-info: #60a5fa;
+  --color-info-tint: #132a4d;
+
+  --background: #121216;
+  --foreground: #f2f2f4;
 }
 
 html {

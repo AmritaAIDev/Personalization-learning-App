@@ -11,6 +11,13 @@ import { Question } from '../question.entity';
 import { MisconceptionsService } from '../misconceptions/misconceptions.service';
 import { NotebookConceptService } from './notebook-concept.service';
 import { NotebookConceptSummary } from './notebook-concept-summary.entity';
+import { NotebookMistakeReview } from './notebook-mistake-review.entity';
+import {
+  FsrsGrade,
+  intervalDaysFromStability,
+  nextFsrsState,
+} from '../adaptive/fsrs.util';
+import { FlashcardRating } from '../adaptive/adaptive.types';
 import type {
   NotebookConceptGroup,
   NotebookConceptsResponse,
@@ -18,6 +25,13 @@ import type {
   NotebookMistakesResponse,
   NotebookMistakeSource,
 } from './notebook.types';
+
+const RATING_TO_GRADE: Record<FlashcardRating, FsrsGrade> = {
+  [FlashcardRating.AGAIN]: 1,
+  [FlashcardRating.HARD]: 2,
+  [FlashcardRating.GOOD]: 3,
+  [FlashcardRating.EASY]: 4,
+};
 
 const DEFAULT_LIMIT = 24;
 const CONCEPT_GROUP_LIMIT = 100;
@@ -57,6 +71,8 @@ export class NotebookService {
     private readonly diagnosticAnswerRepository: Repository<DiagnosticAnswer>,
     @InjectRepository(NotebookConceptSummary)
     private readonly conceptSummaryRepository: Repository<NotebookConceptSummary>,
+    @InjectRepository(NotebookMistakeReview)
+    private readonly mistakeReviewRepository: Repository<NotebookMistakeReview>,
     private readonly conceptService: NotebookConceptService,
     private readonly misconceptionsService: MisconceptionsService,
   ) {}
@@ -157,20 +173,27 @@ export class NotebookService {
     userId: string,
     limit: number,
   ): Promise<NotebookMistakeCard[]> {
-    const [practiceAnswers, adaptiveAnswers, diagnosticAnswers] =
+    const [practiceAnswers, adaptiveAnswers, diagnosticAnswers, reviews] =
       await Promise.all([
         this.getPracticeMistakes(userId, limit),
         this.getAdaptiveMistakes(userId, limit),
         this.getDiagnosticMistakes(userId, limit),
+        this.mistakeReviewRepository.find({ where: { userId } }),
       ]);
+    const reviewByKey = new Map(
+      reviews.map((review) => [
+        `${review.source}:${review.questionId}`,
+        review,
+      ]),
+    );
     const practiceCards = practiceAnswers.map((answer) =>
-      this.toPracticeCard(answer),
+      this.toPracticeCard(answer, reviewByKey),
     );
     const adaptiveCards = adaptiveAnswers
-      .map((answer) => this.toAdaptiveCard(answer))
+      .map((answer) => this.toAdaptiveCard(answer, reviewByKey))
       .filter((card): card is NotebookMistakeCard => card !== null);
     const diagnosticCards = diagnosticAnswers.map((answer) =>
-      this.toDiagnosticCard(answer),
+      this.toDiagnosticCard(answer, reviewByKey),
     );
     return this.dedupeLatest([
       ...practiceCards,
@@ -402,25 +425,36 @@ export class NotebookService {
       .getMany();
   }
 
-  private toDiagnosticCard(answer: DiagnosticAnswer): NotebookMistakeCard {
+  private toDiagnosticCard(
+    answer: DiagnosticAnswer,
+    reviewByKey: Map<string, NotebookMistakeReview>,
+  ): NotebookMistakeCard {
     return this.toCard(
       `diagnostic:${answer.id}`,
       'DIAGNOSTIC',
       this.fromCuratedQuestion(answer.question, answer.selectedOption),
       answer.updatedAt,
+      reviewByKey,
     );
   }
 
-  private toPracticeCard(answer: PracticeAnswer): NotebookMistakeCard {
+  private toPracticeCard(
+    answer: PracticeAnswer,
+    reviewByKey: Map<string, NotebookMistakeReview>,
+  ): NotebookMistakeCard {
     return this.toCard(
       `practice:${answer.id}`,
       'PRACTICE',
       this.fromCuratedQuestion(answer.question, answer.selectedOption),
       answer.updatedAt,
+      reviewByKey,
     );
   }
 
-  private toAdaptiveCard(answer: LearningAnswer): NotebookMistakeCard | null {
+  private toAdaptiveCard(
+    answer: LearningAnswer,
+    reviewByKey: Map<string, NotebookMistakeReview>,
+  ): NotebookMistakeCard | null {
     const item = answer.sessionItem;
     const question = item.question
       ? this.fromCuratedQuestion(item.question, answer.selectedOption)
@@ -438,6 +472,7 @@ export class NotebookService {
       'ADAPTIVE',
       question,
       answer.createdAt,
+      reviewByKey,
     );
   }
 
@@ -446,7 +481,10 @@ export class NotebookService {
     source: NotebookMistakeSource,
     question: QuestionLike,
     occurredAt: Date,
+    reviewByKey: Map<string, NotebookMistakeReview>,
   ): NotebookMistakeCard {
+    const review = reviewByKey.get(`${source}:${question.id}`);
+    const dueAt = review ? review.dueAt : this.getDueReviewAt(occurredAt);
     return {
       id,
       source,
@@ -463,11 +501,8 @@ export class NotebookService {
       difficulty: question.difficulty,
       bloomLevel: question.bloomLevel,
       occurredAt: occurredAt.toISOString(),
-      dueReviewAt: this.getDueReviewAt(occurredAt).toISOString(),
-      reviewState:
-        this.getDueReviewAt(occurredAt).getTime() <= Date.now()
-          ? 'DUE'
-          : 'UPCOMING',
+      dueReviewAt: dueAt.toISOString(),
+      reviewState: dueAt.getTime() <= Date.now() ? 'DUE' : 'UPCOMING',
       practiceSimilar: {
         subject: question.subject,
         chapter: question.chapter,
@@ -542,6 +577,80 @@ export class NotebookService {
       }
     }
     return Array.from(byQuestion.values());
+  }
+
+  /**
+   * Rates a mistake's recall and advances its spaced-repetition schedule.
+   * FSRS math duplicated from adaptive.service.ts's nextReviewSchedule()
+   * rather than shared, so this can never regress the existing Flashcards
+   * feature (see notebook-mistake-review.entity.ts's class comment).
+   */
+  async reviewMistake(
+    userId: string,
+    source: NotebookMistakeSource,
+    questionId: string,
+    rating: FlashcardRating,
+  ): Promise<{
+    source: NotebookMistakeSource;
+    questionId: string;
+    dueReviewAt: string;
+    reviewState: 'UPCOMING';
+    repetitions: number;
+    intervalDays: number;
+  }> {
+    const now = new Date();
+    let review = await this.mistakeReviewRepository.findOne({
+      where: { userId, source, questionId },
+    });
+    const grade = RATING_TO_GRADE[rating];
+    const elapsedDays = review
+      ? Math.max(
+          0,
+          Math.floor(
+            (now.getTime() - review.lastReviewedAt.getTime()) /
+              (24 * 60 * 60 * 1000),
+          ),
+        )
+      : 0;
+    const state = nextFsrsState(
+      review
+        ? { difficulty: review.difficulty, stability: review.stability }
+        : null,
+      elapsedDays,
+      grade,
+    );
+    const intervalDays = Math.max(
+      0,
+      Math.round(intervalDaysFromStability(state.stability)),
+    );
+    const next = {
+      lastRating: rating,
+      repetitions: (review?.repetitions ?? 0) + 1,
+      intervalDays,
+      difficulty: state.difficulty,
+      stability: state.stability,
+      dueAt: new Date(now.getTime() + intervalDays * 24 * 60 * 60 * 1000),
+      lastReviewedAt: now,
+    };
+    if (!review) {
+      review = this.mistakeReviewRepository.create({
+        userId,
+        source,
+        questionId,
+        ...next,
+      });
+    } else {
+      Object.assign(review, next);
+    }
+    const saved = await this.mistakeReviewRepository.save(review);
+    return {
+      source,
+      questionId,
+      dueReviewAt: saved.dueAt.toISOString(),
+      reviewState: 'UPCOMING',
+      repetitions: saved.repetitions,
+      intervalDays: saved.intervalDays,
+    };
   }
 
   private getWeakTopics(cards: NotebookMistakeCard[]): string[] {

@@ -24,6 +24,8 @@ import type {
   PracticePerformanceRow,
   PracticeReviewPayload,
 } from "@/lib/practice-types";
+import AttemptResultHero from "@/components/results/AttemptResultHero";
+import AttemptResultQuestionRow from "@/components/results/AttemptResultQuestionRow";
 
 const StudyMarkdown = dynamic(
   () => import("@/components/learning/StudyMarkdown"),
@@ -206,7 +208,7 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
         <div className="flex flex-wrap gap-2">
           <Link
             href={practiceHref(scope)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-bold text-white transition hover:bg-ink/90"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink-solid px-4 py-2.5 text-sm font-bold text-white transition hover:bg-ink-solid/90"
           >
             <RotateCcw className="h-4 w-4" aria-hidden="true" /> Practice again
           </Link>
@@ -221,22 +223,16 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
       </header>
 
       <section className="mt-7 grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
-        <article className="rounded-[2rem] bg-ink p-7 text-white shadow-[0_20px_48px_rgba(20,20,30,0.18)] sm:p-8">
-          <p className="text-xs font-medium text-white/55">{analysis.grade}</p>
-          <p className="mt-4 font-heading text-6xl font-bold tracking-tight">
-            {analysis.scorePercent}%
-          </p>
-          <p className="mt-3 text-sm text-white/80">
-            {analysis.correct} correct · {analysis.incorrect} to revisit ·{" "}
-            {analysis.total} total
-          </p>
-          <div className="mt-7 h-2 overflow-hidden rounded-full bg-white/15">
-            <div
-              className="h-full rounded-full bg-white/80"
-              style={{ width: `${analysis.scorePercent}%` }}
-            />
-          </div>
-        </article>
+        <AttemptResultHero
+          eyebrow={analysis.grade}
+          score={
+            <p className="font-heading text-6xl font-bold tracking-tight">
+              {analysis.scorePercent}%
+            </p>
+          }
+          statsLine={`${analysis.correct} correct · ${analysis.incorrect} to revisit · ${analysis.total} total`}
+          progressPercent={analysis.scorePercent}
+        />
 
         <article className="rounded-[2rem] border border-hairline bg-surface p-6 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:p-7">
           <h2 className="font-heading text-xl font-bold text-ink">
@@ -355,8 +351,8 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
                   <span
                     className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
                       result.isCorrect
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-rose-50 text-rose-700"
+                        ? "bg-success-tint text-success"
+                        : "bg-danger-tint text-danger"
                     }`}
                   >
                     {result.isCorrect ? (
@@ -385,28 +381,11 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
 
                 {isOpen ? (
                   <div className="border-t border-hairline px-5 pb-6 pt-5 sm:px-6">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div
-                        className={`rounded-xl p-4 ${
-                          result.isCorrect ? "bg-canvas" : "bg-rose-50"
-                        }`}
-                      >
-                        <p className="text-xs font-medium text-ink-mute">
-                          Your answer
-                        </p>
-                        <p className="mt-2 text-sm font-semibold text-ink">
-                          {result.selectedOption ?? "Not answered"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-emerald-50 p-4">
-                        <p className="text-[13px] font-medium text-emerald-700">
-                          Correct answer
-                        </p>
-                        <p className="mt-2 text-sm font-semibold text-emerald-900">
-                          {result.correctOption}
-                        </p>
-                      </div>
-                    </div>
+                    <AttemptResultQuestionRow
+                      isCorrect={result.isCorrect}
+                      yourAnswer={result.selectedOption ?? "Not answered"}
+                      correctAnswer={result.correctOption}
+                    />
                     <div className="mt-4 rounded-xl border border-hairline bg-canvas p-4">
                       <p className="text-xs font-medium text-ink-mute">
                         Explanation

@@ -105,7 +105,7 @@ export default function CalibrationPanel() {
       {error ? (
         <p
           role="alert"
-          className="mt-5 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700"
+          className="mt-5 flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-3 py-3 text-sm font-semibold text-danger"
         >
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           {error}
@@ -134,7 +134,7 @@ export default function CalibrationPanel() {
                 key={row.id}
                 className={`rounded-2xl border p-4 ${
                   row.mismatched
-                    ? "border-rose-200 bg-rose-50/40"
+                    ? "border-danger/25 bg-danger-tint/40"
                     : "border-hairline bg-surface"
                 }`}
               >
@@ -166,7 +166,7 @@ export default function CalibrationPanel() {
                         <span
                           className={`rounded-full px-2.5 py-1 ${
                             row.mismatched
-                              ? "bg-rose-100 text-rose-700"
+                              ? "bg-danger-tint text-danger"
                               : "bg-canvas text-ink-soft"
                           }`}
                         >

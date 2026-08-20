@@ -30,16 +30,16 @@ const resourceVisuals: Record<
     icon: PlayCircle,
     tone: "bg-violet-100 text-violet-800",
   },
-  NOTES: { label: "Notes", icon: FileText, tone: "bg-sky-100 text-sky-800" },
+  NOTES: { label: "Notes", icon: FileText, tone: "bg-info-tint text-info" },
   PRACTICE: {
     label: "Practice",
     icon: ClipboardCheck,
-    tone: "bg-amber-100 text-amber-800",
+    tone: "bg-warning-tint text-warning",
   },
   FORMULA: {
     label: "Formula",
     icon: Sigma,
-    tone: "bg-emerald-100 text-emerald-800",
+    tone: "bg-success-tint text-success",
   },
 };
 
@@ -60,7 +60,7 @@ function ResourceCard({ resource }: { resource: LearningResource }) {
   const Icon = visual.icon;
   const url = safeExternalUrl(resource.url);
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-hairline bg-white p-5 shadow-[0_8px_22px_rgba(20,20,30,0.04)]">
+    <article className="flex h-full flex-col rounded-2xl border border-hairline bg-surface p-5 shadow-[0_8px_22px_rgba(20,20,30,0.04)]">
       <div className="flex items-start justify-between gap-3">
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${visual.tone}`}
@@ -77,7 +77,7 @@ function ResourceCard({ resource }: { resource: LearningResource }) {
         </p>
       )}
       {resource.content && (
-        <p className="mt-4 rounded-xl bg-[#f4f4f6] p-3 text-sm leading-6 text-ink-soft">
+        <p className="mt-4 rounded-xl bg-canvas p-3 text-sm leading-6 text-ink-soft">
           {resource.content}
         </p>
       )}
@@ -145,7 +145,7 @@ export default function RecommendationsPage() {
   if (!recommendations) {
     return (
       <div className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center p-6 text-center">
-        <CircleAlert className="h-8 w-8 text-rose-600" aria-hidden="true" />
+        <CircleAlert className="h-8 w-8 text-danger" aria-hidden="true" />
         <h1 className="mt-4 font-heading text-2xl font-bold text-ink">
           Recommendations unavailable
         </h1>
@@ -171,7 +171,7 @@ export default function RecommendationsPage() {
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to analysis
       </Link>
-      <header className="mt-7 rounded-[2rem] border border-[#f2d9df] bg-[#fffafa] p-6 sm:p-8">
+      <header className="mt-7 rounded-[2rem] border border-danger/20 bg-danger-tint p-6 sm:p-8">
         {recommendations.hasWeakTopics ? (
           <>
             <p className="text-sm font-medium text-ink-mute">
@@ -186,7 +186,7 @@ export default function RecommendationsPage() {
           </>
         ) : (
           <>
-            <p className="flex items-center gap-2 text-[13px] font-medium text-emerald-700">
+            <p className="flex items-center gap-2 text-[13px] font-medium text-success">
               <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Strong
               diagnostic foundation
             </p>
@@ -206,7 +206,7 @@ export default function RecommendationsPage() {
             <article key={topic.topic}>
               <div className="flex flex-col gap-3 border-b border-hairline pb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-bold text-rose-700">
+                  <p className="text-sm font-bold text-danger">
                     Needs reinforcement
                   </p>
                   <h2 className="mt-1 font-heading text-2xl font-bold text-ink">
@@ -214,7 +214,7 @@ export default function RecommendationsPage() {
                   </h2>
                 </div>
                 {topic.formula && (
-                  <p className="max-w-xl rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
+                  <p className="max-w-xl rounded-xl border border-success/25 bg-success-tint px-4 py-3 text-sm font-medium text-success">
                     <Sigma className="mr-2 inline h-4 w-4" aria-hidden="true" />
                     {topic.formula}
                   </p>
@@ -250,7 +250,7 @@ export default function RecommendationsPage() {
             ))}
           </div>
         ) : (
-          <p className="rounded-2xl border border-dashed border-hairline bg-white p-6 text-sm text-ink-soft">
+          <p className="rounded-2xl border border-dashed border-hairline bg-surface p-6 text-sm text-ink-soft">
             <BookOpenText
               className="mr-2 inline h-5 w-5 text-primary"
               aria-hidden="true"

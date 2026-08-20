@@ -82,10 +82,10 @@ function DoubtsSkeleton() {
   return (
     <div className="mt-7 grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <section className="rounded-[1.65rem] border border-hairline bg-surface p-5">
-        <div className="h-5 w-44 animate-pulse rounded-full bg-ink/10" />
-        <div className="mt-5 h-72 animate-pulse rounded-2xl bg-ink/8" />
+        <div className="h-5 w-44 animate-pulse rounded-full bg-ink-solid/10" />
+        <div className="mt-5 h-72 animate-pulse rounded-2xl bg-ink-solid/8" />
       </section>
-      <section className="rounded-[1.65rem] bg-ink p-5">
+      <section className="rounded-[1.65rem] bg-ink-solid p-5">
         <div className="h-5 w-32 animate-pulse rounded-full bg-white/15" />
         <div className="mt-5 h-40 animate-pulse rounded-2xl bg-white/10" />
       </section>
@@ -105,13 +105,13 @@ function DoubtTurn({ doubt }: { doubt: DoubtCard }) {
         <p className="mt-1 text-sm font-medium leading-6">{doubt.message}</p>
       </div>
 
-      <div className="max-w-[92%] rounded-[1.35rem] rounded-bl-md border border-hairline bg-white p-4 shadow-[0_10px_24px_rgba(20,20,30,0.045)]">
+      <div className="max-w-[92%] rounded-[1.35rem] rounded-bl-md border border-hairline bg-surface p-4 shadow-[0_10px_24px_rgba(20,20,30,0.045)]">
         <div className="mb-2 flex items-center gap-2">
           <span
             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] ${
               answered
-                ? "bg-emerald-50 text-emerald-700"
-                : "bg-amber-50 text-amber-700"
+                ? "bg-success-tint text-success"
+                : "bg-warning-tint text-warning"
             }`}
           >
             {answered ? (
@@ -422,7 +422,7 @@ export default function DoubtsPage() {
           </div>
           <Link
             href={workspaceScope ? scopeHref("/learn", workspaceScope) : "/learn"}
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink/90"
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-ink-solid px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink-solid/90"
           >
             Continue learning
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -464,7 +464,7 @@ export default function DoubtsPage() {
                     <DoubtTurn key={doubt.id} doubt={doubt} />
                   ))
                 ) : (
-                  <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-hairline bg-white p-8 text-center">
+                  <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-hairline bg-surface p-8 text-center">
                     <div>
                       <Sparkles
                         className="mx-auto h-8 w-8 text-primary"
@@ -503,14 +503,14 @@ export default function DoubtsPage() {
                                 ? "Chapter"
                                 : "Topic"
                           }
-                          className="min-h-10 w-full rounded-xl border border-hairline bg-canvas px-3 text-sm font-semibold text-ink outline-none transition focus:border-primary/45 focus:bg-white"
+                          className="min-h-10 w-full rounded-xl border border-hairline bg-canvas px-3 text-sm font-semibold text-ink outline-none transition focus:border-primary/45 focus:bg-surface"
                         />
                       </label>
                     ))}
                   </div>
                 ) : null}
 
-                <div className="flex items-end gap-2 rounded-[1.35rem] border border-hairline bg-canvas p-2 transition focus-within:border-primary/45 focus-within:bg-white focus-within:shadow-[0_10px_28px_rgba(63,111,87,0.08)]">
+                <div className="flex items-end gap-2 rounded-[1.35rem] border border-hairline bg-canvas p-2 transition focus-within:border-primary/45 focus-within:bg-surface focus-within:shadow-[0_10px_28px_rgba(63,111,87,0.08)]">
                   <input
                     ref={photoInputRef}
                     type="file"
@@ -524,7 +524,7 @@ export default function DoubtsPage() {
                     onClick={() => photoInputRef.current?.click()}
                     disabled={scanning || submitting}
                     title="Scan a photo of the question"
-                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-hairline bg-white text-ink-soft transition hover:border-primary/40 hover:text-primary disabled:cursor-wait disabled:opacity-60"
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-hairline bg-surface text-ink-soft transition hover:border-primary/40 hover:text-primary disabled:cursor-wait disabled:opacity-60"
                   >
                     {scanning ? (
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -576,7 +576,7 @@ export default function DoubtsPage() {
                 ) : null}
 
                 {error ? (
-                  <div className="mt-3 flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                  <div className="mt-3 flex items-start gap-2 rounded-2xl border border-danger/25 bg-danger-tint p-3 text-sm text-danger">
                     <AlertCircle
                       className="mt-0.5 h-4 w-4 shrink-0"
                       aria-hidden="true"
@@ -585,7 +585,7 @@ export default function DoubtsPage() {
                   </div>
                 ) : null}
                 {success ? (
-                  <div className="mt-3 flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                  <div className="mt-3 flex items-start gap-2 rounded-2xl border border-success/25 bg-success-tint p-3 text-sm text-success">
                     <CheckCircle2
                       className="mt-0.5 h-4 w-4 shrink-0"
                       aria-hidden="true"
@@ -597,7 +597,7 @@ export default function DoubtsPage() {
             </section>
 
             <aside className="space-y-4">
-              <section className="rounded-[1.65rem] bg-ink p-5 text-white shadow-[0_14px_34px_rgba(20,20,30,0.12)]">
+              <section className="rounded-[1.65rem] bg-ink-solid p-5 text-white shadow-[0_14px_34px_rgba(20,20,30,0.12)]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">
@@ -684,8 +684,8 @@ export default function DoubtsPage() {
                           <span
                             className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.11em] ${
                               thread.status === "OPEN"
-                                ? "bg-amber-50 text-amber-700"
-                                : "bg-emerald-50 text-emerald-700"
+                                ? "bg-warning-tint text-warning"
+                                : "bg-success-tint text-success"
                             }`}
                           >
                             {thread.status === "OPEN" ? "Tutor writing" : "Answered"}

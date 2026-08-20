@@ -131,7 +131,7 @@ export default function BulkImportPanel() {
       {fileErrors.length > 0 ? (
         <div
           role="alert"
-          className="mt-5 rounded-xl border border-rose-100 bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700"
+          className="mt-5 rounded-xl border border-danger/20 bg-danger-tint px-3 py-3 text-sm font-semibold text-danger"
         >
           {fileErrors.map((message) => (
             <p key={message}>{message}</p>
@@ -142,7 +142,7 @@ export default function BulkImportPanel() {
       {error ? (
         <p
           role="alert"
-          className="mt-5 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700"
+          className="mt-5 flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-3 py-3 text-sm font-semibold text-danger"
         >
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           {error}
@@ -182,12 +182,12 @@ export default function BulkImportPanel() {
                     </td>
                     <td className="px-3 py-2">
                       {result.valid ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-700">
+                        <span className="inline-flex items-center gap-1 text-success">
                           <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
                           Valid
                         </span>
                       ) : (
-                        <span className="text-rose-700">
+                        <span className="text-danger">
                           {result.errors.join("; ")}
                         </span>
                       )}
@@ -221,17 +221,17 @@ export default function BulkImportPanel() {
       ) : null}
 
       {stage === "done" && result ? (
-        <div className="mt-6 rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-          <p className="flex items-center gap-2 text-sm font-bold text-emerald-800">
+        <div className="mt-6 rounded-xl border border-success/20 bg-success-tint p-4">
+          <p className="flex items-center gap-2 text-sm font-bold text-success">
             <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
             Imported {result.inserted} question{result.inserted === 1 ? "" : "s"} as drafts.
           </p>
           {result.failed.length > 0 ? (
-            <p className="mt-2 text-sm text-emerald-900">
+            <p className="mt-2 text-sm text-success">
               {result.failed.length} row{result.failed.length === 1 ? "" : "s"} could not be imported.
             </p>
           ) : null}
-          <p className="mt-2 text-sm text-emerald-900">
+          <p className="mt-2 text-sm text-success">
             Review and publish them from the Review queue tab.
           </p>
           <button

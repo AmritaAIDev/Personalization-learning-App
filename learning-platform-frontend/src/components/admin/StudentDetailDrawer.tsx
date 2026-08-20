@@ -84,7 +84,7 @@ export default function StudentDetailDrawer({
         <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true">
           <motion.div
             {...backdropAnim}
-            className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-ink-solid/40 backdrop-blur-[2px]"
             onClick={onClose}
           />
           <motion.div
@@ -112,7 +112,7 @@ export default function StudentDetailDrawer({
                 </div>
               ) : error ? (
                 <p
-                  className="flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700"
+                  className="flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-3 py-3 text-sm font-semibold text-danger"
                   role="alert"
                 >
                   <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -142,7 +142,7 @@ function StudentDetailContent({ detail }: { detail: AdminStudentDetail }) {
 
   return (
     <div className="space-y-6">
-      <header className="rounded-2xl bg-ink p-5 text-white">
+      <header className="rounded-2xl bg-ink-solid p-5 text-white">
         <div className="flex items-center gap-3.5">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-strong text-lg font-bold">
             {profile.name.charAt(0).toUpperCase()}

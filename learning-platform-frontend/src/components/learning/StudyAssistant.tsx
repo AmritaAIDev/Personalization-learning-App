@@ -291,13 +291,13 @@ export default function StudyAssistant({
       aria-label={title}
       className={
         variant === "panel"
-          ? "flex h-full max-h-[68dvh] min-h-0 flex-col overflow-hidden rounded-[1.25rem] border border-hairline bg-white shadow-[0_16px_40px_rgba(20,20,30,0.06)] sm:rounded-[1.5rem] xl:max-h-none"
-          : "mb-3 flex h-[min(38rem,calc(100dvh-8.5rem))] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-[1.35rem] border border-hairline bg-white shadow-[0_24px_70px_rgba(20,20,30,0.24)] sm:rounded-[1.75rem]"
+          ? "flex h-full max-h-[68dvh] min-h-0 flex-col overflow-hidden rounded-[1.25rem] border border-hairline bg-surface shadow-[0_16px_40px_rgba(20,20,30,0.06)] sm:rounded-[1.5rem] xl:max-h-none"
+          : "mb-3 flex h-[min(38rem,calc(100dvh-8.5rem))] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-[1.35rem] border border-hairline bg-surface shadow-[0_24px_70px_rgba(20,20,30,0.24)] sm:rounded-[1.75rem]"
       }
     >
       <header
         className={`flex items-center justify-between gap-3 border-b border-hairline px-3 py-2.5 sm:px-4 sm:py-3 ${
-          variant === "panel" ? "bg-primary-tint text-ink" : "bg-ink text-white"
+          variant === "panel" ? "bg-primary-tint text-ink" : "bg-ink-solid text-white"
         }`}
       >
         <div className="flex min-w-0 items-center gap-3">
@@ -344,11 +344,11 @@ export default function StudyAssistant({
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,#fff,#fcfbfb)] p-2.5 custom-scrollbar sm:p-3"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-canvas p-2.5 custom-scrollbar sm:p-3"
       >
         {loading && visibleMessages.length === 0 ? (
           <div
-            className="flex items-center gap-2 rounded-2xl border border-hairline bg-white px-4 py-3 text-sm text-ink-mute"
+            className="flex items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 text-sm text-ink-mute"
             aria-label="Loading your study thread"
           >
             <span className="tutor-dot" aria-hidden="true" />
@@ -378,7 +378,7 @@ export default function StudyAssistant({
               className={
                 item.role === "USER"
                   ? "ml-8 rounded-2xl rounded-br-md bg-primary px-3 py-2.5 text-[12.5px] leading-5 text-white"
-                  : "mr-3 rounded-2xl rounded-bl-md border border-hairline bg-white px-3 py-2.5 shadow-[0_6px_16px_rgba(20,20,30,0.04)]"
+                  : "mr-3 rounded-2xl rounded-bl-md border border-hairline bg-surface px-3 py-2.5 shadow-[0_6px_16px_rgba(20,20,30,0.04)]"
               }
             >
               {item.role === "USER" ? (
@@ -408,7 +408,7 @@ export default function StudyAssistant({
 
           {showStreamingBubble ? (
             <article
-              className="mr-3 rounded-2xl rounded-bl-md border border-hairline bg-white px-3 py-2.5 shadow-[0_6px_16px_rgba(20,20,30,0.04)]"
+              className="mr-3 rounded-2xl rounded-bl-md border border-hairline bg-surface px-3 py-2.5 shadow-[0_6px_16px_rgba(20,20,30,0.04)]"
               aria-live="polite"
             >
               <StudyMarkdown className="text-[12.5px] leading-5 text-ink-soft">
@@ -419,7 +419,7 @@ export default function StudyAssistant({
 
           {showTypingDots ? (
             <article
-              className="mr-3 flex items-center gap-2 rounded-2xl rounded-bl-md border border-hairline bg-white px-3.5 py-3.5"
+              className="mr-3 flex items-center gap-2 rounded-2xl rounded-bl-md border border-hairline bg-surface px-3.5 py-3.5"
               aria-label="The tutor is writing"
             >
               <span className="tutor-dot" aria-hidden="true" />
@@ -431,7 +431,7 @@ export default function StudyAssistant({
 
         {error && (
           <p
-            className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700"
+            className="mt-3 rounded-xl bg-danger-tint px-3 py-2 text-xs font-semibold text-danger"
             role="alert"
           >
             {error}
@@ -440,7 +440,7 @@ export default function StudyAssistant({
         <div ref={endRef} />
       </div>
 
-      <form onSubmit={send} className="border-t border-hairline bg-white p-2.5 sm:p-3">
+      <form onSubmit={send} className="border-t border-hairline bg-surface p-2.5 sm:p-3">
         <div className="mb-2 flex flex-wrap gap-1.5">
           {QUICK_PROMPTS.map(({ label, prompt, Icon }) => (
             <button
@@ -499,7 +499,7 @@ export default function StudyAssistant({
         onClick={toggle}
         aria-expanded={isOpen}
         aria-controls={`study-assistant-${sessionId}`}
-        className="group inline-flex min-h-12 items-center gap-2 rounded-2xl bg-ink px-4 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(20,20,30,0.24)] transition hover:-translate-y-px hover:bg-ink/90"
+        className="group inline-flex min-h-12 items-center gap-2 rounded-2xl bg-ink-solid px-4 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(20,20,30,0.24)] transition hover:-translate-y-px hover:bg-ink-solid/90"
       >
         <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary">
           <BotMessageSquare className="h-4 w-4" aria-hidden="true" />

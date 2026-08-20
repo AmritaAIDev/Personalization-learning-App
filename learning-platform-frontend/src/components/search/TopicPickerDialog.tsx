@@ -135,7 +135,7 @@ export default function TopicPickerDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-end justify-center overflow-hidden bg-ink/45 p-0 backdrop-blur-md sm:items-center sm:p-8"
+      className="fixed inset-0 z-[80] flex items-end justify-center overflow-hidden bg-ink-solid/45 p-0 backdrop-blur-md sm:items-center sm:p-8"
       role="dialog"
       aria-modal="true"
       aria-label="Find a learning topic"
@@ -146,12 +146,12 @@ export default function TopicPickerDialog({
         onClick={onClose}
         aria-label="Close topic search"
       />
-      <section className="relative z-10 flex h-[min(42rem,calc(100dvh-0.75rem))] w-full max-w-3xl flex-col overflow-hidden rounded-t-[1.5rem] border border-white/75 bg-white shadow-[0_28px_90px_rgba(20,20,30,0.28)] sm:h-[min(44rem,calc(100dvh-4rem))] sm:rounded-[1.75rem]">
+      <section className="relative z-10 flex h-[min(42rem,calc(100dvh-0.75rem))] w-full max-w-3xl flex-col overflow-hidden rounded-t-[1.5rem] border border-hairline bg-surface shadow-[0_28px_90px_rgba(20,20,30,0.28)] sm:h-[min(44rem,calc(100dvh-4rem))] sm:rounded-[1.75rem]">
         <div
           className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-primary/10 blur-3xl"
           aria-hidden="true"
         />
-        <header className="relative flex shrink-0 items-start justify-between gap-3 border-b border-hairline bg-white/95 px-4 py-3 sm:gap-4 sm:px-7 sm:py-5">
+        <header className="relative flex shrink-0 items-start justify-between gap-3 border-b border-hairline bg-surface/95 px-4 py-3 sm:gap-4 sm:px-7 sm:py-5">
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
               Topic finder
@@ -174,7 +174,7 @@ export default function TopicPickerDialog({
           </button>
         </header>
 
-        <div className="relative flex min-h-0 flex-1 flex-col bg-white p-3 sm:p-7">
+        <div className="relative flex min-h-0 flex-1 flex-col bg-surface p-3 sm:p-7">
           <label className="relative block shrink-0">
             <span className="sr-only">Search topics and chapters</span>
             <Search
@@ -187,7 +187,7 @@ export default function TopicPickerDialog({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search a topic or chapter"
-              className="h-12 w-full rounded-2xl border border-hairline bg-white pl-12 pr-4 text-[16px] font-semibold text-ink shadow-[0_10px_28px_rgba(20,20,30,0.045)] outline-none transition placeholder:font-medium placeholder:text-ink-mute focus:border-primary/55 focus:bg-white focus:shadow-[0_12px_34px_rgba(63,111,87,0.12)] sm:h-13 sm:text-[15px]"
+              className="h-12 w-full rounded-2xl border border-hairline bg-surface pl-12 pr-4 text-[16px] font-semibold text-ink shadow-[0_10px_28px_rgba(20,20,30,0.045)] outline-none transition placeholder:font-medium placeholder:text-ink-mute focus:border-primary/55 focus:bg-surface focus:shadow-[0_12px_34px_rgba(63,111,87,0.12)] sm:h-13 sm:text-[15px]"
             />
           </label>
 
@@ -214,7 +214,7 @@ export default function TopicPickerDialog({
             <div className="h-full overflow-y-auto overscroll-contain pr-1 custom-scrollbar">
             {error ? (
               <div
-                className="flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-3 text-sm text-rose-700"
+                className="flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-3 py-3 text-sm text-danger"
                 role="alert"
               >
                 <CircleAlert
@@ -280,7 +280,7 @@ function TopicResult({
     <button
       type="button"
       onClick={onOpen}
-      className="group rounded-2xl border border-hairline bg-white p-3 text-left transition duration-300 ease-out-soft hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary-tint/35 hover:shadow-[0_10px_24px_rgba(20,20,30,0.06)] sm:p-4"
+      className="group rounded-2xl border border-hairline bg-surface p-3 text-left transition duration-300 ease-out-soft hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary-tint/35 hover:shadow-[0_10px_24px_rgba(20,20,30,0.06)] sm:p-4"
     >
       <div className="flex items-start justify-between gap-3">
         <span className="min-w-0">
@@ -340,6 +340,6 @@ function stateTone(status: LearningState["status"]) {
   if (status === "MASTERED")
     return "bg-primary-tint text-primary ring-1 ring-primary/10";
   if (status === "PAUSED_FOR_PREREQUISITE")
-    return "bg-rose-50 text-rose-700 ring-1 ring-rose-100";
-  return "bg-orange-50 text-orange-700 ring-1 ring-orange-100";
+    return "bg-danger-tint text-danger ring-1 ring-danger/15";
+  return "bg-warning-tint text-warning ring-1 ring-warning/15";
 }

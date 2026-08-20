@@ -263,13 +263,13 @@ export default function GenerationStudio({
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
                   topicId === gap.topicId
                     ? "border-primary bg-primary text-white"
-                    : "border-hairline bg-canvas text-ink-soft hover:bg-white"
+                    : "border-hairline bg-canvas text-ink-soft hover:bg-surface"
                 }`}
               >
                 {gap.topic}
                 <span
                   className={`rounded-full px-1.5 py-0.5 text-[10px] ${
-                    topicId === gap.topicId ? "bg-white/20" : "bg-white text-ink-mute"
+                    topicId === gap.topicId ? "bg-white/20" : "bg-surface text-ink-mute"
                   }`}
                 >
                   {gap.publishedCount}
@@ -280,7 +280,7 @@ export default function GenerationStudio({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-[1.75rem] bg-ink p-5 text-white shadow-[0_20px_50px_rgba(20,20,30,0.22)] sm:p-6">
+      <div className="overflow-hidden rounded-[1.75rem] bg-ink-solid p-5 text-white shadow-[0_20px_50px_rgba(20,20,30,0.22)] sm:p-6">
         <div className="flex items-center gap-3">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10">
             <Wand2 className="h-5 w-5" aria-hidden="true" />
@@ -398,7 +398,7 @@ export default function GenerationStudio({
 
       {error ? (
         <p
-          className="flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700"
+          className="flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-3 py-3 text-sm font-semibold text-danger"
           role="alert"
         >
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -407,7 +407,7 @@ export default function GenerationStudio({
       ) : null}
       {notice ? (
         <p
-          className="flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-800"
+          className="flex items-start gap-2 rounded-xl border border-success/20 bg-success-tint px-3 py-3 text-sm font-semibold text-success"
           role="status"
         >
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -523,8 +523,8 @@ function ResultCard({
   return (
     <div className="rounded-2xl border border-hairline bg-canvas p-4">
       <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-ink-mute">
-        <span className="rounded-full bg-white px-2 py-0.5">{entry.combo.bloomLevel}</span>
-        <span className="rounded-full bg-white px-2 py-0.5">{entry.combo.difficulty}</span>
+        <span className="rounded-full bg-surface px-2 py-0.5">{entry.combo.bloomLevel}</span>
+        <span className="rounded-full bg-surface px-2 py-0.5">{entry.combo.difficulty}</span>
       </div>
 
       {entry.status === "pending" ? (
@@ -533,7 +533,7 @@ function ResultCard({
           Generating…
         </div>
       ) : entry.status === "failed" ? (
-        <p className="mt-3 flex items-start gap-2 text-sm font-semibold text-rose-700">
+        <p className="mt-3 flex items-start gap-2 text-sm font-semibold text-danger">
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           {entry.error}
         </p>
@@ -557,7 +557,7 @@ function ResultCard({
               onClick={onDiscard}
               disabled={busy}
               title="Discard"
-              className="inline-flex min-h-8 items-center justify-center rounded-lg border border-hairline px-3 py-1.5 text-xs font-bold text-ink-soft hover:bg-white disabled:opacity-60"
+              className="inline-flex min-h-8 items-center justify-center rounded-lg border border-hairline px-3 py-1.5 text-xs font-bold text-ink-soft hover:bg-surface disabled:opacity-60"
             >
               <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
             </button>

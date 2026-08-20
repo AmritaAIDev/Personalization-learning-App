@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { LearningAnswer } from '../adaptive/learning-answer.entity';
 import { MisconceptionsModule } from '../misconceptions/misconceptions.module';
 import { NotebookConceptSummary } from './notebook-concept-summary.entity';
+import { NotebookMistakeReview } from './notebook-mistake-review.entity';
 import { NotebookConceptService } from './notebook-concept.service';
 import { DiagnosticAnswer } from '../diagnostics/diagnostic-answer.entity';
 import { PracticeAnswer } from '../practice/practice-answer.entity';
@@ -16,6 +17,7 @@ import { NotebookService } from './notebook.service';
       LearningAnswer,
       DiagnosticAnswer,
       NotebookConceptSummary,
+      NotebookMistakeReview,
     ]),
     MisconceptionsModule,
   ],

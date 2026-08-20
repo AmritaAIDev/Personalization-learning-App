@@ -25,6 +25,7 @@ import { TutorMessage } from '../adaptive/tutor-message.entity';
 import { Doubt } from '../doubts/doubt.entity';
 import { DoubtThread } from '../doubts/doubt-thread.entity';
 import { NotebookConceptSummary } from '../notebook/notebook-concept-summary.entity';
+import { NotebookMistakeReview } from '../notebook/notebook-mistake-review.entity';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -63,6 +64,7 @@ export default new DataSource({
     DoubtThread,
     Doubt,
     NotebookConceptSummary,
+    NotebookMistakeReview,
   ],
   migrations: [join(__dirname, '..', 'migrations', '*{.ts,.js}')],
   synchronize: false,

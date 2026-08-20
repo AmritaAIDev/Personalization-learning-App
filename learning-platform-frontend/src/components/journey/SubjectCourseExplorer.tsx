@@ -79,7 +79,7 @@ export default function SubjectCourseExplorer({
   if (chapters.length === 0) {
     return createPortal(
       <section
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/35 p-4 backdrop-blur-sm"
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-solid/35 p-4 backdrop-blur-sm"
         role="dialog"
         aria-modal="true"
         aria-labelledby="course-explorer-heading"
@@ -122,7 +122,7 @@ export default function SubjectCourseExplorer({
 
   return createPortal(
     <section
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/35 p-3 backdrop-blur-sm sm:p-5"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-solid/35 p-3 backdrop-blur-sm sm:p-5"
       role="dialog"
       aria-modal="true"
       aria-labelledby="course-explorer-heading"
@@ -187,7 +187,7 @@ export default function SubjectCourseExplorer({
                 </span>
               </div>
             </div>
-            <div className="mt-4 rounded-2xl bg-ink p-4 text-white">
+            <div className="mt-4 rounded-2xl bg-ink-solid p-4 text-white">
               <p className="text-[12px] text-white/55">Course rule</p>
               <p className="mt-1 text-sm leading-5 text-white/78">
                 Pick a topic and the learning flow decides baseline, level,
@@ -209,7 +209,7 @@ export default function SubjectCourseExplorer({
                 return (
                   <article
                     key={chapter.id}
-                    className={`overflow-hidden rounded-2xl border transition-[border-color,background-color,box-shadow] duration-300 ${isOpen ? "border-primary/25 bg-canvas/70 shadow-[0_12px_32px_rgba(20,20,30,0.05)]" : "border-hairline bg-white"}`}
+                    className={`overflow-hidden rounded-2xl border transition-[border-color,background-color,box-shadow] duration-300 ${isOpen ? "border-primary/25 bg-canvas/70 shadow-[0_12px_32px_rgba(20,20,30,0.05)]" : "border-hairline bg-surface"}`}
                   >
                     <button
                       type="button"
@@ -281,9 +281,9 @@ export default function SubjectCourseExplorer({
                                   ? `${progress}% in progress`
                                   : "Ready to begin";
                           const row = (
-                            <span className="group flex min-w-0 items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-white">
+                            <span className="group flex min-w-0 items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-canvas">
                               <span
-                                className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${status === "completed" ? "bg-primary-tint text-primary" : status === "locked" ? "bg-canvas text-ink-mute" : "bg-ink text-white"}`}
+                                className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${status === "completed" ? "bg-primary-tint text-primary" : status === "locked" ? "bg-canvas text-ink-mute" : "bg-ink-solid text-white"}`}
                               >
                                 {icon}
                               </span>

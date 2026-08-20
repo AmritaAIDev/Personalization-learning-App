@@ -16,7 +16,7 @@ export default function AuthFrame({
     <main className="flex min-h-[100dvh] items-center justify-center bg-canvas px-4 py-6 sm:p-6 lg:p-10">
       <div className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-[1.5rem] bg-surface hairline elevate sm:rounded-[1.75rem] lg:grid-cols-[1.02fr_0.98fr] animate-rise">
         {/* Brand panel — calm, typographic, no glow or grid. */}
-        <section className="relative hidden flex-col justify-between bg-ink p-12 text-white lg:flex">
+        <section className="relative hidden flex-col justify-between bg-ink-solid p-12 text-white lg:flex">
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-white">
               <Atom className="h-5 w-5" aria-hidden="true" />

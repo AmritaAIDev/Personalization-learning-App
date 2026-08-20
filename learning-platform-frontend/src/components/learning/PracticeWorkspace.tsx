@@ -250,7 +250,7 @@ function ActiveQuestion({
           {current.bloomLevel}
         </span>
         {current.requiresRetry ? (
-          <span className="ml-auto rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
+          <span className="ml-auto rounded-full bg-warning-tint px-2.5 py-0.5 text-[11px] font-bold text-warning">
             Second attempt
           </span>
         ) : (
@@ -287,7 +287,7 @@ function ActiveQuestion({
                 onClick={() => select(option)}
                 className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left text-[13px] font-medium transition ${
                   ruledOut
-                    ? "border-rose-200 bg-rose-50 text-rose-700 line-through opacity-75"
+                    ? "border-danger/25 bg-danger-tint text-danger line-through opacity-75"
                     : pendingOption === option
                       ? "border-primary bg-primary-tint text-primary-strong ring-1 ring-primary"
                       : "border-hairline bg-surface text-ink hover:border-primary/45 hover:bg-primary-tint/40"
@@ -308,7 +308,7 @@ function ActiveQuestion({
                 </StudyMarkdown>
                 {ruledOut ? (
                   <XCircle
-                    className="h-4 w-4 shrink-0 text-rose-500"
+                    className="h-4 w-4 shrink-0 text-danger"
                     aria-hidden="true"
                   />
                 ) : isPending ? (
@@ -341,7 +341,7 @@ function ActiveQuestion({
 
         {error ? (
           <p
-            className="flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
+            className="flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-4 py-3 text-sm font-medium text-danger"
             role="alert"
           >
             <CircleAlert
@@ -360,7 +360,7 @@ function AnswerFeedback({ feedback }: { feedback: NonNullable<Feedback> }) {
   if (feedback.kind === "CORRECT") {
     return (
       <p
-        className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-sm font-semibold text-emerald-800"
+        className="flex items-center gap-2 rounded-2xl border border-success/25 bg-success-tint px-3.5 py-3 text-sm font-semibold text-success"
         role="status"
       >
         <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -371,7 +371,7 @@ function AnswerFeedback({ feedback }: { feedback: NonNullable<Feedback> }) {
   if (feedback.kind === "SOCRATIC_HINT") {
     return (
       <div
-        className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-900"
+        className="flex items-start gap-3 rounded-2xl border border-warning/25 bg-warning-tint p-3.5 text-sm text-warning"
         role="status"
       >
         <MessagesSquare
@@ -469,9 +469,9 @@ function RoundOutcome({
       <span
         className={`grid h-12 w-12 place-items-center rounded-2xl ${
           tone === "mastered"
-            ? "bg-emerald-100 text-emerald-700"
+            ? "bg-success-tint text-success"
             : tone === "rebuild"
-              ? "bg-amber-100 text-amber-800"
+              ? "bg-warning-tint text-warning"
               : "bg-primary-tint text-primary"
         }`}
       >
@@ -516,7 +516,7 @@ function RoundOutcome({
 
       {error ? (
         <p
-          className="mt-4 flex max-w-md items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-left text-sm font-medium text-rose-700"
+          className="mt-4 flex max-w-md items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-3 py-2 text-left text-sm font-medium text-danger"
           role="alert"
         >
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -594,7 +594,7 @@ function StartPanel({
           </p>
           {error ? (
             <p
-              className="mt-5 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
+              className="mt-5 flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-4 py-3 text-sm font-medium text-danger"
               role="alert"
             >
               <CircleAlert

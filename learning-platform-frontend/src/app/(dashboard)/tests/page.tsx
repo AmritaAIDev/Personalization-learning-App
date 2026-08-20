@@ -30,16 +30,16 @@ function formatDate(value: string | null) {
 }
 
 function scoreTone(score: number) {
-  if (score >= 70) return "bg-emerald-50 text-emerald-700 ring-emerald-100";
-  if (score >= 40) return "bg-amber-50 text-amber-800 ring-amber-100";
-  return "bg-rose-50 text-rose-700 ring-rose-100";
+  if (score >= 70) return "bg-success-tint text-success ring-success/15";
+  if (score >= 40) return "bg-warning-tint text-warning ring-warning/15";
+  return "bg-danger-tint text-danger ring-danger/15";
 }
 
 function TestRecord({ attempt }: { attempt: HistoryItem }) {
   return (
     <Link
       href={`/analysis/${attempt.id}`}
-      className="group flex items-center gap-4 rounded-2xl border border-hairline bg-canvas px-4 py-3.5 transition hover:border-primary/30 hover:bg-white hover:shadow-[0_12px_26px_rgba(20,20,30,0.06)]"
+      className="group flex items-center gap-4 rounded-2xl border border-hairline bg-canvas px-4 py-3.5 transition hover:border-primary/30 hover:bg-surface hover:shadow-[0_12px_26px_rgba(20,20,30,0.06)]"
     >
       <span
         className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl text-sm font-bold ring-1 ${scoreTone(attempt.scorePercent)}`}
@@ -162,7 +162,7 @@ export default function TestsPage() {
             type="button"
             onClick={() => void startOrResume()}
             disabled={loading || launching || !canStart}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(20,20,30,0.16)] transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-55"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink-solid px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(20,20,30,0.16)] transition hover:bg-ink-solid/90 disabled:cursor-not-allowed disabled:opacity-55"
           >
             {launching ? (
               <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -177,7 +177,7 @@ export default function TestsPage() {
 
         {loading ? <TestsSkeleton /> : null}
         {error ? (
-          <div className="mt-6 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          <div className="mt-6 flex items-start gap-3 rounded-2xl border border-danger/25 bg-danger-tint p-4 text-sm text-danger">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
             <div>
               <p className="font-bold">Something interrupted Tests</p>
@@ -195,7 +195,7 @@ export default function TestsPage() {
 
         {!loading && dashboard ? (
           <>
-            <section className="mt-7 overflow-hidden rounded-[1.8rem] bg-ink p-5 text-white shadow-[0_18px_45px_rgba(20,20,30,0.16)] sm:p-7">
+            <section className="mt-7 overflow-hidden rounded-[1.8rem] bg-ink-solid p-5 text-white shadow-[0_18px_45px_rgba(20,20,30,0.16)] sm:p-7">
               <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
@@ -272,7 +272,7 @@ export default function TestsPage() {
             </Link>
 
             {!dashboard.diagnostic.ready && !dashboard.activeAttempt ? (
-              <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <div className="mt-4 flex items-start gap-3 rounded-2xl border border-warning/25 bg-warning-tint p-4 text-sm text-warning">
                 <Clock3 className="mt-0.5 h-5 w-5 shrink-0" />
                 <div>
                   <p className="font-bold">Your next test is being prepared</p>
@@ -372,7 +372,7 @@ export default function TestsPage() {
                       {repairTopics.map((topic) => (
                         <span
                           key={topic}
-                          className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-primary ring-1 ring-primary/10"
+                          className="rounded-full bg-surface px-3 py-1.5 text-xs font-bold text-primary ring-1 ring-primary/10"
                         >
                           {topic}
                         </span>

@@ -102,7 +102,7 @@ export default function ExplainThis({ endpoint }: { endpoint: string }) {
 
       {error ? (
         <p
-          className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700"
+          className="mt-3 rounded-lg bg-danger-tint px-3 py-2 text-xs font-semibold text-danger"
           role="alert"
         >
           {error}
@@ -112,7 +112,7 @@ export default function ExplainThis({ endpoint }: { endpoint: string }) {
       {explanation ? (
         <div className="mt-3 rounded-lg border border-hairline bg-surface p-4">
           {!grounded ? (
-            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-amber-700">
+            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-warning">
               <WifiOff className="h-3.5 w-3.5" aria-hidden="true" />
               Offline explanation from the reviewed solution.
             </p>

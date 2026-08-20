@@ -105,14 +105,14 @@ export default function SubtopicExplorer({ scope }: { scope: LearningScope }) {
               onClick={() => setSelected(item.name)}
               className={`group relative rounded-full px-3.5 py-2 text-[13px] font-medium transition duration-200 ${
                 isActive
-                  ? "bg-ink text-white"
+                  ? "bg-ink-solid text-white"
                   : "bg-canvas text-ink-soft hover:bg-primary-tint hover:text-primary"
               }`}
             >
               {item.name}
               <span
                 className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${
-                  isActive ? "bg-white/20" : "bg-black/[0.05] text-ink-mute"
+                  isActive ? "bg-white/20" : "bg-ink/10 text-ink-mute"
                 }`}
               >
                 {item.questionCount}

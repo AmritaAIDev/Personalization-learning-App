@@ -128,12 +128,12 @@ export default function TargetedPracticeCard({
               const isSelected = selected === option;
               const isAnswerKey = result && option === result.correctAnswer;
               const tone = !result
-                ? "border-hairline bg-white hover:border-primary/40"
+                ? "border-hairline bg-surface hover:border-primary/40"
                 : isAnswerKey
-                  ? "border-emerald-300 bg-emerald-50"
+                  ? "border-success bg-success-tint"
                   : isSelected
-                    ? "border-rose-300 bg-rose-50"
-                    : "border-hairline bg-white opacity-60";
+                    ? "border-danger bg-danger-tint"
+                    : "border-hairline bg-surface opacity-60";
               return (
                 <button
                   key={option}
@@ -149,10 +149,10 @@ export default function TargetedPracticeCard({
           </div>
 
           {result ? (
-            <div className="mt-3 rounded-lg border border-hairline bg-white p-3">
+            <div className="mt-3 rounded-lg border border-hairline bg-surface p-3">
               <div
                 className={`flex items-center gap-1.5 text-[12px] font-bold ${
-                  result.isCorrect ? "text-emerald-600" : "text-rose-600"
+                  result.isCorrect ? "text-success" : "text-danger"
                 }`}
               >
                 {result.isCorrect ? (
@@ -179,7 +179,7 @@ export default function TargetedPracticeCard({
       )}
 
       {error ? (
-        <p className="mt-2 text-[12px] font-medium text-rose-600">{error}</p>
+        <p className="mt-2 text-[12px] font-medium text-danger">{error}</p>
       ) : null}
     </div>
   );

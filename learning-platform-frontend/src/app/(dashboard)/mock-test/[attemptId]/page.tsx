@@ -22,6 +22,8 @@ import type {
   MockTestAttemptPayload,
   MockTestReviewPayload,
 } from "@/lib/mock-test-types";
+import AttemptResultHero from "@/components/results/AttemptResultHero";
+import AttemptResultQuestionRow from "@/components/results/AttemptResultQuestionRow";
 
 const StudyMarkdown = dynamic(
   () => import("@/components/learning/StudyMarkdown"),
@@ -59,9 +61,9 @@ function MockTestAttemptSkeleton() {
 }
 
 function scoreTone(scorePercent: number) {
-  if (scorePercent >= 70) return "text-emerald-700";
-  if (scorePercent >= 40) return "text-amber-700";
-  return "text-rose-700";
+  if (scorePercent >= 70) return "text-success";
+  if (scorePercent >= 40) return "text-warning";
+  return "text-danger";
 }
 
 export default function MockTestAttemptPage() {
@@ -181,9 +183,9 @@ export default function MockTestAttemptPage() {
   if (error && !payload) {
     return (
       <div className="mx-auto flex min-h-screen max-w-lg items-center px-5">
-        <div className="w-full rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center">
-          <AlertCircle className="mx-auto h-8 w-8 text-rose-500" />
-          <p className="mt-3 text-sm font-semibold text-rose-800">{error}</p>
+        <div className="w-full rounded-2xl border border-danger/25 bg-danger-tint p-6 text-center">
+          <AlertCircle className="mx-auto h-8 w-8 text-danger" />
+          <p className="mt-3 text-sm font-semibold text-danger">{error}</p>
           <Link
             href="/mock-test"
             className="mt-4 inline-block text-sm font-bold text-primary underline"
@@ -213,7 +215,7 @@ export default function MockTestAttemptPage() {
               {answeredCount} of {payload.attempt.totalQuestions} answered
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-xl bg-ink px-4 py-2 text-sm font-bold tabular-nums text-white">
+          <div className="flex items-center gap-2 rounded-xl bg-ink-solid px-4 py-2 text-sm font-bold tabular-nums text-white">
             <Clock3 className="h-4 w-4" aria-hidden="true" />
             {formatDuration(remainingSeconds)}
           </div>
@@ -235,7 +237,7 @@ export default function MockTestAttemptPage() {
                 onClick={() => setCurrentIndex(index)}
                 className={`h-9 rounded-lg text-xs font-bold tabular-nums transition duration-200 ease-out-soft active:scale-90 ${
                   isCurrent
-                    ? "bg-ink text-white"
+                    ? "bg-ink-solid text-white"
                     : isAnswered
                       ? "bg-primary-tint text-primary"
                       : "bg-surface text-ink-mute ring-1 ring-hairline hover:bg-canvas"
@@ -308,7 +310,7 @@ export default function MockTestAttemptPage() {
         ) : null}
 
         {error ? (
-          <p className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+          <p className="mt-4 rounded-xl bg-danger-tint px-4 py-3 text-sm font-semibold text-danger">
             {error}
           </p>
         ) : null}
@@ -366,7 +368,7 @@ export default function MockTestAttemptPage() {
                     Math.min(payload.questions.length - 1, index + 1),
                   )
                 }
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-5 py-2.5 text-sm font-bold text-white transition duration-200 ease-out-soft hover:bg-ink/90 active:scale-[0.97]"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink-solid px-5 py-2.5 text-sm font-bold text-white transition duration-200 ease-out-soft hover:bg-ink-solid/90 active:scale-[0.97]"
               >
                 Next
                 <ArrowRight className="h-4 w-4" />
@@ -421,39 +423,35 @@ function MockTestResults({
   return (
     <div className="min-h-screen bg-canvas pb-20">
       <main className="mx-auto w-full max-w-4xl px-5 pt-8 sm:px-8 sm:pt-10">
-        <section className="animate-rise overflow-hidden rounded-[1.8rem] bg-ink p-6 text-white shadow-[0_18px_45px_rgba(20,20,30,0.16)] sm:p-8">
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
-            <Trophy className="h-3.5 w-3.5" />
-            Mock test result
-          </div>
-          <div className="mt-4 flex flex-wrap items-end gap-8">
-            <div>
+        <div className="animate-rise">
+          <AttemptResultHero
+            icon={Trophy}
+            eyebrow="Mock test result"
+            score={
               <p className="font-heading text-5xl font-bold text-white">
                 {attempt.scorePercent}%
               </p>
-              <p className="mt-1 text-sm text-white/60">
-                {attempt.percentile !== null
-                  ? `${attempt.percentile}th percentile on this platform`
-                  : "Percentile pending"}
-              </p>
-            </div>
-            <div className="flex gap-6 text-sm">
+            }
+            statsLine={
+              attempt.percentile !== null
+                ? `${attempt.percentile}th percentile on this platform`
+                : "Percentile pending"
+            }
+          >
+            <div className="mt-5 flex gap-6 text-sm">
               <span>
                 <span className="block font-heading text-xl font-bold">
-                  {attempt.subjectCounts.reduce(
-                    (sum, s) => sum + s.count,
-                    0,
-                  )}
+                  {attempt.subjectCounts.reduce((sum, s) => sum + s.count, 0)}
                 </span>
                 <span className="text-white/50">Questions</span>
               </span>
             </div>
-          </div>
-          <p className="mt-4 max-w-lg text-xs leading-5 text-white/50">
-            Percentile is measured against other submitted mock tests on this
-            platform, not the official national JEE cohort.
-          </p>
-        </section>
+            <p className="mt-4 max-w-lg text-xs leading-5 text-white/50">
+              Percentile is measured against other submitted mock tests on
+              this platform, not the official national JEE cohort.
+            </p>
+          </AttemptResultHero>
+        </div>
 
         <section className="mt-5 grid animate-fade gap-3 [animation-delay:80ms] sm:grid-cols-3">
           {review.subjectBreakdown.map((subject, index) => (
@@ -493,7 +491,7 @@ function MockTestResults({
                     {chapter.chapter}{" "}
                     <span className="text-ink-mute">· {chapter.subject}</span>
                   </span>
-                  <span className="shrink-0 text-xs font-bold text-rose-600">
+                  <span className="shrink-0 text-xs font-bold text-danger">
                     -{chapter.lostMarks} marks
                     {chapter.unattempted > 0
                       ? ` · ${chapter.unattempted} skipped`
@@ -526,9 +524,9 @@ function MockTestResults({
               >
                 <summary className="flex cursor-pointer list-none items-center gap-3">
                   {item.isCorrect === true ? (
-                    <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
                   ) : item.isCorrect === false ? (
-                    <XCircle className="h-5 w-5 shrink-0 text-rose-500" />
+                    <XCircle className="h-5 w-5 shrink-0 text-danger" />
                   ) : (
                     <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-canvas text-[10px] font-bold text-ink-mute">
                       —
@@ -539,17 +537,12 @@ function MockTestResults({
                   </span>
                 </summary>
                 <div className="mt-3 border-t border-hairline pt-3 text-sm leading-6 text-ink-soft">
-                  <p>
-                    <span className="font-semibold text-ink">Your answer: </span>
-                    {item.selectedOption ?? "Not attempted"}
-                  </p>
-                  <p className="mt-1">
-                    <span className="font-semibold text-emerald-700">
-                      Correct answer:{" "}
-                    </span>
-                    {item.correctAnswer}
-                  </p>
-                  <p className="mt-2">{item.solution}</p>
+                  <AttemptResultQuestionRow
+                    isCorrect={item.isCorrect}
+                    yourAnswer={item.selectedOption ?? "Not attempted"}
+                    correctAnswer={item.correctAnswer}
+                  />
+                  <p className="mt-3">{item.solution}</p>
                 </div>
               </details>
             ))}

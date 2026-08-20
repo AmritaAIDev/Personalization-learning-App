@@ -93,7 +93,7 @@ export default function DiagnosticStartPage() {
       </Link>
 
       <section className="mt-4 overflow-hidden rounded-2xl border border-hairline bg-surface shadow-[0_12px_30px_rgba(20,20,30,0.045)]">
-        <div className="bg-ink p-6 text-white sm:p-8">
+        <div className="bg-ink-solid p-6 text-white sm:p-8">
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
             <ClipboardCheck className="h-5 w-5" aria-hidden="true" />
           </span>
@@ -112,7 +112,7 @@ export default function DiagnosticStartPage() {
         <div className="p-5 sm:p-6">
           {error ? (
             <p
-              className="mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"
+              className="mb-4 flex items-start gap-2 rounded-xl border border-danger/25 bg-danger-tint px-3 py-2 text-sm font-medium text-danger"
               role="alert"
             >
               {error}
@@ -145,7 +145,7 @@ export default function DiagnosticStartPage() {
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             {dashboard?.activeAttempt ? (
-              <p className="text-sm font-medium text-amber-700">
+              <p className="text-sm font-medium text-warning">
                 A saved attempt is ready to resume.
               </p>
             ) : dashboard?.diagnostic.ready ? (

@@ -270,7 +270,7 @@ export default function DiagnosticAttemptPage() {
   if (!payload) {
     return (
       <div className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center p-6 text-center">
-        <CircleAlert className="h-9 w-9 text-rose-600" aria-hidden="true" />
+        <CircleAlert className="h-9 w-9 text-danger" aria-hidden="true" />
         <h1 className="mt-4 font-heading text-2xl font-semibold text-ink">
           This test could not be opened
         </h1>
@@ -308,7 +308,7 @@ export default function DiagnosticAttemptPage() {
           </h1>
           <span
             className={`ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold text-white ${
-              lowTime ? "animate-pulse bg-rose-600" : "bg-ink"
+              lowTime ? "animate-pulse bg-danger" : "bg-ink-solid"
             }`}
           >
             <Clock3 className="h-3 w-3" aria-hidden="true" />
@@ -347,7 +347,7 @@ export default function DiagnosticAttemptPage() {
 
       {error ? (
         <p
-          className="mt-4 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"
+          className="mt-4 flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-3 py-2 text-sm font-medium text-danger"
           role="alert"
         >
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -501,7 +501,7 @@ export default function DiagnosticAttemptPage() {
                 type="button"
                 onClick={() => goTo(currentIndex + 1)}
                 disabled={submitting}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-5 py-2.5 text-sm font-bold text-white transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink-solid px-5 py-2.5 text-sm font-bold text-white transition hover:bg-ink-solid/90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Next
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -538,7 +538,7 @@ export default function DiagnosticAttemptPage() {
                     isCurrent
                       ? "bg-primary text-white ring-2 ring-primary/30"
                       : isAnswered
-                        ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                        ? "bg-success-tint text-success hover:bg-success"
                         : "bg-canvas text-ink-mute hover:bg-primary-tint/50"
                   }`}
                 >
@@ -550,7 +550,7 @@ export default function DiagnosticAttemptPage() {
           <div className="mt-5 space-y-2 border-t border-hairline pt-4 text-[11px] text-ink-mute">
             <p className="flex items-center gap-2">
               <span
-                className="h-2.5 w-2.5 rounded-full bg-emerald-400"
+                className="h-2.5 w-2.5 rounded-full bg-success"
                 aria-hidden="true"
               />
               Answer saved
@@ -583,7 +583,7 @@ export default function DiagnosticAttemptPage() {
       </div>
 
       {confirmingSubmit ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-ink-solid/40 p-4 backdrop-blur-sm">
           <section className="w-full max-w-md rounded-2xl border border-hairline bg-surface p-6 shadow-[0_24px_70px_rgba(20,20,30,0.24)]">
             <h2 className="font-heading text-lg font-bold text-ink">
               Submit this test?
@@ -602,7 +602,7 @@ export default function DiagnosticAttemptPage() {
             </p>
             {error ? (
               <p
-                className="mt-4 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"
+                className="mt-4 flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-3 py-2 text-sm font-medium text-danger"
                 role="alert"
               >
                 <CircleAlert

@@ -7,17 +7,17 @@ const CONFIG: Record<
 > = {
   overconfident: {
     label: "Overconfident",
-    className: "bg-rose-50 text-rose-700",
+    className: "bg-danger-tint text-danger",
     Icon: ThumbsDown,
   },
   underconfident: {
     label: "Underconfident",
-    className: "bg-amber-50 text-amber-800",
+    className: "bg-warning-tint text-warning",
     Icon: ThumbsUp,
   },
   calibrated: {
     label: "Well calibrated",
-    className: "bg-emerald-50 text-emerald-700",
+    className: "bg-success-tint text-success",
     Icon: Gauge,
   },
 };

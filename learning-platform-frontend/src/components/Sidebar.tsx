@@ -29,6 +29,7 @@ import {
   scopeToParams,
 } from "@/lib/learning";
 import WorkspaceSelector from "@/components/WorkspaceSelector";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const navigation: Array<{
   label: string;
@@ -48,6 +49,7 @@ const navigation: Array<{
 ];
 
 const overviewLabels = new Set(["Dashboard", "Journey"]);
+const studyLabels = new Set(["Learn", "Practice", "Tests", "Notebook", "Doubts"]);
 const planningLabels = new Set(["Content", "Admin"]);
 const mobileLabels = new Set([
   "Dashboard",
@@ -218,6 +220,25 @@ export default function Sidebar() {
             <div className="my-3 border-t border-hairline" />
           </>
         ) : null}
+        {navigation.some(
+          (item) =>
+            studyLabels.has(item.label) &&
+            (!item.roles || item.roles.includes(user?.role ?? "student")),
+        ) ? (
+          <>
+            <SidebarSection
+              title="Study"
+              items={navigation.filter(
+                (item) =>
+                  studyLabels.has(item.label) &&
+                  (!item.roles || item.roles.includes(user?.role ?? "student")),
+              )}
+              pathname={pathname}
+              collapsed={isCollapsed}
+            />
+            <div className="my-3 border-t border-hairline" />
+          </>
+        ) : null}
         {user?.role !== "admin" ? (
           <WorkspaceSelector compact={isCollapsed} />
         ) : null}
@@ -241,10 +262,11 @@ export default function Sidebar() {
 
       <div className="mt-auto hidden w-full shrink-0 border-t border-hairline pt-2.5 md:block">
         {error && (
-          <p className="mb-3 hidden text-xs text-rose-600 lg:block" role="alert">
+          <p className="mb-3 hidden text-xs text-danger lg:block" role="alert">
             {error}
           </p>
         )}
+        <ThemeToggle collapsed={isCollapsed} />
         <Link
           href="/profile"
           className={`mb-1 flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-canvas md:justify-center ${isCollapsed ? "lg:justify-center" : "lg:justify-start"}`}

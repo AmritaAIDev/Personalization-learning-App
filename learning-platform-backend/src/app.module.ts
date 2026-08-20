@@ -38,6 +38,7 @@ import { NotebookModule } from './notebook/notebook.module';
 import { Doubt } from './doubts/doubt.entity';
 import { DoubtThread } from './doubts/doubt-thread.entity';
 import { NotebookConceptSummary } from './notebook/notebook-concept-summary.entity';
+import { NotebookMistakeReview } from './notebook/notebook-mistake-review.entity';
 import { DoubtsModule } from './doubts/doubts.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { MockTestAttempt } from './mock-tests/mock-test-attempt.entity';
@@ -97,6 +98,7 @@ import { AdminModule } from './admin/admin.module';
             DoubtThread,
             Doubt,
             NotebookConceptSummary,
+            NotebookMistakeReview,
             MockTestAttempt,
             MockTestAnswer,
             MisconceptionHit,

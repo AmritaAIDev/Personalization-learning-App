@@ -288,14 +288,14 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-6xl p-4 pb-24 sm:p-8 lg:p-10">
       {error ? (
         <div
-          className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
+          className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-danger/20 bg-danger-tint px-4 py-3 text-sm font-medium text-danger"
           role="alert"
         >
           <span>{error}</span>
           <button
             type="button"
             onClick={() => void load()}
-            className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1 text-xs font-bold text-white transition hover:bg-rose-700"
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-danger px-3 py-1 text-xs font-bold text-white transition hover:opacity-90"
           >
             Try again
           </button>
@@ -316,7 +316,7 @@ export default function ProfilePage() {
         <StaggerItem className="rounded-[1.5rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:p-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-orange-50 text-orange-500">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-warning-tint text-warning">
                 <Flame className="h-5 w-5" aria-hidden="true" />
               </span>
               <div>
@@ -444,7 +444,7 @@ export default function ProfilePage() {
             type="button"
             onClick={() => void clearHistory()}
             disabled={clearing}
-            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-hairline px-4 py-2 text-sm font-semibold text-ink-soft transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-60"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-hairline px-4 py-2 text-sm font-semibold text-ink-soft transition hover:border-danger/25 hover:bg-danger-tint hover:text-danger disabled:opacity-60"
           >
             {clearing ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
             Clear diagnostic history
@@ -469,7 +469,7 @@ function StaggerItemHero({
   const TierIcon = model.tier.current.icon;
   const initial = (name ?? "L").charAt(0).toUpperCase();
   return (
-    <header className="animate-rise relative overflow-hidden rounded-[1.75rem] bg-ink p-6 text-white shadow-[0_20px_50px_rgba(20,20,30,0.22)] sm:p-8">
+    <header className="animate-rise relative overflow-hidden rounded-[1.75rem] bg-ink-solid p-6 text-white shadow-[0_20px_50px_rgba(20,20,30,0.22)] sm:p-8">
       <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary/25 blur-3xl" />
       <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
@@ -538,7 +538,7 @@ function MilestoneStack({ badges }: { badges: Badge[] }) {
       <button
         type="button"
         onClick={() => setExpanded((value) => !value)}
-        className="group relative h-28 w-full rounded-[1.4rem] border border-hairline bg-canvas text-left transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_14px_30px_rgba(20,20,30,0.06)]"
+        className="group relative h-28 w-full rounded-[1.4rem] border border-hairline bg-canvas text-left transition hover:-translate-y-0.5 hover:bg-surface hover:shadow-[0_14px_30px_rgba(20,20,30,0.06)]"
         aria-expanded={expanded}
       >
         {badges.slice(0, 4).map((badge, index) => {
@@ -550,7 +550,7 @@ function MilestoneStack({ badges }: { badges: Badge[] }) {
               className={`absolute left-5 top-5 flex h-16 w-[calc(100%-2.5rem)] items-center gap-3 rounded-2xl border px-4 transition duration-300 ${
                 unlocked
                   ? "border-primary/20 bg-primary-tint text-primary"
-                  : "border-hairline bg-white text-ink-soft"
+                  : "border-hairline bg-surface text-ink-soft"
               }`}
               style={{
                 transform: `translateY(${index * 8}px) scale(${1 - index * 0.035})`,
@@ -558,7 +558,7 @@ function MilestoneStack({ badges }: { badges: Badge[] }) {
                 opacity: 1 - index * 0.13,
               }}
             >
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-white shadow-sm">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-surface shadow-sm">
                 <Icon className="h-4 w-4" aria-hidden="true" />
               </span>
               <span className="min-w-0">
@@ -605,7 +605,7 @@ function BadgeCard({ badge }: { badge: Badge }) {
       >
         <span
           className={`grid h-11 w-11 place-items-center rounded-xl ${
-            unlocked ? "bg-primary text-white shadow-[0_8px_18px_rgba(63,111,87,0.28)]" : "bg-white text-ink-mute ring-1 ring-hairline"
+            unlocked ? "bg-primary text-white shadow-[0_8px_18px_rgba(63,111,87,0.28)]" : "bg-surface text-ink-mute ring-1 ring-hairline"
           }`}
         >
           <Icon className="h-5 w-5" aria-hidden="true" />
@@ -620,7 +620,7 @@ function BadgeCard({ badge }: { badge: Badge }) {
           </span>
         ) : (
           <div className="mt-2 w-full">
-            <div className="h-1.5 overflow-hidden rounded-full bg-white">
+            <div className="h-1.5 overflow-hidden rounded-full bg-canvas">
               <Bar percent={pct} />
             </div>
             <p className="mt-1 text-[10px] font-semibold text-ink-mute">

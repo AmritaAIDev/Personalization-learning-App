@@ -62,7 +62,7 @@ export default function AnalyticsPage() {
           </div>
           <Link
             href="/tests"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-ink/90"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink-solid px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-ink-solid/90"
           >
             Open tests
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -74,7 +74,7 @@ export default function AnalyticsPage() {
             {[0, 1, 2].map((item) => (
               <div
                 key={item}
-                className="h-32 rounded-[1.35rem] border border-hairline bg-white p-5"
+                className="h-32 rounded-[1.35rem] border border-hairline bg-surface p-5"
               >
                 <div className="h-4 w-24 rounded-full skeleton" />
                 <div className="mt-5 h-9 w-20 rounded-full skeleton" />
@@ -84,7 +84,7 @@ export default function AnalyticsPage() {
         ) : null}
 
         {error ? (
-          <div className="mt-8 flex items-start gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-800">
+          <div className="mt-8 flex items-start gap-3 rounded-2xl border border-danger/20 bg-danger-tint p-4 text-sm text-danger">
             <CircleAlert
               className="mt-0.5 h-5 w-5 shrink-0"
               aria-hidden="true"
@@ -106,7 +106,7 @@ export default function AnalyticsPage() {
         {!loading && growth ? (
           <>
             <section className="mt-8 grid gap-4 md:grid-cols-4">
-              <article className="rounded-[1.35rem] border border-hairline bg-white p-5 shadow-[0_18px_48px_rgba(20,20,30,0.04)]">
+              <article className="rounded-[1.35rem] border border-hairline bg-surface p-5 shadow-[0_18px_48px_rgba(20,20,30,0.04)]">
                 <BarChart3
                   className="h-5 w-5 text-primary"
                   aria-hidden="true"
@@ -118,7 +118,7 @@ export default function AnalyticsPage() {
                   {growth.overall.score}%
                 </p>
               </article>
-              <article className="rounded-[1.35rem] border border-hairline bg-white p-5 shadow-[0_18px_48px_rgba(20,20,30,0.04)]">
+              <article className="rounded-[1.35rem] border border-hairline bg-surface p-5 shadow-[0_18px_48px_rgba(20,20,30,0.04)]">
                 <Target className="h-5 w-5 text-primary" aria-hidden="true" />
                 <p className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-ink-mute">
                   Topics
@@ -127,7 +127,7 @@ export default function AnalyticsPage() {
                   {growth.overall.topicsTracked}
                 </p>
               </article>
-              <article className="rounded-[1.35rem] border border-hairline bg-white p-5 shadow-[0_18px_48px_rgba(20,20,30,0.04)]">
+              <article className="rounded-[1.35rem] border border-hairline bg-surface p-5 shadow-[0_18px_48px_rgba(20,20,30,0.04)]">
                 <TrendingUp
                   className="h-5 w-5 text-primary"
                   aria-hidden="true"
@@ -140,7 +140,7 @@ export default function AnalyticsPage() {
                   {growth.overall.momentum}
                 </p>
               </article>
-              <article className="rounded-[1.35rem] border border-hairline bg-white p-5 shadow-[0_18px_48px_rgba(20,20,30,0.04)]">
+              <article className="rounded-[1.35rem] border border-hairline bg-surface p-5 shadow-[0_18px_48px_rgba(20,20,30,0.04)]">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-mute">
                   Best test
                 </p>
@@ -153,7 +153,7 @@ export default function AnalyticsPage() {
             </section>
 
             <section className="mt-5">
-              <article className="rounded-[1.55rem] border border-hairline bg-white p-6 shadow-[0_18px_48px_rgba(20,20,30,0.05)]">
+              <article className="rounded-[1.55rem] border border-hairline bg-surface p-6 shadow-[0_18px_48px_rgba(20,20,30,0.05)]">
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
                   Weak-topic queue
                 </p>
@@ -170,7 +170,7 @@ export default function AnalyticsPage() {
                           },
                           { tab: "practice" },
                         )}
-                        className="block rounded-2xl border border-hairline bg-canvas p-4 transition hover:border-primary/30 hover:bg-white"
+                        className="block rounded-2xl border border-hairline bg-canvas p-4 transition hover:border-primary/30 hover:bg-surface"
                       >
                         <div className="flex items-center justify-between gap-4">
                           <div>

@@ -19,9 +19,9 @@ import type {
 } from "@/lib/mock-test-types";
 
 function scoreTone(scorePercent: number) {
-  if (scorePercent >= 70) return "bg-emerald-50 text-emerald-700 ring-emerald-100";
-  if (scorePercent >= 40) return "bg-amber-50 text-amber-800 ring-amber-100";
-  return "bg-rose-50 text-rose-700 ring-rose-100";
+  if (scorePercent >= 70) return "bg-success-tint text-success ring-success/15";
+  if (scorePercent >= 40) return "bg-warning-tint text-warning ring-warning/15";
+  return "bg-danger-tint text-danger ring-danger/15";
 }
 
 export default function MockTestLandingPage() {
@@ -98,7 +98,7 @@ export default function MockTestLandingPage() {
           </p>
         </div>
 
-        <section className="mt-7 animate-rise overflow-hidden rounded-[1.8rem] bg-ink p-5 text-white shadow-[0_18px_45px_rgba(20,20,30,0.16)] [animation-delay:70ms] sm:p-7">
+        <section className="mt-7 animate-rise overflow-hidden rounded-[1.8rem] bg-ink-solid p-5 text-white shadow-[0_18px_45px_rgba(20,20,30,0.16)] [animation-delay:70ms] sm:p-7">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
@@ -148,7 +148,7 @@ export default function MockTestLandingPage() {
         </section>
 
         {error ? (
-          <div className="mt-6 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          <div className="mt-6 flex items-start gap-3 rounded-2xl border border-danger/25 bg-danger-tint p-4 text-sm text-danger">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
             <div>
               <p className="font-bold">Something interrupted this page</p>

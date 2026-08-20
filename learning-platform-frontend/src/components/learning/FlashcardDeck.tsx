@@ -49,14 +49,15 @@ const RATINGS: Array<{
     label: "Again",
     caption: "Show soon",
     shortcut: "1",
-    className: "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100",
+    className: "border-danger/25 bg-danger-tint text-danger hover:opacity-80",
   },
   {
     value: "HARD",
     label: "Hard",
     caption: "Shaky",
     shortcut: "2",
-    className: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
+    className:
+      "border-warning/25 bg-warning-tint text-warning hover:opacity-80",
   },
   {
     value: "GOOD",
@@ -64,14 +65,14 @@ const RATINGS: Array<{
     caption: "Recalled",
     shortcut: "3",
     className:
-      "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+      "border-success/25 bg-success-tint text-success hover:opacity-80",
   },
   {
     value: "EASY",
     label: "Easy",
     caption: "Instant",
     shortcut: "4",
-    className: "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100",
+    className: "border-info/25 bg-info-tint text-info hover:opacity-80",
   },
 ];
 
@@ -306,9 +307,9 @@ export default function FlashcardDeck({
         role="dialog"
         aria-modal="true"
         aria-label={`Flashcards for ${topic}`}
-        className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[#f7faf8] shadow-2xl sm:h-[min(48rem,calc(100dvh-3rem))] sm:max-w-4xl sm:rounded-[2rem]"
+        className="flex h-[100dvh] w-full flex-col overflow-hidden bg-canvas shadow-2xl sm:h-[min(48rem,calc(100dvh-3rem))] sm:max-w-4xl sm:rounded-[2rem]"
       >
-        <header className="border-b border-primary/10 bg-white px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-7 sm:py-4">
+        <header className="border-b border-primary/10 bg-surface px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-7 sm:py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
@@ -324,7 +325,7 @@ export default function FlashcardDeck({
                 type="button"
                 onClick={() => setShortcutsVisible((value) => !value)}
                 aria-expanded={shortcutsVisible}
-                className="hidden h-10 w-10 place-items-center rounded-full border border-hairline bg-canvas text-ink-soft transition hover:bg-white hover:text-ink sm:grid"
+                className="hidden h-10 w-10 place-items-center rounded-full border border-hairline bg-canvas text-ink-soft transition hover:bg-surface hover:text-ink sm:grid"
                 aria-label="Keyboard shortcuts"
               >
                 <Keyboard className="h-5 w-5" aria-hidden="true" />
@@ -332,7 +333,7 @@ export default function FlashcardDeck({
               <button
                 type="button"
                 onClick={onClose}
-                className="grid h-10 w-10 place-items-center rounded-full border border-hairline bg-canvas text-ink-soft transition hover:bg-white hover:text-ink"
+                className="grid h-10 w-10 place-items-center rounded-full border border-hairline bg-canvas text-ink-soft transition hover:bg-surface hover:text-ink"
                 aria-label="Close flashcards"
               >
                 <X className="h-5 w-5" aria-hidden="true" />
@@ -370,7 +371,7 @@ export default function FlashcardDeck({
 
           {view === "error" ? (
             <div
-              className="mx-auto my-auto max-w-md rounded-2xl border border-rose-100 bg-rose-50 p-5 text-sm text-rose-800"
+              className="mx-auto my-auto max-w-md rounded-2xl border border-danger/20 bg-danger-tint p-5 text-sm text-danger"
               role="alert"
             >
               <p className="flex items-start gap-2 font-semibold">
@@ -436,7 +437,7 @@ export default function FlashcardDeck({
                     flipped ? "is-flipped" : ""
                   }`}
                 >
-                  <div className="flip-face flex flex-col overflow-y-auto overscroll-contain rounded-[1.35rem] border border-[#e7ebe8] bg-white p-4 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:rounded-[1.75rem] sm:p-9">
+                  <div className="flip-face flex flex-col overflow-y-auto overscroll-contain rounded-[1.35rem] border border-hairline bg-surface p-4 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:rounded-[1.75rem] sm:p-9">
                     <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-mute">
                       Prompt
                     </span>
@@ -475,7 +476,7 @@ export default function FlashcardDeck({
                     </div>
                   </div>
 
-                  <div className="flip-face flip-face--back flex flex-col overflow-y-auto overscroll-contain rounded-[1.35rem] border border-[#d6e8dc] bg-[#eff8f2] p-4 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:rounded-[1.75rem] sm:p-9">
+                  <div className="flip-face flip-face--back flex flex-col overflow-y-auto overscroll-contain rounded-[1.35rem] border border-primary/25 bg-primary-tint p-4 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:rounded-[1.75rem] sm:p-9">
                     <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
                       Answer
                     </span>
@@ -518,7 +519,7 @@ export default function FlashcardDeck({
                 <button
                   type="button"
                   onClick={flip}
-                  className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-ink px-3 py-2 text-sm font-bold text-white transition hover:bg-ink/90"
+                  className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-ink-solid px-3 py-2 text-sm font-bold text-white transition hover:bg-ink-solid/90"
                 >
                   <RotateCcw className="h-4 w-4" aria-hidden="true" /> Reveal
                   answer
@@ -536,7 +537,7 @@ export default function FlashcardDeck({
 function DeckSkeleton() {
   return (
     <div
-      className="mx-auto my-auto w-full max-w-2xl rounded-[1.35rem] border border-[#e7ebe8] bg-white p-5 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:rounded-[1.75rem] sm:p-9"
+      className="mx-auto my-auto w-full max-w-2xl rounded-[1.35rem] border border-hairline bg-surface p-5 shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:rounded-[1.75rem] sm:p-9"
       aria-label="Loading flashcard"
     >
       <div className="h-3 w-20 rounded-full skeleton" />
@@ -561,7 +562,7 @@ function RunSummary({
   onClose: () => void;
 }) {
   return (
-    <div className="mx-auto my-auto w-full max-w-xl rounded-[1.35rem] border border-[#e7ebe8] bg-white p-5 text-center shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:rounded-[1.75rem] sm:p-9">
+    <div className="mx-auto my-auto w-full max-w-xl rounded-[1.35rem] border border-hairline bg-surface p-5 text-center shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:rounded-[1.75rem] sm:p-9">
       <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary-tint text-primary">
         <CheckCheck className="h-7 w-7" aria-hidden="true" />
       </span>

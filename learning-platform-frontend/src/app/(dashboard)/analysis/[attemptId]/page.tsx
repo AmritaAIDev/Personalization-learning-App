@@ -33,6 +33,9 @@ import { formatDateTime } from "@/lib/format";
 import BloomRadar from "@/components/diagnostic/BloomRadar";
 import PerformanceBars from "@/components/diagnostic/PerformanceBars";
 import ScoreRing from "@/components/diagnostic/ScoreRing";
+import AttemptResultHero from "@/components/results/AttemptResultHero";
+import AttemptResultStatRow from "@/components/results/AttemptResultStatRow";
+import AttemptResultQuestionRow from "@/components/results/AttemptResultQuestionRow";
 
 const StudyMarkdown = dynamic(
   () => import("@/components/learning/StudyMarkdown"),
@@ -81,8 +84,8 @@ function getPriorityRows(rows: PerformanceRow[]) {
 function AnalysisSkeleton() {
   return (
     <div className="mx-auto max-w-7xl p-5 sm:p-8 lg:p-10">
-      <div className="h-8 w-32 animate-pulse rounded-full bg-ink/10" />
-      <section className="mt-7 rounded-[1.9rem] bg-ink p-8">
+      <div className="h-8 w-32 animate-pulse rounded-full bg-ink-solid/10" />
+      <section className="mt-7 rounded-[1.9rem] bg-ink-solid p-8">
         <div className="grid gap-6 lg:grid-cols-[auto_1fr_auto] lg:items-center">
           <div className="h-40 w-40 animate-pulse rounded-full bg-white/10" />
           <div className="space-y-4">
@@ -94,7 +97,7 @@ function AnalysisSkeleton() {
       </section>
       <div className="mt-5 grid gap-4 sm:grid-cols-3">
         {[0, 1, 2].map((item) => (
-          <div key={item} className="h-28 animate-pulse rounded-2xl bg-ink/8" />
+          <div key={item} className="h-28 animate-pulse rounded-2xl bg-ink-solid/8" />
         ))}
       </div>
     </div>
@@ -151,7 +154,7 @@ export default function AnalysisPage() {
   if (!result) {
     return (
       <div className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center p-6 text-center">
-        <CircleAlert className="h-8 w-8 text-rose-600" aria-hidden="true" />
+        <CircleAlert className="h-8 w-8 text-danger" aria-hidden="true" />
         <h1 className="mt-4 font-heading text-2xl font-semibold text-ink">
           Analysis unavailable
         </h1>
@@ -182,27 +185,16 @@ export default function AnalysisPage() {
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to tests
         </Link>
-        <section className="relative mt-7 overflow-hidden rounded-[1.9rem] bg-ink p-7 text-white shadow-[0_22px_70px_rgba(20,20,30,0.16)] sm:p-9">
-          <div className="absolute right-0 top-0 h-52 w-52 rounded-full bg-primary/20 blur-3xl" />
-          <div className="relative grid gap-7 lg:grid-cols-[auto_1fr_auto] lg:items-center">
-            <ScoreRing score={analysis.scorePercent} />
-            <div>
-              <p className="inline-flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.16em] text-white/55">
-                <ClipboardList className="h-4 w-4" aria-hidden="true" />
-                Diagnostic complete
-              </p>
-              <h1 className="mt-3 font-heading text-3xl font-semibold tracking-tight sm:text-5xl">
-                {analysis.grade}
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">
-                {gradeMessage[analysis.grade]}
-              </p>
-              <p className="mt-5 text-sm font-semibold text-white">
-                {analysis.correct} correct · {analysis.incorrect} incorrect ·{" "}
-                {analysis.total} total
-              </p>
-              {analysis.recap ? (
-                <p className="mt-4 flex items-start gap-2 rounded-2xl bg-white/8 px-4 py-3 text-sm font-medium leading-6 text-white/85">
+        <div className="mt-7">
+          <AttemptResultHero
+            icon={ClipboardList}
+            eyebrow="Diagnostic complete"
+            score={<ScoreRing score={analysis.scorePercent} />}
+            title={analysis.grade}
+            statsLine={`${analysis.correct} correct · ${analysis.incorrect} incorrect · ${analysis.total} total`}
+            caption={
+              analysis.recap ? (
+                <>
                   <Sparkles
                     className="mt-0.5 h-4 w-4 shrink-0 text-primary"
                     aria-hidden="true"
@@ -211,43 +203,22 @@ export default function AnalysisPage() {
                     <span className="font-bold text-white">AI recap:</span>{" "}
                     {analysis.recap}
                   </span>
-                </p>
-              ) : null}
-            </div>
-            <div className="self-start rounded-2xl bg-white/8 px-4 py-3 text-xs font-semibold text-white/70">
-              Submitted {formatDateTime(attempt.submittedAt)}
-            </div>
-          </div>
-        </section>
-        <section
-          className="mt-5 grid gap-4 sm:grid-cols-3"
-          aria-label="Score summary"
-        >
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-            <p className="text-sm font-semibold text-emerald-800">
-              Correct answers
-            </p>
-            <p className="mt-2 font-heading text-3xl font-semibold text-emerald-950">
-              {analysis.correct}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5">
-            <p className="text-sm font-semibold text-rose-800">
-              Incorrect answers
-            </p>
-            <p className="mt-2 font-heading text-3xl font-semibold text-rose-950">
-              {analysis.incorrect}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-hairline bg-surface p-5 shadow-[0_10px_24px_rgba(20,20,30,0.04)]">
-            <p className="text-sm font-semibold text-ink-mute">
-              Topics to repair
-            </p>
-            <p className="mt-2 font-heading text-3xl font-semibold text-primary">
-              {analysis.weakTopics.length}
-            </p>
-          </div>
-        </section>
+                </>
+              ) : undefined
+            }
+            corner={`Submitted ${formatDateTime(attempt.submittedAt)}`}
+          />
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-soft">
+            {gradeMessage[analysis.grade]}
+          </p>
+        </div>
+        <AttemptResultStatRow
+          stats={[
+            { label: "Correct answers", value: analysis.correct, tone: "positive" },
+            { label: "Incorrect answers", value: analysis.incorrect, tone: "negative" },
+            { label: "Topics to repair", value: analysis.weakTopics.length, tone: "neutral" },
+          ]}
+        />
         <section className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.78fr)]">
           <div className="space-y-5">
             <PerformanceBars
@@ -296,7 +267,7 @@ export default function AnalysisPage() {
                         </Link>
                         <Link
                           href={topicPracticeHref(topic)}
-                          className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-primary/30 hover:text-primary"
+                          className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-hairline bg-surface px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-primary/30 hover:text-primary"
                         >
                           Reviewed practice
                         </Link>
@@ -315,17 +286,17 @@ export default function AnalysisPage() {
         </section>
         {user?.role === "admin" && analysis.integrity?.guessingSuspected ? (
           <section
-            className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5"
+            className="mt-5 rounded-2xl border border-warning/25 bg-warning-tint p-5"
             aria-label="Admin integrity signal"
           >
-            <p className="flex items-center gap-2 text-sm font-bold text-amber-900">
+            <p className="flex items-center gap-2 text-sm font-bold text-warning">
               <ShieldAlert className="h-4 w-4" aria-hidden="true" />
               Possible guess pattern (admin only)
             </p>
-            <p className="mt-2 text-sm leading-6 text-amber-900/90">
+            <p className="mt-2 text-sm leading-6 text-warning/90">
               {analysis.integrity.note}
             </p>
-            <p className="mt-2 text-xs text-amber-800/80">
+            <p className="mt-2 text-xs text-warning/80">
               Heuristic signal, not a certainty — never shown to the learner.
             </p>
           </section>
@@ -376,7 +347,7 @@ export default function AnalysisPage() {
         </section>
         <p className="mt-5 flex items-center gap-2 text-xs text-ink-mute">
           <CheckCircle2
-            className="h-4 w-4 text-emerald-600"
+            className="h-4 w-4 text-success"
             aria-hidden="true"
           />
           This report is derived from answers saved to your account, not
@@ -456,7 +427,7 @@ function ReviewSection({ attemptId }: { attemptId: string }) {
           ) : null}
           {error ? (
             <p
-              className="flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"
+              className="flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-3 py-2 text-sm font-medium text-danger"
               role="alert"
             >
               <CircleAlert
@@ -482,10 +453,10 @@ function ReviewSection({ attemptId }: { attemptId: string }) {
                     <span
                       className={`ml-auto rounded-full px-2.5 py-0.5 ${
                         item.isCorrect
-                          ? "bg-emerald-100 text-emerald-700"
+                          ? "bg-success-tint text-success"
                           : item.selectedOption
-                            ? "bg-rose-100 text-rose-700"
-                            : "bg-amber-100 text-amber-700"
+                            ? "bg-danger-tint text-danger"
+                            : "bg-warning-tint text-warning"
                       }`}
                     >
                       {item.isCorrect
@@ -499,29 +470,18 @@ function ReviewSection({ attemptId }: { attemptId: string }) {
                   <StudyMarkdown className="mt-2 text-sm font-semibold leading-6 text-ink">
                     {item.questionText}
                   </StudyMarkdown>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <div
-                      className={`rounded-xl border px-3 py-2 ${
-                        item.selectedOption && !item.isCorrect
-                          ? "border-rose-200/60 bg-rose-50"
-                          : "border-hairline bg-surface"
-                      }`}
-                    >
-                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-mute">
-                        Your answer
-                      </p>
-                      <StudyMarkdown className="mt-0.5 text-[13px] font-semibold text-ink-soft">
-                        {item.selectedOption ?? "Not answered"}
-                      </StudyMarkdown>
-                    </div>
-                    <div className="rounded-xl border border-emerald-200/70 bg-emerald-50 px-3 py-2">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-600">
-                        Correct answer
-                      </p>
-                      <StudyMarkdown className="mt-0.5 text-[13px] font-semibold text-emerald-800">
-                        {item.correctOption}
-                      </StudyMarkdown>
-                    </div>
+                  <div className="mt-3">
+                    <AttemptResultQuestionRow
+                      isCorrect={item.isCorrect}
+                      yourAnswer={
+                        <StudyMarkdown>
+                          {item.selectedOption ?? "Not answered"}
+                        </StudyMarkdown>
+                      }
+                      correctAnswer={
+                        <StudyMarkdown>{item.correctOption}</StudyMarkdown>
+                      }
+                    />
                   </div>
                   <details className="mt-3 rounded-xl border border-hairline bg-surface px-3 py-2">
                     <summary className="cursor-pointer text-[13px] font-semibold text-ink">

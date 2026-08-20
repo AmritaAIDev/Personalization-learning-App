@@ -58,6 +58,15 @@ function makeConceptSummaryRepository(
   } as never;
 }
 
+function makeMistakeReviewRepository() {
+  return {
+    find: jest.fn().mockResolvedValue([]),
+    findOne: jest.fn().mockResolvedValue(null),
+    create: jest.fn((entity: Record<string, unknown>) => entity),
+    save: jest.fn().mockResolvedValue(undefined),
+  } as never;
+}
+
 function makeConceptService(
   label = 'Flux vs enclosed charge',
   summary = 'You keep treating outside charge as contributing to flux.',
@@ -152,6 +161,7 @@ describe('NotebookService', () => {
       { createQueryBuilder: jest.fn(() => adaptiveQueryBuilder) } as never,
       { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       makeConceptSummaryRepository(),
+      makeMistakeReviewRepository(),
       makeConceptService() as never,
       makeMisconceptionsService() as never,
     );
@@ -210,6 +220,7 @@ describe('NotebookService', () => {
       { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       makeConceptSummaryRepository(),
+      makeMistakeReviewRepository(),
       makeConceptService() as never,
       makeMisconceptionsService() as never,
     );
@@ -270,6 +281,7 @@ describe('NotebookService', () => {
       { createQueryBuilder: jest.fn(() => adaptiveQb) } as never,
       { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       makeConceptSummaryRepository(),
+      makeMistakeReviewRepository(),
       conceptService as never,
       makeMisconceptionsService() as never,
     );
@@ -325,6 +337,7 @@ describe('NotebookService', () => {
       { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       { createQueryBuilder: jest.fn(() => makeQueryBuilder([])) } as never,
       summaryRepo,
+      makeMistakeReviewRepository(),
       conceptService as never,
       makeMisconceptionsService() as never,
     );

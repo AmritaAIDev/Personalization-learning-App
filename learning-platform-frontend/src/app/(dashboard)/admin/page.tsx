@@ -126,7 +126,7 @@ export default function AdminConsolePage() {
             under Content.
           </p>
         </div>
-        <span className="inline-flex items-center gap-2 self-start rounded-full bg-primary-tint px-3 py-2 text-xs font-bold text-emerald-800 lg:self-auto">
+        <span className="inline-flex items-center gap-2 self-start rounded-full bg-primary-tint px-3 py-2 text-xs font-bold text-primary lg:self-auto">
           <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Admin-only
         </span>
       </header>
@@ -156,7 +156,7 @@ export default function AdminConsolePage() {
 
       {error ? (
         <p
-          className="mt-6 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700"
+          className="mt-6 flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-3 py-3 text-sm font-semibold text-danger"
           role="alert"
         >
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -166,7 +166,7 @@ export default function AdminConsolePage() {
 
       {notice ? (
         <p
-          className="mt-6 flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-800"
+          className="mt-6 flex items-start gap-2 rounded-xl border border-success/20 bg-success-tint px-3 py-3 text-sm font-semibold text-success"
           role="status"
         >
           <UserRoundCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -230,7 +230,7 @@ export default function AdminConsolePage() {
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
                           u.role === "admin"
-                            ? "bg-primary-tint text-emerald-800"
+                            ? "bg-primary-tint text-primary"
                             : "bg-canvas text-ink-soft"
                         }`}
                       >

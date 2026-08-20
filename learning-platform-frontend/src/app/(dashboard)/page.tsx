@@ -74,7 +74,7 @@ export default function DashboardPage() {
 
         {error ? (
           <div
-            className="mt-6 flex items-start gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-800"
+            className="mt-6 flex items-start gap-3 rounded-2xl border border-danger/20 bg-danger-tint p-4 text-sm text-danger"
             role="alert"
           >
             <CircleAlert

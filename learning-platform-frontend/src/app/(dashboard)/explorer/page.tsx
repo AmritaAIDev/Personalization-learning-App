@@ -163,17 +163,17 @@ function ExplorerBubbleContent() {
           const isMastered = node.state === "completed";
           const isActive = node.nodeType === "history";
 
-          let bg = "bg-white";
+          let bg = "bg-surface";
           let border = "border-hairline";
           let glow = "none";
 
           if (isMastered) {
-            bg = "bg-emerald-50";
-            border = "border-emerald-300";
+            bg = "bg-success-tint";
+            border = "border-success/40";
             glow = "0 0 32px rgba(16,185,129,0.18)";
           } else if (isActive) {
-            bg = "bg-amber-50";
-            border = "border-amber-400";
+            bg = "bg-warning-tint";
+            border = "border-warning/50";
             glow = "0 0 40px rgba(217,119,6,0.22)";
           } else if (!isLocked) {
             bg = "bg-primary-tint";
@@ -243,10 +243,10 @@ function ExplorerBubbleContent() {
                 ) : isActive ? (
                   <Brain
                     size={24}
-                    className="text-amber-600 mb-1 animate-pulse"
+                    className="text-warning mb-1 animate-pulse"
                   />
                 ) : isMastered ? (
-                  <div className="text-emerald-600 font-black text-xs mb-1">
+                  <div className="text-success font-black text-xs mb-1">
                     M
                   </div>
                 ) : (
@@ -263,7 +263,7 @@ function ExplorerBubbleContent() {
 
                 {node.score !== null && (
                   <span
-                    className={`text-[9px] font-black mt-1 ${isMastered ? "text-emerald-600" : "text-primary"}`}
+                    className={`text-[9px] font-black mt-1 ${isMastered ? "text-success" : "text-primary"}`}
                   >
                     {node.score}%
                   </span>

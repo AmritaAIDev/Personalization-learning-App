@@ -57,12 +57,12 @@ function actionLabel(kind: StudentDashboardAction["kind"]) {
 
 function actionTone(kind: StudentDashboardAction["kind"]) {
   if (kind === "REVIEW_MISTAKES")
-    return "bg-orange-50 text-orange-700 ring-1 ring-orange-100";
+    return "bg-warning-tint text-warning ring-1 ring-warning/15";
   if (kind === "RESUME_DIAGNOSTIC")
-    return "bg-blue-50 text-blue-700 ring-1 ring-blue-100";
+    return "bg-info-tint text-info ring-1 ring-info/15";
   if (kind === "FIND_TOPIC")
     return "bg-primary-tint text-primary ring-1 ring-primary/10";
-  return "bg-emerald-50 text-primary ring-1 ring-primary/10";
+  return "bg-success-tint text-primary ring-1 ring-primary/10";
 }
 
 function momentumPoints(timeline: GrowthPoint[]): string {
@@ -184,7 +184,7 @@ export default function StudentActionCenter({
                   href={actionHref(action)}
                   className="group flex items-center gap-4 rounded-xl px-3 py-4 transition duration-300 ease-out-soft hover:-translate-y-0.5 hover:bg-canvas active:scale-[0.995]"
                 >
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-hairline text-xs font-semibold text-ink-soft transition duration-300 group-hover:border-primary/30 group-hover:bg-white group-hover:text-primary">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-hairline text-xs font-semibold text-ink-soft transition duration-300 group-hover:border-primary/30 group-hover:bg-primary-tint group-hover:text-primary">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <span className="min-w-0 flex-1">
@@ -269,9 +269,9 @@ export default function StudentActionCenter({
       <StaggerItem className="mt-7 grid grid-cols-1 gap-5 xl:grid-cols-[0.88fr_1.12fr]">
         <section
           aria-labelledby="revision-heading"
-          className="relative overflow-hidden rounded-[1.65rem] border border-hairline bg-white p-5 shadow-[0_18px_40px_rgba(20,20,30,0.045)]"
+          className="relative overflow-hidden rounded-[1.65rem] border border-hairline bg-surface p-5 shadow-[0_18px_40px_rgba(20,20,30,0.045)]"
         >
-          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-ink/[0.035] blur-3xl" />
+          <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-ink-solid/[0.035] blur-3xl" />
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2
@@ -294,9 +294,9 @@ export default function StudentActionCenter({
                 <Link
                   key={`${topic.subject}-${topic.chapter}-${topic.topic}`}
                   href="/notebook"
-                  className="group flex items-center gap-3 rounded-[1.25rem] border border-hairline bg-canvas/70 p-3 transition duration-300 ease-out-soft hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_12px_26px_rgba(20,20,30,0.06)]"
+                  className="group flex items-center gap-3 rounded-[1.25rem] border border-hairline bg-canvas/70 p-3 transition duration-300 ease-out-soft hover:-translate-y-0.5 hover:bg-surface hover:shadow-[0_12px_26px_rgba(20,20,30,0.06)]"
                 >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-white text-ink-soft shadow-sm">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-surface text-ink-soft shadow-sm">
                     <BookOpenCheck className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -321,7 +321,7 @@ export default function StudentActionCenter({
 
         <section
           aria-labelledby="activity-heading"
-          className="rounded-[1.65rem] border border-hairline bg-[linear-gradient(180deg,#ffffff,#fbfbfd)] p-5 shadow-[0_18px_40px_rgba(20,20,30,0.04)]"
+          className="rounded-[1.65rem] border border-hairline bg-surface p-5 shadow-[0_18px_40px_rgba(20,20,30,0.04)]"
         >
           <div>
             <h2
@@ -336,7 +336,7 @@ export default function StudentActionCenter({
               {data.activity.map((item) => (
                 <li
                   key={item.id}
-                  className="relative rounded-2xl border border-hairline bg-white px-4 py-3 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(20,20,30,0.05)]"
+                  className="relative rounded-2xl border border-hairline bg-surface px-4 py-3 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(20,20,30,0.05)]"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
@@ -383,7 +383,7 @@ function SubjectCoverageExplorer({
 
   return (
     <section
-      className="mt-7 rounded-2xl border border-hairline bg-white p-5 shadow-[0_10px_28px_rgba(20,20,30,0.04)] sm:p-6"
+      className="mt-7 rounded-2xl border border-hairline bg-surface p-5 shadow-[0_10px_28px_rgba(20,20,30,0.04)] sm:p-6"
       aria-labelledby="subject-map-heading"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -414,7 +414,7 @@ function SubjectCoverageExplorer({
                 onClick={() => setSelectedSubject(subject.subject)}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-[background-color,color,transform] duration-300 ease-out-soft ${
                   active
-                    ? "bg-ink text-white shadow-sm"
+                    ? "bg-ink-solid text-white shadow-sm"
                     : "bg-canvas text-ink-soft hover:-translate-y-0.5 hover:bg-primary-tint hover:text-primary"
                 }`}
               >
@@ -449,7 +449,7 @@ function SubjectCoverageExplorer({
             ) : null}
             {selected.activeTopics > 0 ? (
               <span
-                className="bg-orange-400 transition-[width] duration-700 ease-out-soft"
+                className="bg-warning transition-[width] duration-700 ease-out-soft"
                 style={{
                   width: `${(selected.activeTopics / selected.totalTopics) * 100}%`,
                 }}
@@ -457,7 +457,7 @@ function SubjectCoverageExplorer({
             ) : null}
             {selected.pausedTopics > 0 ? (
               <span
-                className="bg-rose-400 transition-[width] duration-700 ease-out-soft"
+                className="bg-danger transition-[width] duration-700 ease-out-soft"
                 style={{
                   width: `${(selected.pausedTopics / selected.totalTopics) * 100}%`,
                 }}
@@ -470,17 +470,17 @@ function SubjectCoverageExplorer({
               label={`${selected.masteredTopics} done`}
             />
             <CoverageLegend
-              tone="bg-orange-400"
+              tone="bg-warning"
               label={`${selected.activeTopics} active`}
             />
             {selected.pausedTopics > 0 ? (
               <CoverageLegend
-                tone="bg-rose-400"
+                tone="bg-danger"
                 label={`${selected.pausedTopics} paused`}
               />
             ) : null}
             <CoverageLegend
-              tone="bg-[#dcdce2]"
+              tone="bg-ink-mute/25"
               label={`${selected.notStartedTopics} next`}
             />
           </div>
@@ -528,9 +528,9 @@ function coverageTone(
   status: "MASTERED" | "ACTIVE" | "PAUSED" | "NOT_STARTED",
 ): string {
   if (status === "MASTERED") return "bg-primary";
-  if (status === "ACTIVE") return "bg-orange-400";
-  if (status === "PAUSED") return "bg-rose-400";
-  return "bg-[#c6c6ce]";
+  if (status === "ACTIVE") return "bg-warning";
+  if (status === "PAUSED") return "bg-danger";
+  return "bg-ink-mute/40";
 }
 
 function coverageLabel(
@@ -599,7 +599,7 @@ function SignalCircle({
   const circumference = 226.2;
   return (
     <div
-      className="group relative rounded-2xl border border-hairline bg-canvas px-3 py-3 text-center transition duration-300 ease-out-soft hover:-translate-y-1 hover:border-primary/25 hover:bg-white hover:shadow-[0_12px_28px_rgba(20,20,30,0.07)] focus-within:-translate-y-1 min-[430px]:px-2"
+      className="group relative rounded-2xl border border-hairline bg-canvas px-3 py-3 text-center transition duration-300 ease-out-soft hover:-translate-y-1 hover:border-primary/25 hover:bg-surface hover:shadow-[0_12px_28px_rgba(20,20,30,0.07)] focus-within:-translate-y-1 min-[430px]:px-2"
       title={detail}
     >
       <div

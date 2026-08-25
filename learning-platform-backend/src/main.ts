@@ -1,3 +1,4 @@
+import './instrument';
 import { createNestApp } from './bootstrap';
 
 async function bootstrap() {

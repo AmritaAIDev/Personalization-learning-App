@@ -50,12 +50,14 @@ import { MisconceptionsModule } from './misconceptions/misconceptions.module';
 import { TargetedPracticeQuestion } from './targeted-practice/targeted-practice-question.entity';
 import { TargetedPracticeModule } from './targeted-practice/targeted-practice.module';
 import { AdminModule } from './admin/admin.module';
+import { validateEnv } from './config/env.validation';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [join(__dirname, '..', '.env'), '.env'],
+      validate: validateEnv,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

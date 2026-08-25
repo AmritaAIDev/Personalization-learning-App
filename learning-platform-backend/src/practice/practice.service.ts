@@ -14,7 +14,11 @@ import {
   normalizeBloomLevel,
   TutorMessageType,
 } from '../adaptive/adaptive.types';
-import { AgentService, RetrievedSource } from '../agent/agent.service';
+import {
+  AgentService,
+  type ExplanationDepth,
+  RetrievedSource,
+} from '../agent/agent.service';
 import { calibrationFor } from '../confidence.util';
 import { MisconceptionsService } from '../misconceptions/misconceptions.service';
 import { ExplanationResult, toCitations } from '../citation.util';
@@ -387,6 +391,7 @@ export class PracticeService {
         explanation: this.fallbackExplanation(
           question,
           answer?.selectedOption ?? null,
+          input.depth,
         ),
         grounded: false,
         sources: toCitations(sources),
@@ -429,12 +434,25 @@ export class PracticeService {
     }
   }
 
-  /** Deterministic explanation used when the model is unavailable. */
+  /**
+   * Deterministic explanation used when the model is unavailable. Shaped by
+   * `depth` so Regenerate/Concise/Step by step/From scratch don't all render
+   * the identical offline text — only the live AI call used to vary by depth.
+   */
   private fallbackExplanation(
     question: Question,
     selectedOption: string | null,
+    depth?: ExplanationDepth,
   ): string {
     const misconception = (question.common_errors ?? [])[0];
+    if (depth === 'concise') {
+      const firstSentence = question.solution.split(/(?<=[.!?])\s+/)[0];
+      return [
+        '### Correct answer',
+        `**${question.correct_answer}**`,
+        firstSentence,
+      ].join('\n\n');
+    }
     const lines = ['### Correct answer', `**${question.correct_answer}**`];
     if (selectedOption && selectedOption !== question.correct_answer) {
       lines.push(
@@ -444,7 +462,22 @@ export class PracticeService {
           : `Compare “${selectedOption}” against the governing relationship for this topic.`,
       );
     }
-    lines.push('### Worked reasoning', question.solution);
+    if (depth === 'step-by-step') {
+      lines.push(
+        '### Step by step',
+        `1. Identify what the question is actually asking for.`,
+        `2. Apply the governing relationship: ${question.solution}`,
+        `3. Check that ${question.correct_answer} is the only option consistent with step 2.`,
+      );
+    } else if (depth === 'from-scratch') {
+      lines.push(
+        '### From first principles',
+        `Before using any shortcut, re-derive it: ${question.solution}`,
+        `That derivation is what rules every option out except ${question.correct_answer}.`,
+      );
+    } else {
+      lines.push('### Worked reasoning', question.solution);
+    }
     return lines.join('\n\n');
   }
 

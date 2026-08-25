@@ -19,6 +19,15 @@ const TUTOR_INTERACTIVE_TIMEOUT_MS = 14_000;
 /** Safety valve so a lost background call cannot pin the UI in "writing…". */
 const TUTOR_PENDING_TTL_MS = 30_000;
 
+/**
+ * What the learner is actually asking for, used only to shape the
+ * database-backed fallback text (the AI prompt already sees the raw
+ * message and varies naturally). Without this, "Hint", "Explain", and
+ * "Why wrong?" all rendered byte-identical text whenever the AI call
+ * failed, since the fallback was a pure function of the question alone.
+ */
+type FallbackIntent = 'hint' | 'explain' | 'why_wrong';
+
 export interface TutorMessagePayload {
   id: string;
   role: TutorMessageRole;
@@ -202,6 +211,52 @@ export class TutorService {
     );
   }
 
+  /**
+   * A short concept revision for a topic, meant to be read before a practice
+   * round starts. Unlike a hint or explanation, there is no learner attempt
+   * or answer-reveal state involved — it teaches the topic itself, grounded
+   * in whatever reviewed material (questions + flashcards) already exists.
+   */
+  async getTopicRevision(
+    scope: { subject: string; chapter: string; topic: string },
+    sourceMaterial: string,
+  ): Promise<{ content: string; grounded: boolean }> {
+    try {
+      const content = await this.withTimeout(
+        this.agentService.generateTutorResponse({
+          subject: scope.subject,
+          chapter: scope.chapter,
+          topic: scope.topic,
+          learnerMessage:
+            'Give me a short revision of this whole topic before I start practicing: the key definition, the governing formula or relationship, one worked micro-example, and the most common pitfalls. Keep it tight — about a 1-2 minute read.',
+          mode: TutorMessageType.GENERAL,
+          explanatory: true,
+          answerRevealed: false,
+        }),
+        TUTOR_BACKGROUND_TIMEOUT_MS,
+      );
+      return { content, grounded: true };
+    } catch (error) {
+      this.logger.warn(
+        `Topic revision AI unavailable; using reviewed-material fallback. ${this.toErrorMessage(error)}`,
+      );
+      return {
+        content: this.fallbackRevision(scope.topic, sourceMaterial),
+        grounded: false,
+      };
+    }
+  }
+
+  private fallbackRevision(topic: string, sourceMaterial: string): string {
+    const trimmed = sourceMaterial.trim();
+    return [
+      `### ${topic} — quick revision`,
+      'The AI tutor is unavailable right now, so here is a digest straight from the reviewed material for this topic.',
+      trimmed ||
+        'No reviewed material is available yet for this topic — start with a practice round instead.',
+    ].join('\n\n');
+  }
+
   async answerLearnerMessage(
     userId: string,
     session: LearningSession,
@@ -220,6 +275,7 @@ export class TutorService {
         relatedSessionItemId: sessionItemId,
       }),
     );
+    const intent = this.classifyFallbackIntent(message);
     const content = await this.withFallback(
       async () =>
         this.agentService.generateTutorResponse({
@@ -240,8 +296,8 @@ export class TutorService {
       () =>
         question
           ? answerRevealed
-            ? this.fallbackExplanation(question, '')
-            : this.fallbackHint(question)
+            ? this.fallbackExplanation(question, '', intent)
+            : this.fallbackHint(question, intent)
           : 'Tell me which part of the topic feels uncertain, and we can isolate one idea at a time.',
       TUTOR_INTERACTIVE_TIMEOUT_MS,
     );
@@ -294,6 +350,7 @@ export class TutorService {
       recentMessages: await this.recentMessages(conversation.id),
     };
 
+    const intent = this.classifyFallbackIntent(message);
     let full = '';
     const deadline = Date.now() + TUTOR_INTERACTIVE_TIMEOUT_MS;
     try {
@@ -319,8 +376,8 @@ export class TutorService {
         );
         full = question
           ? answerRevealed
-            ? this.fallbackExplanation(question, '')
-            : this.fallbackHint(question)
+            ? this.fallbackExplanation(question, '', intent)
+            : this.fallbackHint(question, intent)
           : 'Tell me which part of the topic feels uncertain, and we can isolate one idea at a time.';
         yield full;
       }
@@ -420,17 +477,74 @@ export class TutorService {
     }
   }
 
-  private fallbackHint(question: LearningQuestionReference): string {
-    const misconception = question.commonErrors[0];
+  /**
+   * Reads the learner's own quick-prompt text ("Give me a hint...", "Explain
+   * this...", "Why is my selected option wrong?") so the offline fallback can
+   * shape its wording differently per button, instead of the three collapsing
+   * onto one canned message whenever the AI call is unavailable.
+   */
+  private classifyFallbackIntent(learnerMessage: string): FallbackIntent {
+    const normalized = learnerMessage.toLocaleLowerCase('en-US');
+    if (normalized.includes('why') && normalized.includes('wrong')) {
+      return 'why_wrong';
+    }
+    if (normalized.includes('explain')) return 'explain';
+    return 'hint';
+  }
+
+  /**
+   * The self-check line used to be one hardcoded sentence for every question
+   * in every topic. Anchoring it to the question's own concept tags (falling
+   * back to its options count when a question has no tags) means two
+   * different questions in the same topic no longer read as the same hint.
+   */
+  private buildSelfCheck(question: LearningQuestionReference): string {
+    const concept = question.conceptTags[0];
+    if (concept) {
+      return `Restate ${concept} in your own words — does your selected option actually follow from it?`;
+    }
+    return `Which of the ${question.options.length} options survives if you check it against the question's exact wording, not a remembered pattern?`;
+  }
+
+  private fallbackHint(
+    question: LearningQuestionReference,
+    intent: FallbackIntent = 'hint',
+  ): string {
+    const misconceptions = question.commonErrors;
     const storedHint = question.hint?.trim();
+    const selfCheck = this.buildSelfCheck(question);
+    if (intent === 'why_wrong') {
+      const misconception = misconceptions[1] ?? misconceptions[0];
+      return [
+        '### The reveal is one attempt away',
+        'Exactly why your choice is wrong unlocks with the answer, after a second attempt.',
+        misconception
+          ? `Until then, test your choice against this common slip: ${misconception}`
+          : 'Until then, re-check which quantity or condition actually controls the result.',
+        '### Self-check',
+        selfCheck,
+      ].join('\n\n');
+    }
+    if (intent === 'explain') {
+      const misconception = misconceptions[0];
+      return [
+        '### Walk it through',
+        storedHint ||
+          (misconception
+            ? `Start from this assumption and check whether it actually holds here: ${misconception}`
+            : 'Re-derive the relationship the question depends on before comparing it to any option.'),
+        '### Self-check',
+        selfCheck,
+      ].join('\n\n');
+    }
     return [
       '### Try this next',
       storedHint ||
-        (misconception
-          ? `Check whether your choice relies on this assumption: ${misconception}`
+        (misconceptions[0]
+          ? `Check whether your choice relies on this assumption: ${misconceptions[0]}`
           : `Re-read the relationship named in the question and test it against your selected option.`),
       '### Self-check',
-      'Which quantity or condition controls the result before you substitute any values?',
+      selfCheck,
     ].join('\n\n');
   }
 
@@ -468,10 +582,15 @@ export class TutorService {
   private fallbackExplanation(
     question: LearningQuestionReference,
     selectedOption: string,
+    intent: FallbackIntent = 'explain',
   ): string {
-    const misconception = question.commonErrors[0];
+    const misconceptions = question.commonErrors;
+    const misconception =
+      intent === 'why_wrong'
+        ? misconceptions[0]
+        : (misconceptions[1] ?? misconceptions[0]);
     return [
-      '### What to correct',
+      intent === 'why_wrong' ? '### Why your choice was wrong' : '### What to correct',
       selectedOption && misconception
         ? `The selected choice is commonly caused by: ${misconception}`
         : misconception ||

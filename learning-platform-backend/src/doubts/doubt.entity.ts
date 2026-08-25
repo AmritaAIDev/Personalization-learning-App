@@ -86,6 +86,16 @@ export class Doubt {
   @Column({ type: 'varchar', length: 20, default: DoubtStatus.OPEN })
   status: DoubtStatus;
 
+  /**
+   * True when the AI tutor was unreachable and `assistantResponse` is the
+   * deterministic database-backed fallback rather than a real generated
+   * answer. The doubt still moves to ANSWERED so the thread isn't stuck
+   * "open" forever, but the client uses this to badge the answer
+   * differently instead of implying the tutor genuinely responded.
+   */
+  @Column({ name: 'answered_with_fallback', type: 'boolean', default: false })
+  answeredWithFallback: boolean;
+
   @Column({ name: 'answered_at', type: 'timestamp', nullable: true })
   answeredAt: Date | null;
 

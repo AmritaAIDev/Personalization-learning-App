@@ -229,6 +229,7 @@ describe('DoubtsService', () => {
     expect(saved.at(-1)).toMatchObject({
       status: DoubtStatus.ANSWERED,
       assistantResponse: expect.stringContaining('safe fallback'),
+      answeredWithFallback: true,
     });
   });
 

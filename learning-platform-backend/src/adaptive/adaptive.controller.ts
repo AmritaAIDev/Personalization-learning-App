@@ -60,6 +60,14 @@ export class AdaptiveController {
     return { data: await this.adaptiveService.getPlacement(user.id, query) };
   }
 
+  // Every open of the revision panel is a fresh AI call, so it gets the same
+  // kind of guard as flashcard generation.
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  @Get('revision')
+  async getTopicRevision(@Query() query: CreateLearningSessionDto) {
+    return { data: await this.adaptiveService.getTopicRevision(query) };
+  }
+
   @Get('flashcards')
   async getFlashcards(
     @CurrentUser() user: AuthenticatedUser,

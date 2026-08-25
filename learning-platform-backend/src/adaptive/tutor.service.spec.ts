@@ -246,4 +246,103 @@ describe('TutorService streaming chat', () => {
     expect(chunks).toHaveLength(1);
     expect(step.value.content.length).toBeGreaterThan(0);
   });
+
+  it('shapes the offline fallback differently for hint, explain, and why-wrong prompts', async () => {
+    async function* failingStream(): AsyncGenerator<string> {
+      throw new Error('model unavailable');
+      // eslint-disable-next-line no-unreachable
+      yield '';
+    }
+    const question: LearningQuestionReference = {
+      source: LearningQuestionSource.CURATED,
+      id: 'question-id',
+      questionText: 'What does Gauss law relate flux to?',
+      options: ['Total charge', 'Enclosed charge', 'Surface area', 'Field strength'],
+      correctAnswer: 'Enclosed charge',
+      solution: 'Gauss law relates flux through a closed surface to the charge it encloses.',
+      hint: null,
+      conceptTags: ["Gauss's law"],
+      commonErrors: [
+        'Confusing total charge near the surface with enclosed charge',
+        'Assuming symmetry that the surface does not have',
+      ],
+      bloomLevel: 'Understand',
+      difficulty: 'Medium',
+    };
+
+    const contentsByPrompt = new Map<string, string>();
+    for (const prompt of [
+      'Give me a hint without revealing the answer.',
+      'Explain this in simpler steps.',
+      'Why is my selected option wrong?',
+    ]) {
+      const { service, session } = createStreamingService(failingStream);
+      const generator = service.answerLearnerMessageStream(
+        'user-id',
+        session,
+        null,
+        question,
+        false,
+        prompt,
+      );
+      let step = await generator.next();
+      while (!step.done) step = await generator.next();
+      contentsByPrompt.set(prompt, step.value.content);
+    }
+
+    const contents = [...contentsByPrompt.values()];
+    expect(new Set(contents).size).toBe(contents.length);
+  });
+});
+
+describe('TutorService topic revision', () => {
+  it('returns the generated revision when the AI call succeeds', async () => {
+    const generateTutorResponse = jest.fn(
+      async () => '### Gauss\'s Law\n\nFlux equals enclosed charge over epsilon0.',
+    );
+    const agent = { generateTutorResponse } as unknown as AgentService;
+    const messages = {} as unknown as Repository<TutorMessage>;
+    const conversations = {} as unknown as Repository<TutorConversation>;
+    const service = new TutorService(agent, conversations, messages);
+
+    const result = await service.getTopicRevision(
+      {
+        subject: 'Physics',
+        chapter: 'Electric Charges and Fields',
+        topic: "Gauss's Law",
+      },
+      'reviewed material digest',
+    );
+
+    expect(result.grounded).toBe(true);
+    expect(result.content).toContain('Flux equals enclosed charge');
+    expect(generateTutorResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ explanatory: true, answerRevealed: false }),
+    );
+  });
+
+  it('falls back to the reviewed-material digest when the AI call fails', async () => {
+    const generateTutorResponse = jest.fn(async () => {
+      throw new Error('model unavailable');
+    });
+    const agent = { generateTutorResponse } as unknown as AgentService;
+    const messages = {} as unknown as Repository<TutorMessage>;
+    const conversations = {} as unknown as Repository<TutorConversation>;
+    const service = new TutorService(agent, conversations, messages);
+
+    const result = await service.getTopicRevision(
+      {
+        subject: 'Physics',
+        chapter: 'Electric Charges and Fields',
+        topic: "Gauss's Law",
+      },
+      'Question concept: flux through a closed surface.',
+    );
+
+    expect(result.grounded).toBe(false);
+    expect(result.content).toContain("Gauss's Law");
+    expect(result.content).toContain(
+      'Question concept: flux through a closed surface.',
+    );
+  });
 });

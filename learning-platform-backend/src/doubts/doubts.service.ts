@@ -168,7 +168,8 @@ export class DoubtsService {
       });
       if (!doubt || doubt.status !== DoubtStatus.OPEN) return;
       const tutorResponse = await this.tryGenerateTutorResponse(doubt);
-      doubt.assistantResponse = tutorResponse;
+      doubt.assistantResponse = tutorResponse.content;
+      doubt.answeredWithFallback = tutorResponse.usedFallback;
       // Grounding is best-effort; a missing/slow vector store just means no
       // citations, never a failed or delayed answer.
       const sources = await this.agentService
@@ -187,13 +188,15 @@ export class DoubtsService {
     }
   }
 
-  private async tryGenerateTutorResponse(doubt: Doubt): Promise<string> {
+  private async tryGenerateTutorResponse(
+    doubt: Doubt,
+  ): Promise<{ content: string; usedFallback: boolean }> {
     const question = await this.resolveQuestionContext(doubt);
     try {
       // When the doubt was raised from a specific question, fold that question
       // in so the answer addresses the learner's actual attempt. Resolution is
       // best-effort: a missing reference degrades to a topic-level explanation.
-      return await this.agentService.generateTutorResponse({
+      const content = await this.agentService.generateTutorResponse({
         subject: doubt.subject,
         chapter: doubt.chapter,
         topic: doubt.topic,
@@ -212,12 +215,16 @@ export class DoubtsService {
         // answer is theirs to see.
         answerRevealed: Boolean(question),
       });
+      return { content, usedFallback: false };
     } catch (error) {
       this.logger.warn(
         `Tutor response unavailable for doubt ${doubt.id}; using deterministic fallback.`,
         error as Error,
       );
-      return this.buildFallbackTutorResponse(doubt, question);
+      return {
+        content: this.buildFallbackTutorResponse(doubt, question),
+        usedFallback: true,
+      };
     }
   }
 
@@ -357,6 +364,7 @@ export class DoubtsService {
       assistantResponse: doubt.assistantResponse,
       sources: doubt.sources ?? [],
       status: doubt.status,
+      answeredWithFallback: doubt.answeredWithFallback,
       questionId: doubt.questionId,
       learningSessionId: doubt.learningSessionId,
       learningSessionItemId: doubt.learningSessionItemId,

@@ -116,6 +116,15 @@ type PublicSessionPayload = {
     sequence: number;
     status: 'CURRENT' | 'PENDING' | 'RESOLVED';
     attemptCount: number;
+    /** Only populated once RESOLVED, so a learner can look back over the round. */
+    review: {
+      questionText: string;
+      options: string[];
+      correctAnswer: string;
+      solution: string;
+      selectedOption: string;
+      isCorrect: boolean;
+    } | null;
   }>;
 };
 
@@ -571,6 +580,20 @@ export class AdaptiveService {
       })),
       suggestions: await this.getSuggestedTopics(states),
     };
+  }
+
+  /**
+   * A short concept revision for a topic, offered as an optional step before
+   * practice or flashcards — never required to reach either.
+   */
+  async getTopicRevision(
+    input: CreateLearningSessionDto,
+  ): Promise<{ content: string; grounded: boolean }> {
+    const scope = this.toScope(input);
+    const sourceMaterial = await this.contentService
+      .buildSourceMaterial(scope)
+      .catch(() => '');
+    return this.tutorService.getTopicRevision(scope, sourceMaterial);
   }
 
   /**
@@ -1088,7 +1111,41 @@ export class AdaptiveService {
             ? 'CURRENT'
             : 'PENDING',
         attemptCount: item.answers?.length ?? 0,
+        review: item.resolvedAt ? this.toItemReview(item) : null,
       })),
+    };
+  }
+
+  /**
+   * Best-effort review detail for an already-resolved item. Null (rather than
+   * throwing) if the underlying question reference is gone, so one stale item
+   * never breaks the whole session payload for a learner reviewing their round.
+   */
+  private toItemReview(item: LearningSessionItem): {
+    questionText: string;
+    options: string[];
+    correctAnswer: string;
+    solution: string;
+    selectedOption: string;
+    isCorrect: boolean;
+  } | null {
+    let question: LearningQuestionReference;
+    try {
+      question = this.contentService.toQuestionReference(item);
+    } catch {
+      return null;
+    }
+    const lastAnswer = (item.answers ?? [])
+      .slice()
+      .sort((left, right) => right.attemptNumber - left.attemptNumber)[0];
+    if (!lastAnswer) return null;
+    return {
+      questionText: question.questionText,
+      options: question.options,
+      correctAnswer: question.correctAnswer,
+      solution: question.solution,
+      selectedOption: lastAnswer.selectedOption,
+      isCorrect: lastAnswer.isCorrect,
     };
   }
 

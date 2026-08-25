@@ -12,6 +12,8 @@ export interface DoubtCard {
   /** Reviewed concept notes the answer cited; empty when none were available. */
   sources: Citation[];
   status: DoubtStatus;
+  /** True when `assistantResponse` is the offline fallback, not a real AI answer. */
+  answeredWithFallback: boolean;
   questionId: string | null;
   learningSessionId: string | null;
   learningSessionItemId: string | null;

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { LoaderCircle, Sparkles, WifiOff } from "lucide-react";
+import { LoaderCircle, Sparkles } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { AiUnavailableNote } from "@/components/AiUnavailableBlock";
 import SourceCitations from "@/components/learning/SourceCitations";
 import type {
   Citation,
@@ -101,21 +102,20 @@ export default function ExplainThis({ endpoint }: { endpoint: string }) {
       </div>
 
       {error ? (
-        <p
-          className="mt-3 rounded-lg bg-danger-tint px-3 py-2 text-xs font-semibold text-danger"
-          role="alert"
-        >
-          {error}
-        </p>
+        <AiUnavailableNote
+          className="mt-3"
+          description={error}
+          onRetry={() => void run(depth)}
+        />
       ) : null}
 
       {explanation ? (
         <div className="mt-3 rounded-lg border border-hairline bg-surface p-4">
           {!grounded ? (
-            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-warning">
-              <WifiOff className="h-3.5 w-3.5" aria-hidden="true" />
-              Offline explanation from the reviewed solution.
-            </p>
+            <AiUnavailableNote
+              className="mb-2"
+              description="Offline explanation from the reviewed solution."
+            />
           ) : null}
           <StudyMarkdown className="text-sm leading-6 text-ink-soft">
             {explanation}

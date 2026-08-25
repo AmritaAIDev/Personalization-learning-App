@@ -16,7 +16,11 @@ import {
   Target,
 } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
-import { learningScopeFromSearchParams, learningUrl } from "@/lib/learning";
+import {
+  friendlyBloomLabel,
+  learningScopeFromSearchParams,
+  learningUrl,
+} from "@/lib/learning";
 import type {
   NotebookConceptGroup,
   NotebookConceptsResponse,
@@ -166,7 +170,7 @@ function MistakeDetail({
           {card.source === "ADAPTIVE" ? "Learn" : card.source === "DIAGNOSTIC" ? "Diagnostic" : "Practice"}
         </span>
         <span className="text-ink-mute">
-          {card.bloomLevel} {"\u00B7"} {card.difficulty}
+          {friendlyBloomLabel(card.bloomLevel)} {"\u00B7"} {card.difficulty}
         </span>
         <span className="ml-auto font-medium text-ink-mute">
           {formatDate(card.occurredAt)}
@@ -321,7 +325,7 @@ function ConceptGroupRow({
             key={level}
             className="rounded-full bg-canvas px-2 py-0.5 text-ink-soft"
           >
-            {level}
+            {friendlyBloomLabel(level)}
           </span>
         ))}
         {group.difficulties.map((level) => (
@@ -425,6 +429,18 @@ export default function NotebookPage() {
     );
   }, [concepts, routeScope]);
 
+  // "Practice weak topics" should drop the learner straight into a session on
+  // their single most-mistaken topic, not a blank topic picker they have to
+  // fill in themselves — the standalone Practice module only ever runs one
+  // topic per set, so the busiest concept group is the best single target.
+  const weakestPracticeHref = useMemo(() => {
+    if (!concepts || concepts.groups.length === 0) return "/practice";
+    const weakest = [...concepts.groups].sort(
+      (left, right) => right.mistakeCount - left.mistakeCount,
+    )[0];
+    return practiceHref(weakest);
+  }, [concepts]);
+
   const stats = useMemo(() => {
     if (!concepts || !visibleGroups) return null;
     const mistakes = visibleGroups.reduce(
@@ -507,7 +523,7 @@ export default function NotebookPage() {
               </Link>
             ) : null}
             <Link
-              href="/practice"
+              href={weakestPracticeHref}
               className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-ink-solid px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink-solid/90"
             >
               Practice weak topics

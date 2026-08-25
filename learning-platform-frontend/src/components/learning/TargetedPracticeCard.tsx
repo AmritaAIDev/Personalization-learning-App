@@ -4,6 +4,7 @@ import { type ReactNode, useState } from "react";
 import dynamic from "next/dynamic";
 import { CheckCircle2, LoaderCircle, RotateCcw, Sparkles, XCircle } from "lucide-react";
 import { ApiError } from "@/lib/api";
+import { AiUnavailableNote } from "@/components/AiUnavailableBlock";
 import {
   generateTargetedQuestion,
   submitTargetedAnswer,
@@ -179,7 +180,11 @@ export default function TargetedPracticeCard({
       )}
 
       {error ? (
-        <p className="mt-2 text-[12px] font-medium text-danger">{error}</p>
+        <AiUnavailableNote
+          className="mt-2"
+          description={error}
+          onRetry={question ? undefined : () => void start()}
+        />
       ) : null}
     </div>
   );

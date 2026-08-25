@@ -16,6 +16,8 @@ export type DoubtCard = {
   assistantResponse: string | null;
   sources: DoubtSource[];
   status: DoubtStatus;
+  /** True when `assistantResponse` is the offline fallback, not a real AI answer. */
+  answeredWithFallback: boolean;
   questionId: string | null;
   learningSessionId: string | null;
   learningSessionItemId: string | null;

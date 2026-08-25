@@ -14,7 +14,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import {
-  AlertCircle,
   ArrowRight,
   Camera,
   CheckCircle2,
@@ -25,6 +24,7 @@ import {
   Send,
   Sparkles,
 } from "lucide-react";
+import { AiUnavailableNote } from "@/components/AiUnavailableBlock";
 import SourceCitations from "@/components/learning/SourceCitations";
 import { ApiError, apiFetch } from "@/lib/api";
 import type {
@@ -95,6 +95,7 @@ function DoubtsSkeleton() {
 
 function DoubtTurn({ doubt }: { doubt: DoubtCard }) {
   const answered = doubt.status === "ANSWERED";
+  const isFallback = answered && doubt.answeredWithFallback;
   return (
     <article className="space-y-3">
       <div className="ml-auto max-w-[88%] rounded-[1.35rem] rounded-br-md bg-primary px-4 py-3 text-white shadow-[0_12px_26px_rgba(63,111,87,0.18)]">
@@ -109,18 +110,29 @@ function DoubtTurn({ doubt }: { doubt: DoubtCard }) {
         <div className="mb-2 flex items-center gap-2">
           <span
             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] ${
-              answered
-                ? "bg-success-tint text-success"
-                : "bg-warning-tint text-warning"
+              isFallback
+                ? "bg-warning-tint text-warning"
+                : answered
+                  ? "bg-success-tint text-success"
+                  : "bg-warning-tint text-warning"
             }`}
           >
             {answered ? (
-              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              isFallback ? (
+                <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              )
             ) : (
               <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />
             )}
-            {answered ? "Tutor answer" : "Writing"}
+            {isFallback ? "Offline answer" : answered ? "Tutor answer" : "Writing"}
           </span>
+          {isFallback ? (
+            <span className="text-[11px] font-semibold text-ink-mute">
+              tutor was unreachable — ask a follow-up once it is back
+            </span>
+          ) : null}
           {doubt.sources.length > 0 ? (
             <span className="text-[11px] font-semibold text-ink-mute">
               grounded with {doubt.sources.length} source
@@ -576,13 +588,7 @@ export default function DoubtsPage() {
                 ) : null}
 
                 {error ? (
-                  <div className="mt-3 flex items-start gap-2 rounded-2xl border border-danger/25 bg-danger-tint p-3 text-sm text-danger">
-                    <AlertCircle
-                      className="mt-0.5 h-4 w-4 shrink-0"
-                      aria-hidden="true"
-                    />
-                    {error}
-                  </div>
+                  <AiUnavailableNote className="mt-3" description={error} />
                 ) : null}
                 {success ? (
                   <div className="mt-3 flex items-start gap-2 rounded-2xl border border-success/25 bg-success-tint p-3 text-sm text-success">

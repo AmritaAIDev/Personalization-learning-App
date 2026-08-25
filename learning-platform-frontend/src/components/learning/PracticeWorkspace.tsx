@@ -18,8 +18,15 @@ import {
   Target,
   Trophy,
 } from "lucide-react";
-import { describeRoundOutcome, isMissTransition, learningUrl } from "@/lib/learning";
+import {
+  describeRoundOutcome,
+  friendlyBloomLabel,
+  isMissTransition,
+  learningUrl,
+} from "@/lib/learning";
+import { AiUnavailableNote } from "@/components/AiUnavailableBlock";
 import ReportQuestionButton from "@/components/ReportQuestionButton";
+import AttemptResultQuestionRow from "@/components/results/AttemptResultQuestionRow";
 import TargetedPracticeCard from "./TargetedPracticeCard";
 import type {
   LearningAnswerPayload,
@@ -45,6 +52,9 @@ export type PracticeWorkspaceProps = {
   loading: boolean;
   answering: boolean;
   error: string | null;
+  /** True once a correct answer has arrived but is held back for an explicit "Next question" click. */
+  pendingNextQuestion: boolean;
+  onNextQuestion: () => void;
   onStart: () => void;
   onAnswer: (selectedOption: string) => void;
   onContinue: () => void;
@@ -62,6 +72,8 @@ export default function PracticeWorkspace({
   loading,
   answering,
   error,
+  pendingNextQuestion,
+  onNextQuestion,
   onStart,
   onAnswer,
   onContinue,
@@ -72,20 +84,45 @@ export default function PracticeWorkspace({
     prompt: string;
     nonce: number;
   } | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   if (!payload && loading) return <StartingSkeleton />;
   if (!payload) {
-    return <StartPanel error={error} loading={loading} onStart={onStart} />;
+    return (
+      <StartPanel
+        error={error}
+        loading={loading}
+        onStart={onStart}
+        onOpenFlashcards={onOpenFlashcards}
+      />
+    );
   }
 
   const complete = payload.session.status !== "ACTIVE";
+  const resolvedItems = payload.progress.filter(
+    (item) => item.status === "RESOLVED" && item.review,
+  );
+
   return (
     <div className="space-y-3 xl:flex xl:h-full xl:flex-col xl:overflow-hidden">
-      {!complete ? <RoundProgress payload={payload} onStop={onStop} /> : null}
+      {!complete ? (
+        <RoundProgress
+          payload={payload}
+          onStop={onStop}
+          reviewCount={resolvedItems.length}
+          reviewOpen={reviewOpen}
+          onToggleReview={() => setReviewOpen((open) => !open)}
+        />
+      ) : null}
 
       <div className="grid gap-3 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_minmax(15rem,0.5fr)] xl:items-stretch">
         <section className="flex min-h-[24rem] flex-col rounded-[1.25rem] border border-hairline bg-surface p-3 shadow-[0_12px_30px_rgba(20,20,30,0.045)] sm:p-4 xl:min-h-0">
-          {complete ? (
+          {!complete && reviewOpen ? (
+            <ReviewPanel
+              items={resolvedItems}
+              onClose={() => setReviewOpen(false)}
+            />
+          ) : complete ? (
             <RoundOutcome
               payload={payload}
               feedback={feedback}
@@ -106,7 +143,9 @@ export default function PracticeWorkspace({
               feedback={feedback}
               answering={answering}
               error={error}
+              pendingNextQuestion={pendingNextQuestion}
               onAnswer={onAnswer}
+              onNextQuestion={onNextQuestion}
               onTutorPrompt={(prompt) =>
                 setTutorPrompt({ prompt, nonce: Date.now() })
               }
@@ -133,9 +172,15 @@ export default function PracticeWorkspace({
 function RoundProgress({
   payload,
   onStop,
+  reviewCount,
+  reviewOpen,
+  onToggleReview,
 }: {
   payload: LearningSessionPayload;
   onStop: () => void;
+  reviewCount: number;
+  reviewOpen: boolean;
+  onToggleReview: () => void;
 }) {
   const complete = payload.session.status !== "ACTIVE";
   const answered = payload.progress.filter(
@@ -167,10 +212,26 @@ function RoundProgress({
         />
       </div>
       <span className="shrink-0 tabular-nums">{percent}%</span>
+      {reviewCount > 0 ? (
+        <button
+          type="button"
+          onClick={onToggleReview}
+          aria-pressed={reviewOpen}
+          className={`ml-1 inline-flex min-h-7 shrink-0 items-center gap-1 rounded-lg border px-2 text-[11px] font-bold transition ${
+            reviewOpen
+              ? "border-primary/30 bg-primary-tint text-primary"
+              : "border-hairline text-ink-soft hover:bg-canvas"
+          }`}
+          title="Review answered questions"
+        >
+          <BookMarked className="h-3 w-3" aria-hidden="true" />
+          {reviewOpen ? "Back to question" : `Review (${reviewCount})`}
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={onStop}
-        className="ml-1 inline-flex min-h-7 shrink-0 items-center gap-1 rounded-lg border border-hairline px-2 text-[11px] font-bold text-ink-soft transition hover:bg-canvas"
+        className="inline-flex min-h-7 shrink-0 items-center gap-1 rounded-lg border border-hairline px-2 text-[11px] font-bold text-ink-soft transition hover:bg-canvas"
         title="Stop practice"
       >
         <Square className="h-3 w-3" aria-hidden="true" />
@@ -179,23 +240,90 @@ function RoundProgress({
     </div>
   );
 }
+
+function ReviewPanel({
+  items,
+  onClose,
+}: {
+  items: LearningSessionPayload["progress"];
+  onClose: () => void;
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="font-heading text-base font-bold text-ink">
+          This round so far
+        </h3>
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-hairline px-2.5 text-xs font-bold text-ink-soft transition hover:bg-canvas"
+        >
+          Back to question
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+        {items.map((item, index) =>
+          item.review ? (
+            <div
+              key={item.id}
+              className="rounded-xl border border-hairline bg-canvas/40 p-3"
+            >
+              <div className="mb-2 flex items-center gap-2 text-[11px] font-bold text-ink-mute">
+                <span>Question {index + 1}</span>
+                <span
+                  className={
+                    item.review.isCorrect ? "text-success" : "text-danger"
+                  }
+                >
+                  {item.review.isCorrect ? "Correct" : "Incorrect"}
+                </span>
+              </div>
+              <p className="mb-2.5 text-sm font-semibold leading-6 text-ink">
+                {item.review.questionText}
+              </p>
+              <AttemptResultQuestionRow
+                isCorrect={item.review.isCorrect}
+                yourAnswer={item.review.selectedOption}
+                correctAnswer={item.review.correctAnswer}
+              />
+            </div>
+          ) : null,
+        )}
+      </div>
+    </div>
+  );
+}
 function ActiveQuestion({
   payload,
   feedback,
   answering,
   error,
+  pendingNextQuestion,
   onAnswer,
+  onNextQuestion,
   onTutorPrompt,
 }: {
   payload: LearningSessionPayload;
   feedback: Feedback;
   answering: boolean;
   error: string | null;
+  pendingNextQuestion: boolean;
   onAnswer: (option: string) => void;
+  onNextQuestion: () => void;
   onTutorPrompt: (prompt: string) => void;
 }) {
   const current = payload.currentItem;
   const [pendingOption, setPendingOption] = useState<string | null>(null);
+  const nextButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  // The correct answer just landed but is held for an explicit click — send
+  // focus to that click so Enter/Space (already muscle memory from answering)
+  // moves the learner forward instead of doing nothing.
+  useEffect(() => {
+    if (pendingNextQuestion) nextButtonRef.current?.focus();
+  }, [pendingNextQuestion]);
 
   useEffect(() => {
     if (!current || answering) return;
@@ -207,6 +335,14 @@ function ActiveQuestion({
           target.tagName === "TEXTAREA" ||
           target.isContentEditable)
       ) {
+        return;
+      }
+      if (pendingNextQuestion) {
+        if (event.key === "Enter" || event.key === " ") {
+          if (target?.closest?.('button, a, [role="button"]')) return;
+          event.preventDefault();
+          onNextQuestion();
+        }
         return;
       }
       if (event.key === "h" || event.key === "H") {
@@ -229,15 +365,22 @@ function ActiveQuestion({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [answering, current, onAnswer, onTutorPrompt]);
+  }, [answering, current, onAnswer, onNextQuestion, onTutorPrompt, pendingNextQuestion]);
 
   if (!current) return null;
 
   const select = (option: string) => {
-    if (answering || current.attemptedOptions.includes(option)) return;
+    if (answering || pendingNextQuestion || current.attemptedOptions.includes(option))
+      return;
     setPendingOption(option);
     onAnswer(option);
   };
+
+  // Once the answer is locked in as correct, the just-answered option reads
+  // as a win, not a rule-out — it's the last attempt recorded for this item.
+  const justAnsweredCorrectOption = pendingNextQuestion
+    ? (current.attemptedOptions.at(-1) ?? null)
+    : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -247,7 +390,7 @@ function ActiveQuestion({
         </span>
         <span className="px-0.5 text-ink-mute">{"\u00B7"}</span>
         <span className="rounded-full bg-canvas px-2 py-0.5 text-ink-soft">
-          {current.bloomLevel}
+          {friendlyBloomLabel(current.bloomLevel)}
         </span>
         {current.requiresRetry ? (
           <span className="ml-auto rounded-full bg-warning-tint px-2.5 py-0.5 text-[11px] font-bold text-warning">
@@ -275,7 +418,10 @@ function ActiveQuestion({
           aria-label="Answer options"
         >
           {current.options.map((option, index) => {
-            const ruledOut = current.attemptedOptions.includes(option);
+            const isCorrectPick =
+              pendingNextQuestion && option === justAnsweredCorrectOption;
+            const ruledOut =
+              !isCorrectPick && current.attemptedOptions.includes(option);
             const isPending = pendingOption === option && answering;
             return (
               <button
@@ -283,21 +429,25 @@ function ActiveQuestion({
                 type="button"
                 role="radio"
                 aria-checked={pendingOption === option}
-                disabled={answering || ruledOut}
+                disabled={answering || pendingNextQuestion || ruledOut}
                 onClick={() => select(option)}
                 className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left text-[13px] font-medium transition ${
-                  ruledOut
-                    ? "border-danger/25 bg-danger-tint text-danger line-through opacity-75"
-                    : pendingOption === option
-                      ? "border-primary bg-primary-tint text-primary-strong ring-1 ring-primary"
-                      : "border-hairline bg-surface text-ink hover:border-primary/45 hover:bg-primary-tint/40"
+                  isCorrectPick
+                    ? "border-success bg-success-tint text-success"
+                    : ruledOut
+                      ? "border-danger/25 bg-danger-tint text-danger line-through opacity-75"
+                      : pendingOption === option
+                        ? "border-primary bg-primary-tint text-primary-strong ring-1 ring-primary"
+                        : "border-hairline bg-surface text-ink hover:border-primary/45 hover:bg-primary-tint/40"
                 } disabled:cursor-not-allowed`}
               >
                 <span
                   className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[11px] font-bold ${
-                    pendingOption === option
-                      ? "bg-primary text-white"
-                      : "bg-canvas text-ink-mute"
+                    isCorrectPick
+                      ? "bg-success text-white"
+                      : pendingOption === option
+                        ? "bg-primary text-white"
+                        : "bg-canvas text-ink-mute"
                   }`}
                   aria-hidden="true"
                 >
@@ -306,7 +456,12 @@ function ActiveQuestion({
                 <StudyMarkdown className="min-w-0 flex-1 text-[13px] font-medium leading-5">
                   {option}
                 </StudyMarkdown>
-                {ruledOut ? (
+                {isCorrectPick ? (
+                  <CheckCircle2
+                    className="h-4 w-4 shrink-0 text-success"
+                    aria-hidden="true"
+                  />
+                ) : ruledOut ? (
                   <XCircle
                     className="h-4 w-4 shrink-0 text-danger"
                     aria-hidden="true"
@@ -321,9 +476,11 @@ function ActiveQuestion({
             );
           })}
         </div>
-        <p className="mt-3 hidden text-[11px] font-semibold text-ink-mute sm:block">
-          Press 1–{current.options.length} to answer · H hint · E explain
-        </p>
+        {!pendingNextQuestion ? (
+          <p className="mt-3 hidden text-[11px] font-semibold text-ink-mute sm:block">
+            Press 1–{current.options.length} to answer · H hint · E explain
+          </p>
+        ) : null}
       </div>
 
       <div className="mt-3 space-y-2" aria-live="polite">
@@ -339,18 +496,19 @@ function ActiveQuestion({
 
         {!answering && feedback ? <AnswerFeedback feedback={feedback} /> : null}
 
-        {error ? (
-          <p
-            className="flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-4 py-3 text-sm font-medium text-danger"
-            role="alert"
+        {pendingNextQuestion ? (
+          <button
+            ref={nextButtonRef}
+            type="button"
+            onClick={onNextQuestion}
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-strong sm:w-auto"
           >
-            <CircleAlert
-              className="mt-0.5 h-4 w-4 shrink-0"
-              aria-hidden="true"
-            />
-            {error}
-          </p>
+            Next question
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </button>
         ) : null}
+
+        {error ? <AiUnavailableNote description={error} /> : null}
       </div>
     </div>
   );
@@ -364,7 +522,7 @@ function AnswerFeedback({ feedback }: { feedback: NonNullable<Feedback> }) {
         role="status"
       >
         <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
-        Correct — next question loaded.
+        Correct!
       </p>
     );
   }
@@ -497,7 +655,7 @@ function RoundOutcome({
       {isMiss && missedItem ? (
         <div className="mt-5 w-full max-w-md text-left">
           <p className="text-xs font-semibold text-ink-mute">
-            {missedItem.bloomLevel} · {missedItem.difficulty}
+            {friendlyBloomLabel(missedItem.bloomLevel)} · {missedItem.difficulty}
           </p>
           <StudyMarkdown className="mt-1 text-sm font-semibold leading-6 text-ink">
             {missedItem.questionText}
@@ -515,13 +673,7 @@ function RoundOutcome({
       ) : null}
 
       {error ? (
-        <p
-          className="mt-4 flex max-w-md items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-3 py-2 text-left text-sm font-medium text-danger"
-          role="alert"
-        >
-          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          {error}
-        </p>
+        <AiUnavailableNote className="mt-4 max-w-md" description={error} />
       ) : null}
 
       <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
@@ -566,15 +718,23 @@ function RoundOutcome({
     </div>
   );
 }
+/** Matches the backend's ConflictException text for a mastered topic (adaptive.service.ts). */
+function isMasteredTopicError(error: string): boolean {
+  return error.toLowerCase().includes("already mastered");
+}
+
 function StartPanel({
   error,
   loading,
   onStart,
+  onOpenFlashcards,
 }: {
   error: string | null;
   loading: boolean;
   onStart: () => void;
+  onOpenFlashcards: () => void;
 }) {
+  const mastered = Boolean(error && isMasteredTopicError(error));
   return (
     <section className="rounded-[1.5rem] border border-hairline bg-surface p-6 shadow-[0_18px_44px_rgba(20,20,30,0.07)] sm:p-7">
       <div className="grid gap-6 lg:grid-cols-[1fr_0.85fr] lg:items-center">
@@ -593,7 +753,7 @@ function StartPanel({
             prepared.
           </p>
           {error ? (
-            <p
+            <div
               className="mt-5 flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-tint px-4 py-3 text-sm font-medium text-danger"
               role="alert"
             >
@@ -601,8 +761,20 @@ function StartPanel({
                 className="mt-0.5 h-4 w-4 shrink-0"
                 aria-hidden="true"
               />
-              {error}
-            </p>
+              <div className="flex-1">
+                <p>{error}</p>
+                {mastered ? (
+                  <button
+                    type="button"
+                    onClick={onOpenFlashcards}
+                    className="mt-2.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-danger/10 px-3 py-1.5 text-xs font-bold text-danger transition hover:bg-danger/20"
+                  >
+                    <Layers3 className="h-3.5 w-3.5" aria-hidden="true" />
+                    Review with flashcards instead
+                  </button>
+                ) : null}
+              </div>
+            </div>
           ) : null}
         </div>
         <div className="rounded-[1.35rem] border border-hairline bg-canvas p-4">

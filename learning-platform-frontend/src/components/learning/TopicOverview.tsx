@@ -1,11 +1,23 @@
 "use client";
 
-import { ArrowRight, Layers3, SearchCheck, Sparkles } from "lucide-react";
+import { useState } from "react";
+import {
+  ArrowRight,
+  BookOpenText,
+  Layers3,
+  SearchCheck,
+  Sparkles,
+} from "lucide-react";
+import {
+  friendlyBloomLabel,
+  friendlyCoordinateLabel,
+} from "@/lib/learning";
 import type {
   LearningDashboardPayload,
   LearningScope,
   LearningState,
 } from "@/lib/learning-types";
+import ConceptRevisionPanel from "./ConceptRevisionPanel";
 import SubtopicExplorer from "./SubtopicExplorer";
 
 function formatTransitionLabel(value: string): string {
@@ -50,8 +62,9 @@ export default function TopicOverview({
         ? "Foundation needed"
         : topicState
           ? "In progress"
-          : "Ready to place";
+          : "Not started yet";
   const coordinate = topicState?.currentCoordinate;
+  const [revisionOpen, setRevisionOpen] = useState(false);
 
   return (
     <div className="space-y-5">
@@ -62,19 +75,27 @@ export default function TopicOverview({
               <div>
                 <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-primary">
                   <SearchCheck className="h-4 w-4" aria-hidden="true" />
-                  Current learning route
+                  Your next step
                 </p>
                 <h2 className="mt-2 font-heading text-2xl font-bold tracking-tight text-ink">
                   {topicState
                     ? topicState.stageLabel
-                    : "Start placement through practice"}
+                    : "Find your starting level"}
                 </h2>
                 <p className="mt-2 max-w-md text-sm leading-6 text-ink-soft">
                   {topicState?.nextFocus ??
-                    "One short round places you automatically from your own answers."}
+                    "One short round of practice figures out where to start you."}
                 </p>
               </div>
               <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
+                <button
+                  type="button"
+                  onClick={() => setRevisionOpen(true)}
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-hairline bg-surface px-4 py-2 text-sm font-bold text-ink-soft transition hover:border-primary/30 hover:text-primary"
+                >
+                  <BookOpenText className="h-4 w-4" aria-hidden="true" />
+                  Revise
+                </button>
                 <button
                   type="button"
                   onClick={onOpenPractice}
@@ -134,11 +155,11 @@ export default function TopicOverview({
                 <span>
                   {coordinate
                     ? `Level ${topicState?.currentLevel}`
-                    : "Not placed"}
+                    : "Not started"}
                 </span>
                 <span className="text-ink-mute">
                   {coordinate
-                    ? `${coordinate.bloomLevel} · ${coordinate.difficulty}`
+                    ? `${friendlyBloomLabel(coordinate.bloomLevel)} · ${coordinate.difficulty}`
                     : status}
                 </span>
               </dd>
@@ -146,7 +167,7 @@ export default function TopicOverview({
           </dl>
         </section>
 
-        <article className="rounded-[1.5rem] border border-hairline bg-surface p-5 shadow-[0_14px_34px_rgba(20,20,30,0.05)]">
+        <article className="rounded-[1.75rem] border border-hairline bg-surface p-5 sm:p-6 shadow-[0_16px_38px_rgba(20,20,30,0.06)]">
           <p className="flex items-center gap-2 text-xs font-medium text-ink-mute">
             <Layers3 className="h-4 w-4" aria-hidden="true" />
             Topic trail
@@ -165,7 +186,7 @@ export default function TopicOverview({
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-ink">
-                      {item.coordinate.label}
+                      {friendlyCoordinateLabel(item.coordinate)}
                     </p>
                     <p className="mt-0.5 text-xs text-ink-soft">
                       {formatTransitionLabel(item.transition)}
@@ -182,6 +203,17 @@ export default function TopicOverview({
       </div>
 
       <SubtopicExplorer scope={scope} />
+
+      {revisionOpen ? (
+        <ConceptRevisionPanel
+          scope={scope}
+          onClose={() => setRevisionOpen(false)}
+          onStartPractice={() => {
+            setRevisionOpen(false);
+            onOpenPractice();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -15,7 +15,19 @@ const AGAIN_REQUEUE_GAP = 3;
 /** Prompt labels kept for de-duplication, bounded so the request stays small. */
 const MAX_TRACKED_PROMPTS = 48;
 
+/**
+ * A flip slower than this reads as genuine hesitation rather than normal
+ * reading time — long enough that a quick glance-and-tap never counts.
+ */
+export const HESITATION_THRESHOLD_SECONDS = 12;
+
 export type FlashcardTally = Record<FlashcardRating, number>;
+
+export type FlashcardHesitation = {
+  front: string;
+  tags: string[];
+  seconds: number;
+};
 
 export type FlashcardSession = {
   /** Cards still to be shown, in order. */
@@ -27,6 +39,8 @@ export type FlashcardSession = {
   tally: FlashcardTally;
   /** Normalized prompts already delivered, newest last. */
   seenPrompts: string[];
+  /** Cards where reveal took unusually long, for the end-of-run focus note. */
+  hesitations: FlashcardHesitation[];
 };
 
 export function createFlashcardSession(): FlashcardSession {
@@ -36,6 +50,28 @@ export function createFlashcardSession(): FlashcardSession {
     reviewed: 0,
     tally: { AGAIN: 0, HARD: 0, GOOD: 0, EASY: 0 },
     seenPrompts: [],
+    hesitations: [],
+  };
+}
+
+/**
+ * Records how long a card sat unrevealed before the learner tapped to flip
+ * it. This is a secondary signal only — it never touches the self-rated
+ * Again/Hard/Good/Easy tally that actually drives the spaced-repetition
+ * schedule; it just feeds the end-of-run "you hesitated on" note.
+ */
+export function recordHesitation(
+  session: FlashcardSession,
+  card: Flashcard,
+  seconds: number,
+): FlashcardSession {
+  if (seconds < HESITATION_THRESHOLD_SECONDS) return session;
+  return {
+    ...session,
+    hesitations: [
+      ...session.hesitations,
+      { front: card.front, tags: card.tags, seconds },
+    ],
   };
 }
 

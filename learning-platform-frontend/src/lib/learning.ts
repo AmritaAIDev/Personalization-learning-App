@@ -1,9 +1,36 @@
 import type { ReadonlyURLSearchParams } from "next/navigation";
 import type {
+  LearningCoordinate,
   LearningScope,
   LearningSessionTransition,
   LearningTab,
 } from "./learning-types";
+
+/**
+ * The adaptive engine tracks proficiency on Bloom's-taxonomy names
+ * (Recall/Comprehension/Application/Higher-Order) — precise for the engine,
+ * jargon for a student. This is the one place that translates a raw Bloom
+ * level into plain language for anything rendered on screen.
+ */
+const FRIENDLY_BLOOM_LABELS: Record<LearningCoordinate["bloomLevel"], string> =
+  {
+    Recall: "Basics",
+    Comprehension: "Understanding",
+    Application: "Application",
+    "Higher-Order": "Advanced",
+  };
+
+export function friendlyBloomLabel(bloomLevel: string): string {
+  return (
+    FRIENDLY_BLOOM_LABELS[bloomLevel as LearningCoordinate["bloomLevel"]] ??
+    bloomLevel
+  );
+}
+
+/** Plain-language stand-in for a coordinate's own `label` (e.g. "Level 4: Recall · Medium"). */
+export function friendlyCoordinateLabel(coordinate: LearningCoordinate): string {
+  return `Level ${coordinate.level}: ${friendlyBloomLabel(coordinate.bloomLevel)} · ${coordinate.difficulty}`;
+}
 
 export function learningScopeFromSearchParams(
   searchParams: ReadonlyURLSearchParams,

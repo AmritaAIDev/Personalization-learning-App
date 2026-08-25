@@ -92,6 +92,14 @@ export type LearningSessionPayload = {
     sequence: number;
     status: "CURRENT" | "PENDING" | "RESOLVED";
     attemptCount: number;
+    review: {
+      questionText: string;
+      options: string[];
+      correctAnswer: string;
+      solution: string;
+      selectedOption: string;
+      isCorrect: boolean;
+    } | null;
   }>;
 };
 

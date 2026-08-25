@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { apiFetch, streamApi } from "@/lib/api";
+import { AiUnavailableNote } from "@/components/AiUnavailableBlock";
 import type { TutorMessage } from "@/lib/learning-types";
 import { nextTutorPollDelay } from "@/lib/tutor-polling";
 
@@ -430,12 +431,10 @@ export default function StudyAssistant({
         </div>
 
         {error && (
-          <p
-            className="mt-3 rounded-xl bg-danger-tint px-3 py-2 text-xs font-semibold text-danger"
-            role="alert"
-          >
-            {error}
-          </p>
+          <AiUnavailableNote
+            className="mt-3"
+            description={error}
+          />
         )}
         <div ref={endRef} />
       </div>

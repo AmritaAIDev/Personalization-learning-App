@@ -86,6 +86,17 @@ export default function AdaptiveStudySession({
   const [missedItem, setMissedItem] = useState<
     LearningSessionPayload["currentItem"]
   >(null);
+  /**
+   * A correct answer mid-round is held here instead of applied immediately.
+   * Every other question flow in the app (Practice, Mock Tests, Diagnostics)
+   * requires an explicit click to move on; this one used to swap the question
+   * out from under the learner the instant the API responded, with only a
+   * fading status line as a clue. Holding the already-fetched next payload
+   * here until "Next question" is clicked matches that convention without a
+   * second round trip.
+   */
+  const [pendingAdvance, setPendingAdvance] =
+    useState<LearningAnswerPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [answering, setAnswering] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -181,12 +192,20 @@ export default function AdaptiveStudySession({
           `/api/learning/sessions/${payload.session.id}/items/${payload.currentItem.id}/answer`,
           { method: "POST", body: JSON.stringify({ selectedOption }) },
         );
-        setPayload(next);
-        setFeedback(next.feedback);
-        setMissedItem(
-          isMissTransition(next.session.transition) ? answeredItem : null,
-        );
-        if (next.session.status !== "ACTIVE") void refreshDashboard();
+        // A correct answer mid-round already carries the next question in
+        // this same response, but the learner hasn't asked to move on yet —
+        // hold it back for an explicit "Next question" click.
+        if (next.feedback.kind === "CORRECT" && next.session.status === "ACTIVE") {
+          setPendingAdvance(next);
+          setFeedback(next.feedback);
+        } else {
+          setPayload(next);
+          setFeedback(next.feedback);
+          setMissedItem(
+            isMissTransition(next.session.transition) ? answeredItem : null,
+          );
+          if (next.session.status !== "ACTIVE") void refreshDashboard();
+        }
       } catch (reason) {
         setError(
           reason instanceof Error
@@ -200,17 +219,20 @@ export default function AdaptiveStudySession({
     [answering, payload, refreshDashboard],
   );
 
-  // A correct answer confirmation is a moment, not a permanent banner.
-  useEffect(() => {
-    if (feedback?.kind !== "CORRECT") return;
-    const timeout = window.setTimeout(() => setFeedback(null), 2_600);
-    return () => window.clearTimeout(timeout);
-  }, [feedback]);
+  /** Applies the held-back next question once the learner clicks "Next question". */
+  const continueToNext = useCallback(() => {
+    if (!pendingAdvance) return;
+    setPayload(pendingAdvance);
+    setFeedback(null);
+    setMissedItem(null);
+    setPendingAdvance(null);
+  }, [pendingAdvance]);
 
   const stopPractice = () => {
     setPayload(null);
     setFeedback(null);
     setMissedItem(null);
+    setPendingAdvance(null);
     setError(null);
     selectTab("overview");
   };
@@ -300,6 +322,8 @@ export default function AdaptiveStudySession({
             loading={loading}
             answering={answering}
             error={error}
+            pendingNextQuestion={pendingAdvance !== null}
+            onNextQuestion={continueToNext}
             onStart={() => void start()}
             onAnswer={(selectedOption) => void answer(selectedOption)}
             onContinue={() => void start()}

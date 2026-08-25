@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import {
   CheckCheck,
-  CircleAlert,
   Keyboard,
   Lightbulb,
   LoaderCircle,
@@ -14,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { AiUnavailableBlock } from "@/components/AiUnavailableBlock";
 import {
   appendFlashcards,
   createFlashcardSession,
@@ -22,8 +22,10 @@ import {
   FLASHCARD_BATCH_SIZE,
   isPersistedFlashcard,
   rateFlashcard,
+  recordHesitation,
   remainingFlashcards,
   shouldPrefetchFlashcards,
+  type FlashcardHesitation,
   type FlashcardSession,
 } from "@/lib/flashcard-session";
 import type {
@@ -116,6 +118,14 @@ export default function FlashcardDeck({
 
   const card = currentFlashcard(session);
   const remaining = remainingFlashcards(session);
+
+  // Reset the "shown at" clock whenever a new card becomes current, so the
+  // hesitation measurement is reading-time-to-reveal for THIS card only.
+  const cardShownAtRef = useRef(0);
+  const cardKey = card ? `${card.id}:${card.front}` : null;
+  useEffect(() => {
+    cardShownAtRef.current = Date.now();
+  }, [cardKey]);
 
   /**
    * Single writer for the session. Keeping the ref in step with state lets the
@@ -241,7 +251,18 @@ export default function FlashcardDeck({
     [applySession],
   );
 
-  const flip = useCallback(() => setFlipped((value) => !value), []);
+  const flip = useCallback(() => {
+    setFlipped((wasFlipped) => {
+      if (!wasFlipped) {
+        const active = currentFlashcard(sessionRef.current);
+        if (active) {
+          const seconds = (Date.now() - cardShownAtRef.current) / 1000;
+          applySession((current) => recordHesitation(current, active, seconds));
+        }
+      }
+      return !wasFlipped;
+    });
+  }, [applySession]);
 
   useBodyScrollLock();
 
@@ -370,31 +391,18 @@ export default function FlashcardDeck({
           {view === "loading" ? <DeckSkeleton /> : null}
 
           {view === "error" ? (
-            <div
-              className="mx-auto my-auto max-w-md rounded-2xl border border-danger/20 bg-danger-tint p-5 text-sm text-danger"
-              role="alert"
-            >
-              <p className="flex items-start gap-2 font-semibold">
-                <CircleAlert
-                  className="mt-0.5 h-4 w-4 shrink-0"
-                  aria-hidden="true"
-                />
-                {error ?? "Flashcards are unavailable right now."}
-              </p>
-              <button
-                type="button"
-                onClick={loadMore}
-                className="mt-4 font-bold underline underline-offset-4"
-              >
-                Try again
-              </button>
-            </div>
+            <AiUnavailableBlock
+              title="Flashcards are taking a moment"
+              description={error ?? "Flashcards are unavailable right now."}
+              onRetry={loadMore}
+            />
           ) : null}
 
           {view === "summary" ? (
             <RunSummary
               reviewed={session.reviewed}
               summary={summary}
+              hesitations={session.hesitations}
               loadingMore={loadingMore}
               onContinue={loadMore}
               onClose={onClose}
@@ -415,7 +423,7 @@ export default function FlashcardDeck({
                   </span>
                 ) : (
                   <span className="rounded-full bg-canvas px-2.5 py-1">
-                    New card
+                    Not reviewed yet
                   </span>
                 )}
               </div>
@@ -548,19 +556,42 @@ function DeckSkeleton() {
   );
 }
 
+/**
+ * Concepts the learner hesitated on, ranked by how often they showed up
+ * across the slow cards — a hint at what to revisit, not a verdict.
+ */
+function topHesitationConcepts(
+  hesitations: FlashcardHesitation[],
+  limit = 3,
+): string[] {
+  const counts = new Map<string, number>();
+  for (const item of hesitations) {
+    for (const tag of item.tags) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, limit)
+    .map(([tag]) => tag);
+}
+
 function RunSummary({
   reviewed,
   summary,
+  hesitations,
   loadingMore,
   onContinue,
   onClose,
 }: {
   reviewed: number;
   summary: Array<{ value: FlashcardRating; label: string; count: number }>;
+  hesitations: FlashcardHesitation[];
   loadingMore: boolean;
   onContinue: () => void;
   onClose: () => void;
 }) {
+  const focusConcepts = topHesitationConcepts(hesitations);
   return (
     <div className="mx-auto my-auto w-full max-w-xl rounded-[1.35rem] border border-hairline bg-surface p-5 text-center shadow-[0_20px_60px_rgba(20,20,30,0.08)] sm:rounded-[1.75rem] sm:p-9">
       <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary-tint text-primary">
@@ -588,6 +619,22 @@ function RunSummary({
             </div>
           ))}
         </dl>
+      ) : null}
+
+      {focusConcepts.length > 0 ? (
+        <div className="mt-5 rounded-2xl border border-warning/20 bg-warning-tint px-4 py-3 text-left">
+          <p className="text-xs font-bold uppercase tracking-[0.1em] text-warning">
+            Worth a closer look
+          </p>
+          <p className="mt-1 text-sm leading-6 text-ink-soft">
+            You took a while to reveal cards on{" "}
+            <span className="font-semibold text-ink">
+              {focusConcepts.join(", ")}
+            </span>
+            . A slower reveal usually means the recall is not yet automatic —
+            worth another pass on this concept.
+          </p>
+        </div>
       ) : null}
 
       <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:justify-center">

@@ -173,3 +173,49 @@ describe('AgentService misconception classification', () => {
     await expect(service.classifyMisconception(context)).rejects.toThrow();
   });
 });
+
+/**
+ * Building the OpenAI client unconditionally took the whole application down at
+ * boot on any deploy without DEEPSEEK_API_KEY: the SDK throws on an empty key,
+ * and the throw happened inside the constructor of a module every request path
+ * depends on. The service is documented as degrading to database fallbacks, so
+ * construction must succeed and only the LLM-backed calls may fail.
+ */
+describe('AgentService without an LLM configured', () => {
+  const configService = {
+    get: jest.fn((key: string) =>
+      key === 'DEEPSEEK_API_KEY' ? '' : undefined,
+    ),
+  };
+
+  function construct(): AgentService {
+    return new AgentService(configService as never, {} as never, {} as never);
+  }
+
+  it('constructs without throwing when the API key is empty', () => {
+    expect(() => construct()).not.toThrow();
+  });
+
+  it('constructs without throwing when the API key is absent entirely', () => {
+    const missingKeyConfig = { get: jest.fn(() => undefined) };
+    expect(
+      () =>
+        new AgentService(missingKeyConfig as never, {} as never, {} as never),
+    ).not.toThrow();
+  });
+
+  it('reports the LLM as unavailable instead of crashing when generating', async () => {
+    const service = construct();
+    await expect(
+      service.generateLearningQuestionBatch({
+        subject: 'Physics',
+        chapter: 'Kinematics',
+        topic: 'Relative Velocity',
+        bloomLevel: 'Recall',
+        difficulty: 'Easy',
+        count: 5,
+        sourceMaterial: '',
+      }),
+    ).rejects.toThrow(/DEEPSEEK_API_KEY/);
+  });
+});

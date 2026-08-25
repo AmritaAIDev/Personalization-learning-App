@@ -13,12 +13,17 @@ import { SESSION_COOKIE_NAME } from '../../src/auth/auth.service';
 import { GlobalExceptionFilter } from '../../src/common/filters/global-exception.filter';
 import {
   CORRECT_OPTION,
+  SPREAD_TOPIC,
   TEST_CHAPTER,
+  TEST_QUESTION_PREFIX,
   TEST_SUBJECT,
   TEST_TOPIC,
+  THIN_CHAPTER,
+  THIN_TOPIC,
   cleanupTestData,
   cleanupUser,
   seedLevelOneQuestions,
+  seedQuestions,
 } from './seed.util';
 
 const ALLOWED_ORIGIN = 'http://localhost:3000';
@@ -61,6 +66,33 @@ describe('Platform integration (real database)', () => {
     await cleanupTestData(dataSource);
     await cleanupUser(dataSource, LEARNER_EMAIL);
     await seedLevelOneQuestions(dataSource, 8);
+
+    // Two questions is below the five a session needs, and no other coordinate
+    // can cover for it.
+    await seedQuestions(dataSource, {
+      topic: THIN_TOPIC,
+      chapter: THIN_CHAPTER,
+      idPrefix: `${TEST_QUESTION_PREFIX}THIN-`,
+      entries: [
+        { bloomLevel: 'Recall', difficulty: 'Easy' },
+        { bloomLevel: 'Recall', difficulty: 'Easy' },
+      ],
+    });
+
+    // Six questions, but never five at one coordinate: only the calibration
+    // fallback can assemble a session out of this.
+    await seedQuestions(dataSource, {
+      topic: SPREAD_TOPIC,
+      idPrefix: `${TEST_QUESTION_PREFIX}SPREAD-`,
+      entries: [
+        { bloomLevel: 'Recall', difficulty: 'Easy' },
+        { bloomLevel: 'Recall', difficulty: 'Easy' },
+        { bloomLevel: 'Comprehension', difficulty: 'Easy' },
+        { bloomLevel: 'Comprehension', difficulty: 'Medium' },
+        { bloomLevel: 'Application', difficulty: 'Easy' },
+        { bloomLevel: 'Application', difficulty: 'Medium' },
+      ],
+    });
   }, 60_000);
 
   afterAll(async () => {
@@ -210,6 +242,81 @@ describe('Platform integration (real database)', () => {
         .expect(200);
 
       expect(JSON.stringify(response.body)).toContain(TEST_TOPIC);
+    }, 30_000);
+  });
+
+  /**
+   * With no DEEPSEEK_API_KEY configured — the state of CI, and of production
+   * whenever the LLM is down — a topic that cannot fill a five-question set has
+   * only the database to fall back on. These specs pin down what a learner
+   * actually gets in that case, because the difference between "an honest
+   * unavailable message" and "a broken half-session" is invisible to the
+   * mocked unit suites.
+   */
+  describe('low question supply', () => {
+    it('refuses a topic that cannot fill a set, with an actionable message', async () => {
+      const response = await httpRequest()
+        .post('/api/learning/sessions')
+        .set('Origin', ALLOWED_ORIGIN)
+        .set('Cookie', sessionCookie)
+        .send({
+          subject: TEST_SUBJECT,
+          chapter: THIN_CHAPTER,
+          topic: THIN_TOPIC,
+        })
+        .expect(503);
+
+      expect(response.body.message).toMatch(/five-question set/i);
+      // The learner must be able to quote something back; a bare 503 is not
+      // diagnosable in production.
+      expect(response.body.requestId).toBeDefined();
+    }, 30_000);
+
+    it('leaves no half-built session behind after refusing', async () => {
+      const sessions = await dataSource.query<Array<{ id: string }>>(
+        `SELECT ls.id FROM learning_sessions ls
+           JOIN learning_topic_states lts ON lts.id = ls.state_id
+          WHERE lts.topic = $1`,
+        [THIN_TOPIC],
+      );
+      expect(sessions).toHaveLength(0);
+    });
+
+    it('assembles a calibration set when no single coordinate has enough', async () => {
+      const response = await httpRequest()
+        .post('/api/learning/sessions')
+        .set('Origin', ALLOWED_ORIGIN)
+        .set('Cookie', sessionCookie)
+        .send({
+          subject: TEST_SUBJECT,
+          chapter: TEST_CHAPTER,
+          topic: SPREAD_TOPIC,
+        })
+        .expect(201);
+
+      const { session, currentItem } = response.body.data;
+      expect(session.totalQuestions).toBe(5);
+      expect(currentItem).not.toBeNull();
+    }, 30_000);
+
+    it('reports per-coordinate supply so gaps can be found before launch', async () => {
+      const response = await httpRequest()
+        .get('/api/learning/coverage')
+        .query({
+          subject: TEST_SUBJECT,
+          chapter: THIN_CHAPTER,
+          topic: THIN_TOPIC,
+        })
+        .set('Cookie', sessionCookie)
+        .expect(200);
+
+      const { coordinates } = response.body.data;
+      expect(coordinates).toHaveLength(12);
+      expect(
+        coordinates.every(
+          (entry: { readyForSession: boolean }) => !entry.readyForSession,
+        ),
+      ).toBe(true);
     }, 30_000);
   });
 

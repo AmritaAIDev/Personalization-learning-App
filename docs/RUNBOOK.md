@@ -135,3 +135,30 @@ checking that `/health` is still 200 and that non-AI routes respond.
   explicit `DATABASE_URL`. Point it only at a disposable database.
 - Session cookies are `HttpOnly`, and `Secure` + `SameSite=None` in production.
   Unsafe requests additionally require an allowed `Origin` (`CsrfOriginGuard`).
+
+## Question supply
+
+Adaptive practice needs `LEARNING_QUESTIONS_PER_SESSION` (5) questions at a
+single coordinate, and a topic has 12 coordinates, so a fully covered topic
+needs **60** questions. Below that, a learner hits the fallback chain in
+`AdaptiveService.createOrResume`:
+
+1. The exact coordinate.
+2. The nearest ready coordinate — the learner's level is moved to match.
+3. A calibration set, which widens from the topic to the whole **chapter**.
+4. On-demand AI generation, when `DEEPSEEK_API_KEY` is set.
+5. Otherwise `503` with "This topic needs one ready five-question set…".
+
+Audit supply across the whole catalogue before opening a subject to learners.
+The script is read-only and safe to point at production:
+
+```bash
+DATABASE_URL=<production> npm run audit:coverage
+DATABASE_URL=<production> npm run audit:coverage -- --subject Physics
+DATABASE_URL=<production> npm run audit:coverage -- --json
+```
+
+It exits non-zero while any topic is short, so it can gate a launch. The
+per-coordinate columns show where the gaps are, and the summary calls out
+topics that cannot even fill a Level 1 session — those are unusable on day one,
+because every learner starts at Level 1.

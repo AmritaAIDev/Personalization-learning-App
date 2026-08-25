@@ -381,3 +381,57 @@ Still open:
 
 - Production seed and low-supply fallback audits must still be run against the
   target production database.
+
+## Slice 013 - Observability, configuration safety, and content audit
+
+Completed:
+
+- Configuration is validated at boot (`src/config/env.validation.ts`). Production
+  rejects a missing `DATABASE_URL` or `FRONTEND_ORIGIN`, disabled database TLS,
+  disabled certificate verification, and non-https origins. A bad deploy now fails
+  to start instead of failing on a learner's first request.
+- 5xx responses are reported to Sentry when `SENTRY_DSN` is set, tagged with the
+  same `requestId` already carried by the `X-Request-Id` header and error body.
+  4xx is deliberately not reported. Request bodies, cookies, and headers are
+  stripped before sending. Everything is inert without a DSN.
+- Added `.github/workflows/migrate-production.yml` to apply pending migrations on
+  pushes that touch `src/migrations`, ahead of the Vercel deploy on the same push.
+- Added `docs/RUNBOOK.md`: deploy steps, expand-then-contract schema rules, triage
+  by request id, rollback for a bad release and a bad migration, and what degrades
+  rather than fails when DeepSeek or Qdrant is down.
+- Added `npm run audit:coverage`, a read-only catalogue-wide supply audit across all
+  12 coordinates for every topic. Exits non-zero while any topic is short.
+- Added integration coverage for the low-supply fallback chain: an isolated thin
+  topic returns 503 with an actionable message and leaves no half-built session,
+  while a topic whose questions are spread thinly still assembles a calibration set.
+
+Fixed:
+
+- **Deploying without `DEEPSEEK_API_KEY` crashed the backend at boot.** `AgentService`
+  built the OpenAI client unconditionally, and the SDK throws on an empty key, so
+  every request path — login, dashboard, practice — died at module init on any deploy
+  without the key. `.env.example` shipped exactly that configuration. The client is
+  now built only when a key exists, which is what the "safe database fallbacks"
+  warning always claimed. Regression tests cover both the empty and absent cases.
+- The integration suite now clears `DEEPSEEK_API_KEY`, `QDRANT_URL`, and
+  `QDRANT_API_KEY` unconditionally. A developer with real credentials exported was
+  spending DeepSeek tokens on every run, and the low-supply specs silently asserted
+  the opposite of what they claimed because a configured LLM generated the questions
+  whose absence they were meant to prove.
+
+Content audit result (all seed scripts run against a clean database):
+
+- 241 published questions across 57 topics.
+- **0 of 57 topics cover all 12 coordinates.**
+- **54 of 57 topics cannot fill a Level 1 session**, so a learner cannot start them.
+- The 3 usable topics are the original Electrostatics set (20 questions each), and
+  each covers only 1 of 12 coordinates.
+- Full coverage needs 60 questions per topic: 3,420 in total against 241 today.
+
+Still open:
+
+- Question supply is the remaining launch blocker. Either author the curated content
+  or rely on AI generation with `DEEPSEEK_API_KEY` set, then re-run
+  `npm run audit:coverage` until it exits zero.
+- `test/app.e2e-spec.ts` is still the unmodified Nest boilerplate asserting
+  "Hello World!"; the real coverage lives in `test/integration/`.

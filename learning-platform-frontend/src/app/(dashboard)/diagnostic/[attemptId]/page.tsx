@@ -14,6 +14,7 @@ import {
   Send,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { friendlyBloomLabel } from "@/lib/learning";
 import type { DiagnosticAttemptPayload } from "@/lib/diagnostic-types";
 import { formatDuration } from "@/lib/format";
 import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
@@ -363,7 +364,7 @@ export default function DiagnosticAttemptPage() {
             </span>
             <span className="px-0.5 text-ink-mute">{"\u00B7"}</span>
             <span className="rounded-full bg-canvas px-2 py-0.5 text-ink-soft">
-              {question.bloomLevel}
+              {friendlyBloomLabel(question.bloomLevel)}
             </span>
             <span className="px-0.5 text-ink-mute">{"\u00B7"}</span>
             <span className="rounded-full bg-canvas px-2 py-0.5 text-ink-soft">

@@ -32,7 +32,7 @@ export default function AttemptResultHero({
   children,
 }: AttemptResultHeroProps) {
   return (
-    <section className="relative overflow-hidden rounded-[1.8rem] bg-ink-solid p-7 text-white shadow-[0_22px_70px_rgba(20,20,30,0.16)] sm:p-9">
+    <section className="relative overflow-hidden rounded-[1.75rem] bg-ink-solid p-7 text-white shadow-[0_22px_70px_rgba(20,20,30,0.16)] sm:p-9">
       <div className="absolute right-0 top-0 h-52 w-52 rounded-full bg-primary/20 blur-3xl" />
       <div className="relative grid gap-7 lg:grid-cols-[auto_1fr_auto] lg:items-center">
         <div className="flex items-center gap-4 lg:block">{score}</div>

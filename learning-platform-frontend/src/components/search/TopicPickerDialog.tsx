@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { ArrowRight, CircleAlert, LoaderCircle, Search, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import { learningUrl } from "@/lib/learning";
+import { friendlyBloomLabel, learningUrl } from "@/lib/learning";
 import { practiceHref } from "@/lib/practice";
 import type {
   LearningDashboardPayload,
@@ -309,8 +309,9 @@ function TopicResult({
         <div className="mt-3 sm:mt-4">
           <div className="flex justify-between gap-3 text-[10.5px] font-semibold text-ink-soft sm:text-[11px]">
             <span className="min-w-0 truncate">
-              Level {state.currentLevel} · {state.currentCoordinate.bloomLevel}{" "}
-              · {state.currentCoordinate.difficulty}
+              Level {state.currentLevel} ·{" "}
+              {friendlyBloomLabel(state.currentCoordinate.bloomLevel)} ·{" "}
+              {state.currentCoordinate.difficulty}
             </span>
             <span className="text-primary">{progress}%</span>
           </div>

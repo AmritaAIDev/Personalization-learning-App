@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { learningUrl } from "@/lib/learning";
+import { friendlyCoordinateLabel, learningUrl } from "@/lib/learning";
 import type { LearningDashboardPayload } from "@/lib/learning-types";
 
 /**
@@ -25,7 +25,7 @@ export default function LearningOverview({
         </h2>
         {data.history[0] ? (
           <span className="text-[13px] text-ink-mute">
-            Latest checkpoint · {data.history[0].coordinate.label}
+            Latest checkpoint · {friendlyCoordinateLabel(data.history[0].coordinate)}
           </span>
         ) : null}
       </div>

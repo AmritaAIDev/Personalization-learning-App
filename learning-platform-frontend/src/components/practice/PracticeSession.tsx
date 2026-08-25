@@ -15,6 +15,7 @@ import {
   Timer,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { friendlyBloomLabel } from "@/lib/learning";
 import ReportQuestionButton from "@/components/ReportQuestionButton";
 import { formatDuration } from "@/lib/format";
 import {
@@ -364,7 +365,7 @@ export default function PracticeSession({ scope }: { scope: PracticeScope }) {
                 {question.difficulty}
               </span>
               <span className="rounded-full bg-canvas px-3 py-1.5 text-ink-soft">
-                {question.bloomLevel}
+                {friendlyBloomLabel(question.bloomLevel)}
               </span>
               <span className="rounded-full bg-canvas px-3 py-1.5 text-ink-soft">
                 {question.marks} marks

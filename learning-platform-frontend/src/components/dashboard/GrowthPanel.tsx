@@ -12,7 +12,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import { learningUrl } from "@/lib/learning";
+import { friendlyBloomLabel, learningUrl } from "@/lib/learning";
 import { useApiResource } from "@/lib/useApiResource";
 import type {
   CompetencyBand,
@@ -519,7 +519,8 @@ export default function GrowthPanel() {
                 key={`${topic.subject}-${topic.chapter}-${topic.topic}`}
                 className="rounded-full bg-primary-tint px-3 py-1.5 text-[11px] font-semibold text-primary"
               >
-                {topic.topic} • {topic.bloomLevel} • {topic.difficulty}
+                {topic.topic} • {friendlyBloomLabel(topic.bloomLevel)} •{" "}
+                {topic.difficulty}
               </span>
             ))}
           </div>

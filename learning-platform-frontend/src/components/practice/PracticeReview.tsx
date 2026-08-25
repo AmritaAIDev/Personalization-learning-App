@@ -18,7 +18,7 @@ import ExplainThis from "@/components/learning/ExplainThis";
 import TargetedPracticeCard from "@/components/learning/TargetedPracticeCard";
 import ConfidenceBadge from "@/components/diagnostic/ConfidenceBadge";
 import { apiFetch } from "@/lib/api";
-import { learningUrl } from "@/lib/learning";
+import { friendlyBloomLabel, learningUrl } from "@/lib/learning";
 import { practiceHref } from "@/lib/practice";
 import type {
   PracticePerformanceRow,
@@ -234,7 +234,7 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
           progressPercent={analysis.scorePercent}
         />
 
-        <article className="rounded-[2rem] border border-hairline bg-surface p-6 shadow-[0_14px_34px_rgba(20,20,30,0.05)] sm:p-7">
+        <article className="rounded-[1.75rem] border border-hairline bg-surface p-5 shadow-[0_16px_38px_rgba(20,20,30,0.06)] sm:p-6">
           <h2 className="font-heading text-xl font-bold text-ink">
             Performance by difficulty
           </h2>
@@ -248,13 +248,16 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
           </h2>
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
             {analysis.bloomPerformance.map((row) => (
-              <PerformanceRow key={row.label} row={row} />
+              <PerformanceRow
+                key={row.label}
+                row={{ ...row, label: friendlyBloomLabel(row.label) }}
+              />
             ))}
           </div>
         </article>
       </section>
 
-      <section className="mt-6 rounded-[1.75rem] border border-hairline bg-surface p-6 sm:p-7">
+      <section className="mt-6 rounded-[1.75rem] border border-hairline bg-surface p-5 shadow-[0_16px_38px_rgba(20,20,30,0.06)] sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="flex items-center gap-2 text-xs font-medium text-ink-mute">
@@ -365,7 +368,7 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
                     <span className="flex flex-wrap items-center gap-2 text-xs font-medium text-ink-mute">
                       <span>
                         Question {result.position} · {result.difficulty} ·{" "}
-                        {result.bloomLevel}
+                        {friendlyBloomLabel(result.bloomLevel)}
                       </span>
                       <ConfidenceBadge calibration={result.calibration} />
                     </span>

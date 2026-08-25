@@ -19,6 +19,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
+import { friendlyBloomLabel } from "@/lib/learning";
 import { useAuth } from "@/context/AuthContext";
 import ExplainThis from "@/components/learning/ExplainThis";
 import TargetedPracticeCard from "@/components/learning/TargetedPracticeCard";
@@ -236,7 +237,12 @@ export default function AnalysisPage() {
           </div>
 
           <div className="space-y-5">
-            <BloomRadar rows={analysis.bloomPerformance} />
+            <BloomRadar
+              rows={analysis.bloomPerformance.map((row) => ({
+                ...row,
+                label: friendlyBloomLabel(row.label),
+              }))}
+            />
             <section className="rounded-2xl border border-hairline bg-surface p-6 shadow-[0_8px_22px_rgba(20,20,30,0.04)]">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-mute">
                 Repair priority
@@ -449,7 +455,9 @@ function ReviewSection({ attemptId }: { attemptId: string }) {
                     <span className="rounded-full bg-primary-tint px-2 py-0.5 text-primary">
                       {item.difficulty}
                     </span>
-                    <span className="text-ink-mute">{item.bloomLevel}</span>
+                    <span className="text-ink-mute">
+                      {friendlyBloomLabel(item.bloomLevel)}
+                    </span>
                     <span
                       className={`ml-auto rounded-full px-2.5 py-0.5 ${
                         item.isCorrect

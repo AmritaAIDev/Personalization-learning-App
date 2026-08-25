@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+# A newer push to the same branch makes an in-flight run redundant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (lint, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: learning-platform-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: learning-platform-backend/package-lock.json
+
+      - run: npm ci --include=dev
+
+      - name: Lint
+        run: npm run lint:check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  frontend:
+    name: Frontend (lint, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: learning-platform-frontend
+    env:
+      # `next build` must never run with a development NODE_ENV: React resolves
+      # to its development build and prerendering the error boundaries fails.
+      NODE_ENV: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: learning-platform-frontend/package-lock.json
+
+      # NODE_ENV=production makes npm skip devDependencies, which the build needs.
+      - run: npm ci --include=dev
+        env:
+          NODE_ENV: development
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  integration:
+    name: Integration (migrations + real database)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: learning-platform-backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jee_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/jee_ci
+      # The service container speaks plaintext on the runner's loopback.
+      DATABASE_SSL: 'false'
+      DATABASE_SSL_REJECT_UNAUTHORIZED: 'false'
+      FRONTEND_ORIGIN: http://localhost:3000
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: learning-platform-backend/package-lock.json
+
+      - run: npm ci --include=dev
+
+      # Proves the migration history still builds the schema from nothing,
+      # which is exactly what a fresh production database does.
+      - name: Run migrations from an empty database
+        run: npm run migration:run
+
+      - name: Check for entity/migration schema drift
+        run: npm run check:schema-drift
+
+      - name: Integration tests
+        run: npm run test:integration

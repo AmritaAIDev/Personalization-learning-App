@@ -348,3 +348,36 @@ Still open:
 - Notebook due-review is implemented as a backend-derived schedule; a dedicated persistence model is only needed later for custom spaced-repetition ratings.
 - Row-level adaptive state mutation is covered by a repository-backed mutation spec around `applyAnswer`; a live database integration test can be added later when a dedicated test database is available.
 - Production seed and low-supply fallback audits must be run against the target database/environment.
+
+## Slice 012 - Continuous integration and real-database verification
+
+Completed:
+
+- Added `.github/workflows/ci.yml` with three gates on every push and pull request:
+  backend (lint/test/build), frontend (lint/test/build), and integration.
+- The integration job starts a PostgreSQL 16 service container, runs all migrations
+  from an empty database, checks schema drift, and runs the integration suite.
+- Added `test/integration/` — the first suite that exercises the real HTTP stack
+  against a real database: health probe, applied-migration check, 401 on
+  unauthenticated reads, 403 on a foreign browser origin, HttpOnly session cookie
+  issue/invalidate, no password hash or solution text leaked to the client, and
+  row-level verification that an answer writes `learning_answers` and advances
+  `learning_topic_states`.
+- Added `npm run check:schema-drift`, which fails only on structural entity/migration
+  differences and ignores TypeORM's constraint/index naming noise.
+- Added `npm run lint:check` so CI lints without rewriting files the way `lint --fix` does.
+- Fixed real drift the new gate found: `notebook_concept_summaries.created_at` and
+  `updated_at` are `timestamptz` in the migration, but the entity decorators defaulted
+  to a naive `timestamp`. Pinned the entity type; no DDL or data change needed.
+
+Closes previously open items:
+
+- Row-level `applyAnswer` mutation is now verified against a live database.
+- Full persistence verification now runs across session item, answer, state, and
+  dashboard rows in one flow.
+- Migrations are proven to build the schema from nothing on every push.
+
+Still open:
+
+- Production seed and low-supply fallback audits must still be run against the
+  target production database.

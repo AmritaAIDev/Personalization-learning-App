@@ -47,7 +47,10 @@
     "seed:qdrant:scrape": "ts-node scrape-qdrant.ts",
     "migration:show": "typeorm-ts-node-commonjs migration:show -d src/database/data-source.ts",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts",
-    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts"
+    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts",
+    "test:integration": "jest --config ./test/jest-integration.json --runInBand --forceExit",
+    "check:schema-drift": "ts-node -r tsconfig-paths/register src/scripts/check-schema-drift.ts",
+    "lint:check": "eslint \"{src,apps,libs,test}/**/*.ts\" --max-warnings=0"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",

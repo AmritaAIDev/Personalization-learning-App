@@ -1,11 +1,13 @@
-# Topics Module
+# Topics module
 
-## Purpose
-This module defines the structural curriculum of the learning platform. It maps out the subjects and chapters that the AI engine can generate questions for.
+The structural curriculum: subjects, chapters, and topics, with optional prerequisite edges between topics. `AgentModule` uses a topic's identity to scope Qdrant retrieval; the adaptive engine uses prerequisite edges to route a learner when a coordinate demotes past the floor.
 
-## Key Components
-- **topic.entity.ts**: Represents a single learning node (e.g., Subject: "Physics", Name: "Electrostatics").
-- **topics.module.ts**: Wraps the entity for injection into the global app module.
+## API
 
-## Interaction
-The `Topic` entity acts as a primary key reference point. When the `AgentModule` is generating questions, it needs to know which Topic context to retrieve from Qdrant. Additionally, `TestSession` records tie a student directly to a `Topic` to track their mastery.
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/api/topics/tree` | full subject/chapter/topic tree |
+| POST | `/api/topics` | create a topic — **admin only** |
+| GET | `/api/topics/:id/prerequisites` | a topic's prerequisite edges |
+| PATCH | `/api/topics/:id` | update a topic — **admin only** |
+| DELETE | `/api/topics/:id` | remove a topic — **admin only** |

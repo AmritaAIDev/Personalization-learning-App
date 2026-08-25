@@ -1,62 +1,44 @@
 # Learning workspace UI
 
-These components power the student-facing learning workspace and never ship mock question, progress, tutor, or flashcard data in the browser.
+Powers the student-facing "Learn" workspace. Never ships mock question, progress, tutor, or flashcard data — everything comes from the API.
 
 ## Structure
 
-`AdaptiveStudySession` is the workspace shell. It owns session and dashboard state and delegates each surface to a focused component:
+`AdaptiveStudySession` is the workspace shell; it owns session/dashboard state and delegates to:
 
-- `LearningTabs` — the three-way navigation (overview, practice, flashcards). The active tab is mirrored into the URL, so a workspace view is shareable and survives a reload.
-- `TopicOverview` — mastery, accuracy, current checkpoint, recent trail, and the concept breakdown for the topic.
-- `PracticeWorkspace` — the adaptive round: question card, optimistic answer selection, round progress, and the completion summary, with the tutor board beside it.
-- `FlashcardDeck` — the recall run, opened as a full-surface dialog over the workspace.
-- `StudyAssistant` — the linked tutor board, used inline as a panel or as a floating helper.
-- `StudyMarkdown` — the single renderer for study prose (flashcards, tutor replies, question explanations), with GFM and KaTeX support and no raw HTML. `normalizeMathDelimiters` rewrites raw LaTeX delimiters `\(...\)` and `\[...\]` to the dollar form `remark-math` understands, and repairs the common `\text(enc)` mistake, so model-emitted equations render even when the model ignores the dollar-delimiter instruction. Question stems and answer options render through `StudyMarkdown`, so JEE equations display.
-ormalizeMathDelimiters rewrites raw LaTeX \\(...\\) / \\[...\\] delimiters to the dollar form emark-math understands and repairs the common \\text(enc) mistake, so model-emitted equations render even when the model ignores the $...$ instruction. Question stems and answer options render through StudyMarkdown, so JEE equations display.
-- `LearningOverview` and `LearningHistoryPanel` summarize saved progress, mastered topics, and next-step suggestions from `/api/learning/dashboard`.
+- `LearningTabs` — Overview / Practice / Flashcards, mirrored into the URL so a view is shareable.
+- `TopicOverview` — mastery, accuracy, checkpoint, recent trail, concept breakdown.
+- `PracticeWorkspace` — the adaptive round, with the tutor board beside it.
+- `FlashcardDeck` — the recall run, opened as a full-surface dialog.
+- `StudyAssistant` — the linked tutor board (inline panel or floating helper).
+- `StudyMarkdown` — the single renderer for study prose (GFM + KaTeX, no raw HTML). `normalizeMathDelimiters` rewrites `\(...\)`/`\[...\]` to the `$...$` form `remark-math` expects, so model-emitted equations render even when the model ignores that instruction.
+- `LearningOverview` / `LearningHistoryPanel` — saved progress and next-step suggestions.
 
-Overview and practice both stay mounted while hidden, so switching tabs is instant and an in-flight round is never thrown away by navigation.
+Overview and Practice both stay mounted while hidden, so switching tabs never throws away an in-flight round.
 
-## Practice behaviour
+## Practice behavior
 
-- The learner never picks a raw entry level. The session is API-owned and the calculated placement is shown in learner-friendly language.
-- Two attempts per question. A first miss triggers a Socratic hint and the answer stays hidden; the option already tried is struck through so the retry is a real second choice.
-- Selecting an option updates immediately and shows an inline pending state; answers are graded server-side only. A ruled-out (wrong) option is shown in red with an X marker.
-- Options can be answered with the `1`–`4` keys.
-- Rounds auto-advance: when a round completes, an inline RoundOutcome banner shows the transition (advance, reinforce, rebuild, prerequisite route, or mastery) and starts the next round after a short beat - no required click. A persistent "Stop" control is always available. A failed "continue" surfaces inline rather than silently doing nothing.
-- Three cases stop for an explicit choice instead of auto-continuing: mastery, a prerequisite route, and — since AI Phase 2.3 — a miss (REINFORCE/DEMOTED). `AdaptiveStudySession` snapshots the just-answered question (`currentItem` is gone once the round moves on) into `missedItem` when the resulting transition is a miss; `RoundOutcome` shows it with a `TargetedPracticeCard` ("try a similar one") and a manual Continue button, since the old ~2s auto-advance wasn't enough time to actually use it.
+- Two attempts per question. A first miss opens a Socratic hint with the answer withheld; the tried option shows struck-through so the retry is a real second choice.
+- A correct answer holds on the current question (highlighted, options locked) with an explicit **Next question** button — it does not auto-advance, matching every other question flow in the app (Practice, Mock Tests, Diagnostics).
+- Options answer with `1`–`4`; `H`/`E` trigger a hint/explain tutor prompt.
+- A round auto-continues between rounds for advance/reinforce/rebuild transitions after a short beat; mastery, a prerequisite reroute, and a miss stop for an explicit choice instead.
+- A "Review (N)" toggle lets the learner browse already-answered questions in the round without losing their place.
 
 ## Flashcards
 
-- The deck keeps a small buffer of cards ahead of the learner and tops it up in the background, so a rating always advances instantly.
-- Ratings are posted against the card's real identifier and drive the server-side spaced-repetition schedule. "Again" also keeps the card in the current run and brings it back a few cards later.
-- `Space` flips, `1`–`4` rate, `H` reveals the hint without flipping, `Esc` closes.
-- Running out of cards ends in a calm run summary with the recall tally, not an error.
+Keeps a small buffer of cards ahead of the learner and tops it up in the background. Ratings post against the card's real identifier and drive the server-side FSRS schedule; "Again" requeues the card a few cards later. `Space` flips, `1`–`4` rate, `H` reveals the hint, `Esc` closes. Response time to reveal is tracked client-side and surfaced as a "worth a closer look" note at the end of a run when it's unusually slow — a signal only, never fed into the schedule itself.
 
-The queue rules live in `src/lib/flashcard-session.ts` as pure functions and are unit tested.
+Queue logic lives in `src/lib/flashcard-session.ts` as pure, unit-tested functions.
 
 ## Tutor board
 
-Hints and explanations are written in the background after an answer. The board shows a live "writing" state driven by the `pending` flag from the conversation endpoint and polls with backoff (`src/lib/tutor-polling.ts`) until the reply lands. A learner's own message is echoed immediately rather than after the round trip, and the thread only auto-scrolls when the learner is already reading the newest message.
+Hints/explanations are written in the background; the board shows a "writing" state driven by the `pending` flag and polls with backoff (`src/lib/tutor-polling.ts`). The learner's own message echoes immediately. Quick prompts (**Hint / Explain / Why wrong?**) are visible buttons above the input.
 
-The shared `src/lib/learning-types.ts` mirrors the server payloads, while `src/lib/learning.ts` handles route scope, workspace tab selection, and the round-outcome copy. All learner-specific values are fetched from the database-backed API.
+## Shared pieces
 
-The tutor board already surfaces the **Hint / Explain / Why wrong?** quick prompts as visible buttons above the input, so a hint is one tap (not only the `H` shortcut).
+- `ExplainThis` — one-tap explanation control (practice/diagnostic review) with a depth toggle (`Concise` / `Step by step` / `From scratch`); labels a degraded response as offline.
+- `TargetedPracticeCard` — on-demand single-question control behind "Practice this misconception" and "Try a similar one."
+- `SourceCitations` — renders the RAG citation strip; renders nothing when empty.
+- `ConceptRevisionPanel` — optional pre-practice topic summary, opened from a "Revise" button; never blocks reaching Practice or Flashcards.
 
-## ExplainThis
-
-`ExplainThis` is a shared one-tap "Explain this" control used on the practice and diagnostic review screens. Given an `endpoint` (the backend explain URL), it POSTs the selected **depth** (`Concise` / `Step by step` / `From scratch`) and renders the returned explanation through `StudyMarkdown`. The answer is already revealed at review time, so the tutor teaches it in full. A `Regenerate` action re-runs at a different depth, and when the backend serves its deterministic fallback (`grounded: false`) the panel labels it as an offline explanation. All content comes from the backend; nothing is generated client-side.
-
-## TargetedPracticeCard
-
-`TargetedPracticeCard` is the shared on-demand single-question control behind
-two AI Phase 2 features: Notebook's "Practice this misconception" and
-`PracticeReview`'s "Try a similar one" (shown only on incorrect results). Given
-a `reason` (`MISCONCEPTION` | `SIMILAR`), a `focusText`, and a scope, it calls
-the backend `targeted-practice` module to generate one question, renders it
-with answer options, grades the submission, and shows the worked solution —
-all state-local; nothing here touches the adaptive session.
-
-## SourceCitations (RAG)
-
-`SourceCitations` renders the reviewed concept notes an AI answer was grounded on — the `sources` array (`title`/`topic`/`chapter`) returned by the explain endpoints and stored on answered doubts. It shows a compact "Sources" strip and renders nothing when the list is empty (Qdrant empty/unavailable), so an ungrounded answer simply carries no citations. Used by `ExplainThis` and the doubts page.
+`src/lib/learning-types.ts` mirrors server payloads; `src/lib/learning.ts` handles route scope, tab selection, round-outcome copy, and the plain-language Bloom-level labels shown on screen.

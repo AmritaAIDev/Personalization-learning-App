@@ -19,15 +19,6 @@ import type { ReactNode } from "react";
 /** The product's one expressive easing curve — mirrors --ease-out-soft in CSS. */
 export const EASE_OUT_SOFT = [0.22, 1, 0.36, 1] as const;
 
-const revealVariants: Variants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: EASE_OUT_SOFT },
-  },
-};
-
 const staggerVariants: Variants = {
   hidden: {},
   visible: {
@@ -45,22 +36,6 @@ const staggerItemVariants: Variants = {
 };
 
 type DivMotionProps = HTMLMotionProps<"div"> & { children?: ReactNode };
-
-/** A single element that eases up into place on mount. */
-export function Reveal({ children, ...rest }: DivMotionProps) {
-  const reduce = useReducedMotion();
-  if (reduce) return <div {...(rest as object)}>{children}</div>;
-  return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={revealVariants}
-      {...rest}
-    >
-      {children}
-    </motion.div>
-  );
-}
 
 /**
  * Container that reveals its {@link StaggerItem} children in a gentle cascade.

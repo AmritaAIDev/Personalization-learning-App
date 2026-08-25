@@ -39,18 +39,6 @@ export const BLOOM_LEVELS = [
 
 export const QUESTION_DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
 
-export class GenerateQuestionQueryDto {
-  @IsString()
-  @MinLength(1)
-  @MaxLength(160)
-  topic: string;
-
-  @IsOptional()
-  @IsString()
-  @IsIn(BLOOM_LEVELS)
-  bloomLevel?: string;
-}
-
 export class TutorChatDto {
   @IsString()
   @MinLength(1)

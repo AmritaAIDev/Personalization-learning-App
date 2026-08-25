@@ -1,15 +1,14 @@
 # Authentication module
 
-This module owns browser authentication for the learning platform. It uses opaque, random
-session tokens in `HttpOnly` cookies and stores only a SHA-256 token hash in PostgreSQL.
+Opaque, random session tokens in `HttpOnly` cookies; only a SHA-256 token hash is stored in PostgreSQL. Passwords are bcrypt-hashed. CORS/CSRF accept only exact `FRONTEND_ORIGIN` values — no hostname-pattern matching, so preview deployments must be added explicitly.
 
-## Responsibilities
+No password, session token, or external credential is ever returned in a response body.
 
-- Register and authenticate students with bcrypt password hashes.
-- Create, revoke, and expire database-backed sessions.
-- Attach the authenticated user to protected Nest requests.
-- Enforce role checks, throttling, and origin validation for unsafe browser requests.
-- Allow only the exact `FRONTEND_ORIGIN` values for CORS and CSRF checks; preview
-  deployments must be added explicitly rather than accepted by a hostname pattern.
+## API
 
-No password, session token, or external credential is returned in API response bodies.
+| Method | Path | Description |
+| --- | --- | --- |
+| POST | `/api/auth/register` | create an account |
+| POST | `/api/auth/login` | start a session |
+| POST | `/api/auth/logout` | revoke the current session |
+| GET | `/api/auth/me` | current authenticated user |

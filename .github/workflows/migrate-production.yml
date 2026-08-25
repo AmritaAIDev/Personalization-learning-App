@@ -1,0 +1,64 @@
+name: Migrate production database
+
+# Schema changes must reach the database before the code that depends on them
+# starts serving traffic. Vercel deploys on the same push, so this runs first
+# and every migration is written to be additive and backwards compatible with
+# the release still running (see docs/RUNBOOK.md, "Schema changes").
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'learning-platform-backend/src/migrations/**'
+      - '.github/workflows/migrate-production.yml'
+  # Available for a manual re-run when a deploy needs replaying.
+  workflow_dispatch:
+
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Run pending migrations
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: learning-platform-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: learning-platform-backend/package-lock.json
+
+      # Skips cleanly rather than failing the run when the secret is absent,
+      # so the workflow can be merged before production credentials exist.
+      - name: Check that the production database secret is configured
+        id: guard
+        env:
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          if [ -z "$PRODUCTION_DATABASE_URL" ]; then
+            echo "PRODUCTION_DATABASE_URL is not set; skipping migration run."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - run: npm ci --include=dev
+        if: steps.guard.outputs.configured == 'true'
+
+      - name: Show pending migrations
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: npm run migration:show
+
+      - name: Run migrations
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: npm run migrate:deploy

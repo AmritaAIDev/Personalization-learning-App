@@ -158,7 +158,8 @@ export interface TutorPromptContext {
 @Injectable()
 export class AgentService {
   private readonly logger = new Logger(AgentService.name);
-  private readonly deepseek: OpenAI;
+  /** Null when DEEPSEEK_API_KEY is absent; every use goes through requireLlm(). */
+  private readonly deepseek: OpenAI | null;
   private readonly qdrantClient: QdrantClient;
   private readonly collectionName = 'learning_concepts';
   /** Process-local, non-personal grounding cache. Never holds learner data. */
@@ -181,20 +182,26 @@ export class AgentService {
     private readonly topicsRepository: Repository<Topic>,
   ) {
     const deepseekKey = this.configService.get<string>('DEEPSEEK_API_KEY');
+    // The OpenAI SDK throws on an empty apiKey at construction time, so the
+    // client must not be built at all when no key is configured. Building it
+    // unconditionally took the whole application down at boot — login and
+    // dashboard included — on any deploy without the key, which is the exact
+    // opposite of the database fallback this warning promises.
     if (!deepseekKey) {
       this.logger.warn(
         'DEEPSEEK_API_KEY is not set; AI augmentation and tutoring will use their safe database fallbacks.',
       );
+      this.deepseek = null;
+    } else {
+      this.deepseek = new OpenAI({
+        baseURL:
+          this.configService.get<string>('DEEPSEEK_BASE_URL') ??
+          'https://api.deepseek.com',
+        apiKey: deepseekKey,
+        timeout: 25_000,
+        maxRetries: 1,
+      });
     }
-
-    this.deepseek = new OpenAI({
-      baseURL:
-        this.configService.get<string>('DEEPSEEK_BASE_URL') ??
-        'https://api.deepseek.com',
-      apiKey: deepseekKey ?? '',
-      timeout: 25_000,
-      maxRetries: 1,
-    });
 
     this.qdrantClient = new QdrantClient({
       url: this.configService.get<string>('QDRANT_URL'),
@@ -804,7 +811,7 @@ export class AgentService {
     maxTokens: number,
   ): Promise<string> {
     try {
-      const response = await this.deepseek.chat.completions.create({
+      const response = await this.requireLlm().chat.completions.create({
         model:
           this.configService.get<string>('DEEPSEEK_MODEL') ?? 'deepseek-chat',
         temperature: 0.25,
@@ -834,7 +841,7 @@ export class AgentService {
     maxTokens: number,
   ): Promise<string> {
     try {
-      const response = await this.deepseek.chat.completions.create({
+      const response = await this.requireLlm().chat.completions.create({
         model:
           this.configService.get<string>('DEEPSEEK_MODEL') ?? 'deepseek-chat',
         temperature: 0.35,
@@ -862,7 +869,7 @@ export class AgentService {
     maxTokens: number,
   ): AsyncGenerator<string> {
     try {
-      const stream = await this.deepseek.chat.completions.create({
+      const stream = await this.requireLlm().chat.completions.create({
         model:
           this.configService.get<string>('DEEPSEEK_MODEL') ?? 'deepseek-chat',
         temperature: 0.35,
@@ -1053,11 +1060,25 @@ export class AgentService {
   }
 
   private assertConfigured(): void {
-    if (!this.configService.get<string>('DEEPSEEK_API_KEY')) {
+    if (!this.deepseek) {
       throw new ServiceUnavailableException(
         'LLM is not configured (missing DEEPSEEK_API_KEY).',
       );
     }
+  }
+
+  /**
+   * Narrows the nullable client for the call sites that need it. Reaching here
+   * without a client is a programming error: every caller must have passed
+   * through assertConfigured() or a fallback branch first.
+   */
+  private requireLlm(): OpenAI {
+    if (!this.deepseek) {
+      throw new ServiceUnavailableException(
+        'LLM is not configured (missing DEEPSEEK_API_KEY).',
+      );
+    }
+    return this.deepseek;
   }
 
   private toBloomLevel(value: string): BloomLevel {

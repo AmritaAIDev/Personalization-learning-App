@@ -51,9 +51,12 @@ export class NotebookConceptSummary {
   })
   summarySource: string;
 
-  @CreateDateColumn({ name: 'created_at' })
+  // The creating migration declares these as `timestamptz`; TypeORM's default
+  // for these decorators is a naive `timestamp`, so the type is pinned here to
+  // keep the entity and the migrated schema in agreement.
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

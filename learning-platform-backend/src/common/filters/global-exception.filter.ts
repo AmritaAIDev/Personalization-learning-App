@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import type { Request, Response } from 'express';
 
 /**
@@ -14,6 +15,10 @@ import type { Request, Response } from 'express';
  * logs nothing structured). Known HttpExceptions keep their status/response;
  * anything else is logged with full detail server-side but returned to the
  * client as an opaque 500 so internals never leak.
+ *
+ * Server faults are also forwarded to Sentry when SENTRY_DSN is configured.
+ * Client-caused 4xx responses are deliberately not reported: they are normal
+ * traffic and would drown the signal from real faults.
  */
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -49,6 +54,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         JSON.stringify(logPayload),
         exception instanceof Error ? exception.stack : undefined,
       );
+      // No-op unless SENTRY_DSN is set; see src/instrument.ts.
+      Sentry.withScope((scope) => {
+        scope.setTag('requestId', request?.id ?? 'unknown');
+        scope.setContext('request', {
+          method: logPayload.method,
+          path: logPayload.path,
+          statusCode: status,
+        });
+        Sentry.captureException(exception);
+      });
     } else {
       this.logger.warn(JSON.stringify(logPayload));
     }

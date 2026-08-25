@@ -1,3 +1,4 @@
+import '../src/instrument';
 import type { Request, Response } from 'express';
 import 'pg';
 import { createNestApp } from '../src/bootstrap';

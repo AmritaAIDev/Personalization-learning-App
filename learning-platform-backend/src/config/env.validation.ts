@@ -62,6 +62,26 @@ export function validateEnv(
     }
   }
 
+  const qdrantUrl = asString(config.QDRANT_URL);
+  if (qdrantUrl && !qdrantUrl.startsWith('https://')) {
+    errors.push('QDRANT_URL must use https:// (Qdrant Cloud requires TLS).');
+  }
+
+  const deepseekKey = asString(config.DEEPSEEK_API_KEY);
+  if (deepseekKey && deepseekKey.length < 10) {
+    errors.push('DEEPSEEK_API_KEY looks too short to be valid.');
+  }
+
+  if (isProduction(config)) {
+    if (!qdrantUrl) {
+      // Non-blocking in env validation, but log will warn at boot — AI features will degrade to DB fallback
+      // We don't throw here to allow prod boot without vector DB, but health check will report degraded
+    }
+    if (!deepseekKey) {
+      // Same — allow boot, Degraded health
+    }
+  }
+
   const tracesSampleRate = asString(config.SENTRY_TRACES_SAMPLE_RATE);
   if (tracesSampleRate) {
     const parsed = Number(tracesSampleRate);

@@ -41,6 +41,9 @@
     "seed:sequences-series": "ts-node -r tsconfig-paths/register src/scripts/seed-sequences-series.ts",
     "seed:trigonometric-functions": "ts-node -r tsconfig-paths/register src/scripts/seed-trigonometric-functions.ts",
     "seed:journey:development": "ts-node -r tsconfig-paths/register src/scripts/seed.ts",
+    "seed:syllabus": "ts-node -r tsconfig-paths/register src/scripts/seed-jee-syllabus.ts",
+    "seed:qdrant:syllabus": "ts-node -r tsconfig-paths/register src/scripts/seed-qdrant-syllabus.ts",
+    "generate:content": "ts-node -r tsconfig-paths/register src/scripts/generate-chapter-content.ts",
     "seed:postgres": "ts-node seed-postgres.ts",
     "seed:qdrant": "ts-node seed-qdrant.ts",
     "seed:qdrant:full": "ts-node seed-qdrant-full-chapter.ts",
@@ -51,6 +54,7 @@
     "test:integration": "jest --config ./test/jest-integration.json --runInBand --forceExit",
     "check:schema-drift": "ts-node -r tsconfig-paths/register src/scripts/check-schema-drift.ts",
     "lint:check": "eslint \"{src,apps,libs,test}/**/*.ts\" --max-warnings=0",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json",
     "migrate:deploy": "typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts",
     "audit:coverage": "ts-node -r tsconfig-paths/register src/scripts/audit-question-coverage.ts"
   },

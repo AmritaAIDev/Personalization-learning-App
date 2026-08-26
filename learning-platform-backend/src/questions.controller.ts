@@ -18,6 +18,7 @@ import { QuestionsService } from './questions.service';
 import {
   AdminQuestionReviewQueryDto,
   BulkImportQuestionsDto,
+  CoverageGapsQueryDto,
   CreateQuestionDto,
   GenerateQuestionDraftDto,
   QuestionBankQueryDto,
@@ -55,20 +56,11 @@ export class QuestionsController {
   /** Syllabus topics thinnest on published questions, for the studio's "fill this gap" flow. */
   @Get('coverage-gaps')
   @Roles('admin')
-  async getCoverageGaps(
-    @Query('threshold') threshold?: string,
-    @Query('limit') limit?: string,
-  ) {
-    const parsedThreshold = Number(threshold);
-    const parsedLimit = Number(limit);
+  async getCoverageGaps(@Query() query: CoverageGapsQueryDto) {
     return {
       data: await this.questionsService.getCoverageGaps(
-        Number.isFinite(parsedThreshold) && parsedThreshold > 0
-          ? parsedThreshold
-          : undefined,
-        Number.isFinite(parsedLimit) && parsedLimit > 0
-          ? parsedLimit
-          : undefined,
+        query.threshold,
+        query.limit,
       ),
     };
   }

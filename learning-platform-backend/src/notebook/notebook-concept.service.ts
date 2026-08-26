@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
+import { DEEPSEEK_DEFAULT_BASE_URL } from '../agent/llm-config';
 import type { NotebookMistakeCard } from './notebook.types';
 
 /**
@@ -41,7 +42,7 @@ export class NotebookConceptService {
       ? new OpenAI({
           baseURL:
             this.configService.get<string>('DEEPSEEK_BASE_URL') ??
-            'https://api.deepseek.com',
+            DEEPSEEK_DEFAULT_BASE_URL,
           apiKey,
           timeout: 20_000,
           maxRetries: 1,

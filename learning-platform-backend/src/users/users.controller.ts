@@ -1,9 +1,17 @@
-import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Roles } from '../auth/roles.decorator';
-import type { AuthenticatedUser, StudentRole } from '../auth/auth.types';
+import type { AuthenticatedUser } from '../auth/auth.types';
 import { levelForXp } from './user-progress';
+import { UpdateUserRoleDto } from './update-user-role.dto';
 import { UsersService } from './users.service';
 
 @ApiTags('Users')
@@ -53,8 +61,8 @@ export class UsersController {
   @Roles('admin')
   async updateUserRole(
     @CurrentUser() admin: AuthenticatedUser,
-    @Param('userId') userId: string,
-    @Body() body: { role: StudentRole },
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() body: UpdateUserRoleDto,
   ) {
     const user = await this.usersService.updateRole(
       userId,

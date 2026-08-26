@@ -250,16 +250,22 @@ describe('TutorService streaming chat', () => {
   it('shapes the offline fallback differently for hint, explain, and why-wrong prompts', async () => {
     async function* failingStream(): AsyncGenerator<string> {
       throw new Error('model unavailable');
-      // eslint-disable-next-line no-unreachable
+
       yield '';
     }
     const question: LearningQuestionReference = {
       source: LearningQuestionSource.CURATED,
       id: 'question-id',
       questionText: 'What does Gauss law relate flux to?',
-      options: ['Total charge', 'Enclosed charge', 'Surface area', 'Field strength'],
+      options: [
+        'Total charge',
+        'Enclosed charge',
+        'Surface area',
+        'Field strength',
+      ],
       correctAnswer: 'Enclosed charge',
-      solution: 'Gauss law relates flux through a closed surface to the charge it encloses.',
+      solution:
+        'Gauss law relates flux through a closed surface to the charge it encloses.',
       hint: null,
       conceptTags: ["Gauss's law"],
       commonErrors: [
@@ -298,7 +304,8 @@ describe('TutorService streaming chat', () => {
 describe('TutorService topic revision', () => {
   it('returns the generated revision when the AI call succeeds', async () => {
     const generateTutorResponse = jest.fn(
-      async () => '### Gauss\'s Law\n\nFlux equals enclosed charge over epsilon0.',
+      async () =>
+        "### Gauss's Law\n\nFlux equals enclosed charge over epsilon0.",
     );
     const agent = { generateTutorResponse } as unknown as AgentService;
     const messages = {} as unknown as Repository<TutorMessage>;

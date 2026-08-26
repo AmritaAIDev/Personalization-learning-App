@@ -9,9 +9,14 @@ import { LearningResource } from '../diagnostics/learning-resource.entity';
 import { PracticeAnswer } from '../practice/practice-answer.entity';
 import { PracticeAttempt } from '../practice/practice-attempt.entity';
 import { Question } from '../question.entity';
+import { QuestionReport } from '../question-report.entity';
 import { TestSession } from '../sessions/test-session.entity';
 import { Topic } from '../topics/topic.entity';
 import { User } from '../users/user.entity';
+import { MockTestAttempt } from '../mock-tests/mock-test-attempt.entity';
+import { MockTestAnswer } from '../mock-tests/mock-test-answer.entity';
+import { MisconceptionHit } from '../misconceptions/misconception-hit.entity';
+import { TargetedPracticeQuestion } from '../targeted-practice/targeted-practice-question.entity';
 import { LearningTopicState } from '../adaptive/learning-topic-state.entity';
 import { LearningSession } from '../adaptive/learning-session.entity';
 import { LearningSessionItem } from '../adaptive/learning-session-item.entity';
@@ -44,6 +49,7 @@ export default new DataSource({
     User,
     Topic,
     Question,
+    QuestionReport,
     TestSession,
     AuthSession,
     DiagnosticAttempt,
@@ -65,6 +71,10 @@ export default new DataSource({
     Doubt,
     NotebookConceptSummary,
     NotebookMistakeReview,
+    MockTestAttempt,
+    MockTestAnswer,
+    MisconceptionHit,
+    TargetedPracticeQuestion,
   ],
   migrations: [join(__dirname, '..', 'migrations', '*{.ts,.js}')],
   synchronize: false,

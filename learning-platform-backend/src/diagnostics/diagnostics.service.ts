@@ -11,21 +11,14 @@ import { In, Repository } from 'typeorm';
 import { Question, QuestionPublicationStatus } from '../question.entity';
 import { LearningTopicState } from '../adaptive/learning-topic-state.entity';
 import { LearningTopicStatus } from '../adaptive/adaptive.types';
-import {
-  BLOOM_LEVELS,
-  normalizeBloomLevel,
-  TutorMessageType,
-} from '../adaptive/adaptive.types';
-import {
-  AgentService,
-  type ExplanationDepth,
-  RetrievedSource,
-} from '../agent/agent.service';
+import { BLOOM_LEVELS, normalizeBloomLevel } from '../adaptive/adaptive.types';
+import { AgentService } from '../agent/agent.service';
 import { User } from '../users/user.entity';
 import { levelForXp } from '../users/user-progress';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { calibrationFor } from '../confidence.util';
-import { ExplanationResult, toCitations } from '../citation.util';
+import type { ExplanationResult } from '../citation.util';
+import { generateReviewExplanation } from '../common/review-explanation';
 import { DiagnosticAnswer } from './diagnostic-answer.entity';
 import { DiagnosticAttempt } from './diagnostic-attempt.entity';
 import {
@@ -356,88 +349,12 @@ export class DiagnosticsService {
       (candidate) => candidate.questionId === questionId,
     );
 
-    // Citations are best-effort and never block: retrieval degrades to [].
-    const sources = await this.agentService
-      .retrieveSupplementalSources(question.topic)
-      .catch(() => [] as RetrievedSource[]);
-
-    try {
-      const explanation = await this.agentService.generateTutorResponse({
-        subject: question.subject,
-        chapter: question.chapter,
-        topic: question.topic,
-        learnerMessage:
-          'Explain this question: why the correct answer is right and where the tempting choices go wrong.',
-        mode: TutorMessageType.ANSWER_EXPLANATION,
-        questionText: question.question_text,
-        options: question.options,
-        selectedOption: answer?.selectedOption ?? undefined,
-        correctAnswer: question.correct_answer,
-        solution: question.solution,
-        commonErrors: question.common_errors ?? [],
-        answerRevealed: true,
-        explanatory: true,
-        depth: input.depth,
-      });
-      return { explanation, grounded: true, sources: toCitations(sources) };
-    } catch {
-      return {
-        explanation: this.fallbackExplanation(
-          question,
-          answer?.selectedOption ?? null,
-          input.depth,
-        ),
-        grounded: false,
-        sources: toCitations(sources),
-      };
-    }
-  }
-
-  /**
-   * Deterministic explanation used when the model is unavailable. Shaped by
-   * `depth` so Regenerate/Concise/Step by step/From scratch don't all render
-   * the identical offline text — only the live AI call used to vary by depth.
-   */
-  private fallbackExplanation(
-    question: Question,
-    selectedOption: string | null,
-    depth?: ExplanationDepth,
-  ): string {
-    const misconception = (question.common_errors ?? [])[0];
-    if (depth === 'concise') {
-      const firstSentence = question.solution.split(/(?<=[.!?])\s+/)[0];
-      return [
-        '### Correct answer',
-        `**${question.correct_answer}**`,
-        firstSentence,
-      ].join('\n\n');
-    }
-    const lines = ['### Correct answer', `**${question.correct_answer}**`];
-    if (selectedOption && selectedOption !== question.correct_answer) {
-      lines.push(
-        '### Where your choice went wrong',
-        misconception
-          ? `A common cause of “${selectedOption}” is: ${misconception}`
-          : `Compare “${selectedOption}” against the governing relationship for this topic.`,
-      );
-    }
-    if (depth === 'step-by-step') {
-      lines.push(
-        '### Step by step',
-        `1. Identify what the question is actually asking for.`,
-        `2. Apply the governing relationship: ${question.solution}`,
-        `3. Check that ${question.correct_answer} is the only option consistent with step 2.`,
-      );
-    } else if (depth === 'from-scratch') {
-      lines.push(
-        '### From first principles',
-        `Before using any shortcut, re-derive it: ${question.solution}`,
-        `That derivation is what rules every option out except ${question.correct_answer}.`,
-      );
-    } else {
-      lines.push('### Worked reasoning', question.solution);
-    }
-    return lines.join('\n\n');
+    return generateReviewExplanation(
+      this.agentService,
+      question,
+      answer?.selectedOption ?? null,
+      input.depth,
+    );
   }
 
   async getRecommendations(userId: string, attemptId: string) {

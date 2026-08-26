@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
 @Entity('users')
@@ -23,15 +24,19 @@ export class User {
   @Column({ default: 'student' })
   role: string; // e.g., 'student', 'admin'
 
-  // Gamification stats surfaced on the dashboard header
+  @Index()
   @Column({ type: 'int', default: 0 })
-  xp: number;
+  xp: number; // Gamification stats surfaced on the dashboard header
 
   @Column({ type: 'int', default: 1 })
   level: number;
 
   @Column({ type: 'int', default: 0 })
   streak: number; // consecutive active days
+
+  @Column({ type: 'simple-array', default: [], select: false })
+  @Index()
+  concurrentSessions: string[]; // active session token hashes for this user (for logout-all)
 
   @CreateDateColumn()
   createdAt: Date;

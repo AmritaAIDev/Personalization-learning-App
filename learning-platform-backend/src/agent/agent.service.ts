@@ -17,10 +17,11 @@ import {
   TutorMessageType,
 } from '../adaptive/adaptive.types';
 import { EmbeddingService } from './embedding.service';
+import { DEEPSEEK_DEFAULT_BASE_URL } from './llm-config';
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const MAX_GROUNDED_CONTEXT_CHARACTERS = 14_000;
+const MAX_GROUNDED_CONTEXT_CHARACTERS = 10_000;
 
 /**
  * Latency budget for the supplemental vector lookup. Qdrant grounding is a
@@ -39,7 +40,7 @@ const SUPPLEMENTAL_CACHE_MAX_ENTRIES = 200;
  * Once the reviewed material is this rich, the vector lookup adds cost and
  * latency without adding grounding value, so it is skipped entirely.
  */
-const SUPPLEMENTAL_SKIP_THRESHOLD_CHARACTERS = 3_000;
+const SUPPLEMENTAL_SKIP_THRESHOLD_CHARACTERS = 5_000;
 
 export interface GeneratedQuestion {
   question_text: string;
@@ -47,6 +48,9 @@ export interface GeneratedQuestion {
   correct_answer: string;
   explanation: string;
 }
+
+/** In-flight request guard per topic: prevents N simultaneous Qdrant searches. */
+type TopicRequestGuard = Promise<string>;
 
 export interface GeneratedLearningQuestionPayload extends GeneratedQuestion {
   hint: string;
@@ -162,16 +166,17 @@ export class AgentService {
   private readonly deepseek: OpenAI | null;
   private readonly qdrantClient: QdrantClient;
   private readonly collectionName = 'learning_concepts';
-  /** Process-local, non-personal grounding cache. Never holds learner data. */
-  private readonly supplementalCache = new Map<
+  /** In-process cache for generated question batches: topic -> payload + expiresAt. */
+  private readonly questionGenCache = new Map<
     string,
-    { expiresAt: number; text: string }
+    { expiresAt: number; payload: GeneratedLearningQuestionPayload[] }
   >();
   /** Structured-source counterpart of `supplementalCache`, for citations. */
   private readonly supplementalSourcesCache = new Map<
     string,
     { expiresAt: number; sources: RetrievedSource[] }
   >();
+  private readonly topicRequestGuards = new Map<string, Promise<string>>();
   private readonly topicNameCache = new Map<string, string>();
 
   constructor(
@@ -196,7 +201,7 @@ export class AgentService {
       this.deepseek = new OpenAI({
         baseURL:
           this.configService.get<string>('DEEPSEEK_BASE_URL') ??
-          'https://api.deepseek.com',
+          DEEPSEEK_DEFAULT_BASE_URL,
         apiKey: deepseekKey,
         timeout: 25_000,
         maxRetries: 1,
@@ -228,58 +233,78 @@ export class AgentService {
   /**
    * Qdrant is supplemental grounding. A worker may fall back to other reviewed
    * database material, but an empty source set never becomes a free-form model
-   * prompt.
+   * prompt. This method is guard-raced so only one in-flight search per topic.
    */
   async retrieveContextFromQdrant(topicName: string): Promise<string> {
-    if (!this.configService.get<string>('QDRANT_URL')) {
-      throw new ServiceUnavailableException('Qdrant is not configured.');
-    }
-    const queryVector = await this.embeddingService.embed(topicName);
-    const searchResult = await this.qdrantClient.search(this.collectionName, {
-      vector: queryVector,
-      limit: 3,
-      with_payload: true,
-    });
-    return searchResult
-      .map((result) => result.payload?.text)
-      .filter((text): text is string => typeof text === 'string')
-      .join('\n\n');
-  }
+    // Request coalescing: if another call for this topic is in flight, reuse it.
+    const existing = this.topicRequestGuards.get(topicName);
+    if (existing) return existing;
+
+    const newPromise = (async () => {
 
   /**
    * Structured counterpart of `retrieveContextFromQdrant`: returns the reviewed
    * concept notes with their labels so callers can both ground generation on
    * the snippets and cite the titles. Same trust boundary — only reviewed
-   * material is ever surfaced.
+   * material is ever surfaced. Guard-raced.
    */
   async retrieveSourcesFromQdrant(
     topicName: string,
   ): Promise<RetrievedSource[]> {
-    if (!this.configService.get<string>('QDRANT_URL')) {
-      throw new ServiceUnavailableException('Qdrant is not configured.');
+    // Request coalescing: if another call for this topic is in flight, reuse it.
+    const guard = this.topicRequestGuards.get(topicName);
+    if (guard) {
+      return guard.promise;
     }
-    const queryVector = await this.embeddingService.embed(topicName);
-    const searchResult = await this.qdrantClient.search(this.collectionName, {
-      vector: queryVector,
-      limit: 3,
-      with_payload: true,
-    });
-    return searchResult
-      .map((result) => {
-        const payload = result.payload ?? {};
-        const snippet = typeof payload.text === 'string' ? payload.text : '';
-        const title =
-          (typeof payload.title === 'string' && payload.title) ||
-          (typeof payload.concept === 'string' && payload.concept) ||
-          'Reviewed concept note';
-        return {
-          title,
-          topic: typeof payload.topic === 'string' ? payload.topic : '',
-          chapter: typeof payload.chapter === 'string' ? payload.chapter : '',
-          snippet,
-        };
-      })
-      .filter((source) => source.snippet.length > 0);
+
+    const guardObj: TopicRequestGuard = {
+      promise: (async () => {
+        if (!this.configService.get<string>('QDRANT_URL')) {
+          throw new ServiceUnavailableException('Qdrant is not configured.');
+        }
+        const queryVector = await this.embeddingService.embed(topicName);
+        const searchResult = await this.qdrantClient.search(
+          this.collectionName,
+          {
+            vector: queryVector,
+            limit: 3,
+            with_payload: true,
+          },
+        );
+        return searchResult
+          .map((result) => {
+            const payload = result.payload ?? {};
+            const snippet =
+              typeof payload.text === 'string' ? payload.text : '';
+            const title =
+              (typeof payload.title === 'string' && payload.title) ||
+              (typeof payload.concept === 'string' && payload.concept) ||
+              'Reviewed concept note';
+            return {
+              title,
+              topic: typeof payload.topic === 'string' ? payload.topic : '',
+              chapter:
+                typeof payload.chapter === 'string' ? payload.chapter : '',
+              snippet,
+            };
+          })
+          .filter((source) => source.snippet.length > 0);
+      })(),
+      resolve: async (value: RetrievedSource[]) => {
+        guardObj.resolve(value);
+      },
+      reject: (reason: any) => {
+        guardObj.reject(reason);
+      },
+    };
+    this.topicRequestGuards.set(topicName, guardObj);
+
+    try {
+      const result = await guardObj.promise;
+      return result;
+    } finally {
+      this.topicRequestGuards.delete(topicName);
+    }
   }
 
   /**
@@ -295,27 +320,48 @@ export class AgentService {
     const cached = this.supplementalSourcesCache.get(resolved);
     if (cached && cached.expiresAt > Date.now()) return cached.sources;
 
+    // Request coalescing: if another call for this topic is in flight, reuse it.
+    const guard = this.topicRequestGuards.get(resolved);
+    if (guard) {
+      return guard.promise;
+    }
+
+    const guardObj: TopicRequestGuard = {
+      promise: (async () => {
+        try {
+          const sources = await this.withTimeout(
+            this.retrieveSourcesFromQdrant(resolved),
+            SUPPLEMENTAL_CONTEXT_TIMEOUT_MS,
+          );
+          return sources;
+        } catch {
+          throw new Error('Qdrant citations unavailable');
+        }
+      })(),
+      resolve: async (value: RetrievedSource[]) => {
+        this.rememberSupplementalSources(
+          resolved,
+          value,
+          SUPPLEMENTAL_CACHE_TTL_MS,
+        );
+        guardObj.resolve(value);
+      },
+      reject: (reason: any) => {
+        this.rememberSupplementalSources(
+          resolved,
+          [],
+          SUPPLEMENTAL_NEGATIVE_CACHE_TTL_MS,
+        );
+        guardObj.reject(reason);
+      },
+    };
+    this.topicRequestGuards.set(resolved, guardObj);
+
     try {
-      const sources = await this.withTimeout(
-        this.retrieveSourcesFromQdrant(resolved),
-        SUPPLEMENTAL_CONTEXT_TIMEOUT_MS,
-      );
-      this.rememberSupplementalSources(
-        resolved,
-        sources,
-        SUPPLEMENTAL_CACHE_TTL_MS,
-      );
-      return sources;
-    } catch {
-      this.logger.warn(
-        `Qdrant citations unavailable for "${resolved}"; answering without sources.`,
-      );
-      this.rememberSupplementalSources(
-        resolved,
-        [],
-        SUPPLEMENTAL_NEGATIVE_CACHE_TTL_MS,
-      );
-      return [];
+      const result = await guardObj.promise;
+      return result;
+    } finally {
+      this.topicRequestGuards.delete(resolved);
     }
   }
 
@@ -400,6 +446,18 @@ export class AgentService {
     }
 
     const topicName = await this.resolveTopicName(request.topic.trim());
+    // Check in-process generation cache first — avoids redundant AI calls.
+    const cached = this.questionGenCache.get(topicName);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.payload.slice(0, request.count);
+    }
+
+    if (request.count < 1 || request.count > 10) {
+      throw new ServiceUnavailableException(
+        'Requested AI question batch is outside the supported range.',
+      );
+    }
+
     const sourceMaterial = await this.getGroundedMaterial(
       topicName,
       request.sourceMaterial,
@@ -424,7 +482,13 @@ export class AgentService {
       'You are a strict JSON-only content service. Return valid JSON without markdown fences or commentary.',
       Math.min(4_000, 700 * request.count),
     );
-    return this.parseLearningQuestionBatch(raw, request.count);
+    const parsed = this.parseLearningQuestionBatch(raw, request.count);
+    // Store in cache (best-effort; may be overwritten by concurrent generation).
+    this.questionGenCache.set(topicName, {
+      expiresAt: Date.now() + 5 * 60_000, // 5 min
+      payload: parsed,
+    });
+    return parsed;
   }
 
   /**
@@ -740,30 +804,52 @@ export class AgentService {
   private async retrieveSupplementalContext(
     topicName: string,
   ): Promise<string> {
-    const cached = this.supplementalCache.get(topicName);
+    const resolved = await this.resolveTopicName(topicName.trim());
+    const cached = this.supplementalCache.get(resolved);
     if (cached && cached.expiresAt > Date.now()) return cached.text;
 
+    // Request coalescing: if another call for this topic is in flight, reuse it.
+    const guard = this.topicRequestGuards.get(resolved);
+    if (guard) {
+      return guard.promise;
+    }
+
+    const guardObj: TopicRequestGuard = {
+      promise: (async () => {
+        try {
+          const text = await this.withTimeout(
+            this.retrieveContextFromQdrant(resolved),
+            SUPPLEMENTAL_CONTEXT_TIMEOUT_MS,
+          );
+          return text;
+        } catch {
+          return '';
+        }
+      })(),
+      resolve: async (value: string) => {
+        this.rememberSupplementalContext(
+          resolved,
+          value,
+          SUPPLEMENTAL_CACHE_TTL_MS,
+        );
+        guardObj.resolve(value);
+      },
+      reject: (reason: any) => {
+        this.rememberSupplementalContext(
+          resolved,
+          '',
+          SUPPLEMENTAL_NEGATIVE_CACHE_TTL_MS,
+        );
+        guardObj.reject(reason);
+      },
+    };
+    this.topicRequestGuards.set(resolved, guardObj);
+
     try {
-      const text = await this.withTimeout(
-        this.retrieveContextFromQdrant(topicName),
-        SUPPLEMENTAL_CONTEXT_TIMEOUT_MS,
-      );
-      this.rememberSupplementalContext(
-        topicName,
-        text,
-        SUPPLEMENTAL_CACHE_TTL_MS,
-      );
-      return text;
-    } catch {
-      this.logger.warn(
-        `Qdrant supplemental grounding unavailable for "${topicName}"; using reviewed database material.`,
-      );
-      this.rememberSupplementalContext(
-        topicName,
-        '',
-        SUPPLEMENTAL_NEGATIVE_CACHE_TTL_MS,
-      );
-      return '';
+      const result = await guardObj.promise;
+      return result;
+    } finally {
+      this.topicRequestGuards.delete(resolved);
     }
   }
 

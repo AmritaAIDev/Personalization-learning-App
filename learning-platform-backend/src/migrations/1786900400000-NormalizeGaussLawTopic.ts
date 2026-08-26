@@ -39,7 +39,7 @@ export class NormalizeGaussLawTopic1786900400000 implements MigrationInterface {
    * into one before this migration ran, so there is no recorded mapping back
    * to which of the two non-canonical names each row originally had.
    */
-  public async down(): Promise<void> {
+  public down(): Promise<void> {
     throw new Error(
       'NormalizeGaussLawTopic1786900400000 cannot be reverted automatically: ' +
         'the original per-row topic split was not preserved.',

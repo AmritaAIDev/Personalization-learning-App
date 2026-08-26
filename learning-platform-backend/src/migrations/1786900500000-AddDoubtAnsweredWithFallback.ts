@@ -6,9 +6,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * deterministic fallback as if the tutor had genuinely responded. This flag
  * lets the client show that distinction.
  */
-export class AddDoubtAnsweredWithFallback1786900500000
-  implements MigrationInterface
-{
+export class AddDoubtAnsweredWithFallback1786900500000 implements MigrationInterface {
   name = 'AddDoubtAnsweredWithFallback1786900500000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

@@ -260,7 +260,7 @@ export class MockTestsService {
     >();
     for (const item of items) {
       if (item.isCorrect) continue;
-      const key = `${item.subject} ${item.chapter}`;
+      const key = `${item.subject}\u0000${item.chapter}`;
       const current = chapterLoss.get(key) ?? {
         subject: item.subject,
         chapter: item.chapter,

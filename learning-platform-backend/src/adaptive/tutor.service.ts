@@ -590,7 +590,9 @@ export class TutorService {
         ? misconceptions[0]
         : (misconceptions[1] ?? misconceptions[0]);
     return [
-      intent === 'why_wrong' ? '### Why your choice was wrong' : '### What to correct',
+      intent === 'why_wrong'
+        ? '### Why your choice was wrong'
+        : '### What to correct',
       selectedOption && misconception
         ? `The selected choice is commonly caused by: ${misconception}`
         : misconception ||

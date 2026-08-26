@@ -14,6 +14,7 @@ import { Repository } from 'typeorm';
 import { User } from '../users/user.entity';
 import { levelForXp } from '../users/user-progress';
 import type { LoginDto, RegisterDto } from './auth.dto';
+import { isPasswordValid, PASSWORD_POLICY_MESSAGE } from './password-policy';
 import { AuthSession } from './auth-session.entity';
 import type { AuthenticatedUser } from './auth.types';
 
@@ -199,6 +200,15 @@ export class AuthService implements OnModuleInit {
 
     if (!email || !password) {
       return;
+    }
+
+    // The seeded admin must satisfy the same policy as self-registration;
+    // refuse to boot with a weak bootstrap credential instead of silently
+    // creating an easy compromise target.
+    if (!isPasswordValid(password)) {
+      throw new Error(
+        `ADMIN_PASSWORD does not satisfy the password policy: ${PASSWORD_POLICY_MESSAGE}`,
+      );
     }
 
     const existing = await this.usersRepository.findOne({ where: { email } });

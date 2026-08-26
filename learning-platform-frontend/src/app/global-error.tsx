@@ -5,10 +5,10 @@ import "./globals.css";
 
 export default function GlobalError({
   error,
-  retry,
+  reset,
 }: {
   error: Error & { digest?: string };
-  retry: () => void;
+  reset: () => void;
 }) {
   useEffect(() => {
     console.error(error);
@@ -25,8 +25,8 @@ export default function GlobalError({
           </p>
           <button
             type="button"
-            onClick={() => retry()}
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-[#3f6f57] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#315844]"
+            onClick={() => reset()}
+            className="mt-6 inline-flex items-center justify-center rounded-full bg-[#3f6f57] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#315844] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3f6f57]"
           >
             Try again
           </button>

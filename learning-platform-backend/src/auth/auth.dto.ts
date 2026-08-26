@@ -5,6 +5,11 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_PATTERN,
+} from './password-policy';
 
 export class RegisterDto {
   @IsString()
@@ -17,9 +22,9 @@ export class RegisterDto {
   email: string;
 
   @IsString()
-  @MinLength(12)
-  @MaxLength(128)
-  @Matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
+  @MinLength(PASSWORD_MIN_LENGTH)
+  @MaxLength(PASSWORD_MAX_LENGTH)
+  @Matches(PASSWORD_PATTERN, {
     message:
       'Password must include an uppercase letter, lowercase letter, and number.',
   })

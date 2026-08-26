@@ -56,7 +56,8 @@ export default function DiagnosticStartPage() {
         "/api/diagnostics",
         {
           method: "POST",
-          body: JSON.stringify({ subject: "Physics" }),
+          // Subject is owned by the backend (DIAGNOSTIC_SUBJECT default).
+          body: JSON.stringify({}),
         },
       );
       router.push(`/diagnostic/${attempt.attempt.id}`);

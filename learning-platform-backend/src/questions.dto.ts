@@ -98,6 +98,23 @@ export class SearchQuestionCatalogDto {
   limit = 24;
 }
 
+/** Admin-only tuning for the coverage-gap report. */
+export class CoverageGapsQueryDto {
+  /** Minimum published-question count below which a topic counts as a gap. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  threshold?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  limit?: number;
+}
+
 /** Admin-only filters for the reviewed and draft question inventory. */
 export class AdminQuestionReviewQueryDto extends QuestionBankQueryDto {
   @IsOptional()

@@ -184,10 +184,14 @@ export default function DoubtsPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [pendingDoubtId, setPendingDoubtId] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewFileName, setPreviewFileName] = useState<string | null>(null);
+  const [previewFileSize, setPreviewFileSize] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const scanIdRef = useRef(0);
 
   const loadDoubts = useCallback(async () => {
     setError(null);
@@ -367,35 +371,77 @@ export default function DoubtsPage() {
     }
   }
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  function clearPreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setPreviewFileName(null);
+    setPreviewFileSize(null);
+  }
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
   async function handlePhotoSelected(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget;
     const file = input.files?.[0];
     input.value = "";
     if (!file) return;
 
+    // Create preview immediately for instant feedback
+    const url = URL.createObjectURL(file);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(url);
+    setPreviewFileName(file.name);
+    setPreviewFileSize(formatFileSize(file.size));
+
+    const currentScanId = ++scanIdRef.current;
     setScanning(true);
     setError(null);
     setSuccess(null);
     try {
       const extracted = await recognizeQuestionImage(file);
+      // If user cancelled or selected new image, ignore stale result
+      if (scanIdRef.current !== currentScanId) return;
       setForm((current) => ({
         ...current,
         message: current.message.trim()
           ? `${current.message.trim()}\n${extracted}`
           : extracted,
       }));
+      setSuccess("Text extracted — review and edit before sending.");
       messageInputRef.current?.focus();
     } catch (caught) {
-      // Fallback per the roadmap: leave the composer editable and ask the
-      // learner to type the question themselves.
+      if (scanIdRef.current !== currentScanId) return;
       setError(
         caught instanceof OcrError
           ? caught.message
           : "Could not read that image. Please type the question instead.",
       );
     } finally {
-      setScanning(false);
+      if (scanIdRef.current === currentScanId) setScanning(false);
     }
+  }
+
+  function handleCancelScan() {
+    scanIdRef.current += 1;
+    setScanning(false);
+    setError("Scan cancelled.");
+  }
+
+  function handleRemovePreview() {
+    scanIdRef.current += 1;
+    setScanning(false);
+    clearPreview();
+    setError(null);
   }
 
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -536,6 +582,7 @@ export default function DoubtsPage() {
                     onClick={() => photoInputRef.current?.click()}
                     disabled={scanning || submitting}
                     title="Scan a photo of the question"
+                    aria-label={scanning ? "Scanning image" : "Scan a photo of the question"}
                     className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-hairline bg-surface text-ink-soft transition hover:border-primary/40 hover:text-primary disabled:cursor-wait disabled:opacity-60"
                   >
                     {scanning ? (
@@ -559,12 +606,14 @@ export default function DoubtsPage() {
                       onKeyDown={handleComposerKeyDown}
                       placeholder="Ask a focused doubt, or scan a photo of the question..."
                       disabled={submitting}
+                      aria-label="Your doubt message"
                       className="custom-scrollbar max-h-28 min-h-10 w-full resize-none bg-transparent px-2 py-2 text-[13px] leading-5 text-ink outline-none placeholder:text-ink-mute disabled:cursor-wait disabled:opacity-70"
                     />
                   </label>
                   <button
                     type="submit"
                     disabled={!canSubmit}
+                    aria-label={submitting ? "Sending doubt" : "Send doubt"}
                     className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(63,111,87,0.18)] transition hover:-translate-y-0.5 hover:bg-primary/90 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55"
                   >
                     {submitting ? (
@@ -580,10 +629,54 @@ export default function DoubtsPage() {
                     </span>
                   </button>
                 </div>
-                {scanning ? (
-                  <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-ink-mute">
+                {previewUrl ? (
+                  <div className="mt-3 overflow-hidden rounded-2xl border border-hairline bg-surface shadow-sm animate-rise">
+                    <div className="flex gap-3 p-3">
+                      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-canvas">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={previewUrl} alt="Selected question preview" className="h-full w-full object-cover" />
+                        {scanning && (
+                          <div className="absolute inset-0 grid place-items-center bg-ink-solid/60 backdrop-blur-[1px]">
+                            <Loader2 className="h-5 w-5 animate-spin text-white" aria-hidden="true" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-ink">{previewFileName}</p>
+                        <p className="text-xs text-ink-mute">{previewFileSize} {scanning ? "· Reading..." : "· Ready"}</p>
+                        {scanning ? (
+                          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-canvas">
+                            <div className="h-full w-full animate-pulse bg-primary/40" style={{ animation: "shimmer 1.2s ease-in-out infinite" }} />
+                          </div>
+                        ) : (
+                          <p className="mt-1 text-xs leading-5 text-ink-soft">Text will be added to your message — review and edit before sending.</p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 flex-col gap-1.5">
+                        {scanning ? (
+                          <button
+                            type="button"
+                            onClick={handleCancelScan}
+                            className="rounded-full border border-hairline bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-canvas"
+                          >
+                            Cancel
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleRemovePreview}
+                            className="rounded-full border border-hairline bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-canvas"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : scanning ? (
+                  <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-ink-mute" role="status" aria-live="polite">
                     <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                    Reading the photo...
+                    Reading the photo — this can take a few seconds...
                   </p>
                 ) : null}
 

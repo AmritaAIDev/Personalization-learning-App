@@ -3,24 +3,32 @@ import { Compass } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-canvas px-5">
-      <div className="w-full max-w-md rounded-2xl border border-hairline bg-surface p-8 text-center shadow-sm">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-tint">
-          <Compass className="h-6 w-6 text-primary" aria-hidden="true" />
+    <div className="flex min-h-screen items-center justify-center bg-canvas px-5 premium-mesh">
+      <div className="w-full max-w-md rounded-[1.5rem] border border-hairline bg-surface p-8 text-center shadow-premium animate-rise premium-card">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-tint text-primary">
+          <Compass className="h-7 w-7" aria-hidden="true" />
         </div>
-        <h1 className="mt-4 font-heading text-xl font-semibold text-ink">
+        <h1 className="mt-5 font-heading text-xl font-semibold tracking-tight text-ink">
           Page not found
         </h1>
-        <p className="mt-2 text-sm text-ink-soft">
+        <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-ink-soft">
           The page you&apos;re looking for doesn&apos;t exist or may have
-          moved.
+          moved. Check the address or return to your dashboard.
         </p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-strong"
-        >
-          Back to dashboard
-        </Link>
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(63,111,87,0.25)] transition hover:bg-primary-strong hover:shadow-[0_12px_28px_rgba(63,111,87,0.3)] hover:-translate-y-[0.5px] active:translate-y-0"
+          >
+            Back to dashboard
+          </Link>
+          <Link
+            href="/journey"
+            className="inline-flex items-center justify-center rounded-full border border-hairline bg-surface px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-canvas"
+          >
+            Explore journey
+          </Link>
+        </div>
       </div>
     </div>
   );

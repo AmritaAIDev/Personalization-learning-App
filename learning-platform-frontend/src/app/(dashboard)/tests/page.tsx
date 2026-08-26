@@ -116,13 +116,11 @@ export default function TestsPage() {
     setLaunching(true);
     setError(null);
     try {
-      const payload = await apiFetch<DiagnosticAttemptPayload>(
-        "/api/diagnostics",
-        {
-          method: "POST",
-          body: JSON.stringify({ subject: "Physics" }),
-        },
-      );
+      const payload = await apiFetch<DiagnosticAttemptPayload>("/api/diagnostics", {
+        method: "POST",
+        // Subject is owned by the backend (DIAGNOSTIC_SUBJECT default).
+        body: JSON.stringify({}),
+      });
       router.push(`/diagnostic/${payload.attempt.id}`);
     } catch (reason) {
       setError(

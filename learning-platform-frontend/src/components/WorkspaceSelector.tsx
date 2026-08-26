@@ -1,44 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import {
-  BookOpenCheck,
-  ChevronDown,
-  CircleHelp,
-  CirclePlay,
-  Layers3,
-  SquarePen,
-  Timer,
-  type LucideIcon,
-} from "lucide-react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { ChevronDown, Layers3 } from "lucide-react";
 import TopicPickerDialog from "@/components/search/TopicPickerDialog";
 import { apiFetch } from "@/lib/api";
-import {
-  learningScopeFromSearchParams,
-  learningUrl,
-  scopeToParams,
-} from "@/lib/learning";
-import { practiceHref } from "@/lib/practice";
 import type {
   LearningDashboardPayload,
-  LearningScope,
 } from "@/lib/learning-types";
 
-function scopedHref(path: string, scope: LearningScope) {
-  // scope may be a full backend topic state at runtime; narrow to scope keys.
-  const params = scopeToParams(scope);
-  return `${path}?${params.toString()}`;
-}
-
+/**
+ * Sidebar card that shows the learner's active topic and opens the topic
+ * picker. Destination links intentionally live in the sidebar's Study
+ * section — duplicating them here caused drifting labels and hrefs.
+ */
 export default function WorkspaceSelector({
   compact = false,
 }: {
   compact?: boolean;
 }) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [dashboard, setDashboard] = useState<LearningDashboardPayload | null>(
     null,
   );
@@ -61,23 +40,14 @@ export default function WorkspaceSelector({
     return () => window.clearTimeout(timeout);
   }, [load]);
 
-  const routeScope = learningScopeFromSearchParams(searchParams);
-  const backendScope =
+  const scope =
     dashboard?.activeTopics[0] ?? dashboard?.completedTopics[0] ?? null;
-  const scope = routeScope ?? backendScope;
-  const isWorkspaceRoute = [
-    "/learn",
-    "/practice",
-    "/tests",
-    "/notebook",
-    "/doubts",
-  ].some((route) => pathname.startsWith(route));
 
   return (
     <section className="relative hidden lg:block">
       <div
         className={`rounded-[1.35rem] border transition ${compact ? "border-transparent bg-transparent p-0" : "p-1.5"} ${
-          isWorkspaceRoute
+          pickerOpen
             ? "border-primary/25 bg-surface shadow-[0_12px_30px_rgba(28,78,56,0.07)]"
             : "border-hairline bg-canvas/50"
         }`}
@@ -120,93 +90,11 @@ export default function WorkspaceSelector({
             aria-hidden="true"
           />
         </button>
-
-        {!compact && scope ? (
-          <nav
-            className="mt-2 border-t border-hairline px-0.5 pt-2"
-            aria-label="Selected topic workspace"
-          >
-            <p className="px-1 pb-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-primary/90">
-              Workspace tools
-            </p>
-            <WorkspaceLink
-              href={learningUrl(scope)}
-              label="Continue learning"
-              icon={CirclePlay}
-              active={pathname === "/learn"}
-              featured
-            />
-            <div className="mt-2 grid grid-cols-2 gap-1 rounded-xl bg-canvas/70 p-1 ring-1 ring-hairline/60">
-              <WorkspaceLink
-                href={learningUrl(scope, { tab: "practice" })}
-                label="Practice"
-                icon={SquarePen}
-                active={
-                  pathname === "/learn" &&
-                  searchParams.get("tab") === "practice"
-                }
-              />
-              <WorkspaceLink
-                href={practiceHref(scope)}
-                label="Tests"
-                icon={Timer}
-                active={pathname === "/practice"}
-              />
-              <WorkspaceLink
-                href={scopedHref("/notebook", scope)}
-                label="Notebook"
-                icon={BookOpenCheck}
-                active={pathname === "/notebook"}
-              />
-              <WorkspaceLink
-                href={scopedHref("/doubts", scope)}
-                label="Doubts"
-                icon={CircleHelp}
-                active={pathname === "/doubts"}
-              />
-            </div>
-          </nav>
-        ) : null}
       </div>
       <TopicPickerDialog
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
       />
     </section>
-  );
-}
-
-function WorkspaceLink({
-  href,
-  label,
-  icon: Icon,
-  active,
-  featured = false,
-}: {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  active: boolean;
-  featured?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`flex h-9 items-center gap-2 rounded-lg px-2.5 text-[11px] transition ${
-        featured ? "w-full" : "min-w-0 justify-start"
-      } ${
-        featured
-          ? "bg-primary font-semibold text-white shadow-[0_7px_18px_rgba(63,111,87,0.2)] hover:bg-primary-strong"
-          : active
-            ? "bg-surface font-semibold text-primary shadow-[0_3px_10px_rgba(20,20,30,0.06)] ring-1 ring-primary/15"
-            : "font-semibold text-ink-soft hover:bg-surface hover:text-ink"
-      }`}
-    >
-      <Icon
-        className={`h-4 w-4 ${featured ? "text-white" : active ? "text-primary" : "text-ink-mute"}`}
-        aria-hidden="true"
-      />
-      {label}
-    </Link>
   );
 }

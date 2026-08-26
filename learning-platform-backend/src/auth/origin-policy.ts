@@ -11,8 +11,12 @@ export const DEFAULT_FRONTEND_ORIGINS = [
 export function configuredAllowedOrigins(
   ...values: Array<string | undefined>
 ): string[] {
+  const isProd = process.env.NODE_ENV === 'production';
+  const baseOrigins = isProd
+    ? DEFAULT_FRONTEND_ORIGINS.filter((o) => !o.includes('localhost'))
+    : DEFAULT_FRONTEND_ORIGINS;
   const configuredValues = values.filter((value) => value?.trim());
-  const origins = [...DEFAULT_FRONTEND_ORIGINS, ...configuredValues]
+  const origins = [...baseOrigins, ...configuredValues]
     .join(',')
     .split(',')
     .map((origin) => origin.trim().replace(/\/$/, ''))

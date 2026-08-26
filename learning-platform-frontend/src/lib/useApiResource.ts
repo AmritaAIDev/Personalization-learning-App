@@ -20,7 +20,21 @@ export function useApiResource<T>(
   const [error, setError] = useState<string | null>(null);
   const hasDataRef = useRef(false);
 
+  const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      abortRef.current?.abort();
+    };
+  }, []);
+
   const load = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     // Only show the loading skeleton when nothing is on screen yet. Once we
     // have data, a background refresh (e.g. triggered by
     // LEARNING_DATA_UPDATED_EVENT) keeps the current data visible instead of
@@ -28,13 +42,16 @@ export function useApiResource<T>(
     if (!hasDataRef.current) setLoading(true);
     try {
       const next = await fetcher();
+      if (!mountedRef.current || controller.signal.aborted) return;
       setData(next);
       hasDataRef.current = true;
       setError(null);
     } catch (reason) {
+      if (!mountedRef.current || controller.signal.aborted) return;
+      if (reason instanceof DOMException && reason.name === "AbortError") return;
       setError(reason instanceof Error ? reason.message : fallbackErrorMessage);
     } finally {
-      setLoading(false);
+      if (mountedRef.current && !controller.signal.aborted) setLoading(false);
     }
   }, [fetcher, fallbackErrorMessage]);
 

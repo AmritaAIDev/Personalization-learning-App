@@ -4,6 +4,8 @@ Operational reference for running the JEE adaptive learning platform in
 production. Product behaviour lives in `WORKING_DOCUMENT.md`; this file covers
 only deploying, observing, and recovering the system.
 
+_Last work log: 2026-08-26 — see commit history for details._
+
 ## Topology
 
 | Piece | Runs on | Entry point |

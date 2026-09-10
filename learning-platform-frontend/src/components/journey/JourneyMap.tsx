@@ -4,12 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
-  Atom,
-  Calculator,
   Check,
   CircleAlert,
   Flame,
-  FlaskConical,
   Lock,
   RotateCcw,
   Star,
@@ -19,6 +16,7 @@ import {
 } from "lucide-react";
 import { LEARNING_DATA_UPDATED_EVENT, apiFetch } from "@/lib/api";
 import { learningUrl } from "@/lib/learning";
+import { getSubjectTheme } from "@/lib/subject-theme";
 import SubjectCourseExplorer from "@/components/journey/SubjectCourseExplorer";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -96,32 +94,6 @@ function resolveState(sub: Subtopic, chapter: JourneyNode): NodeState {
 function clampPct(value: number | null | undefined, fallback: number) {
   if (typeof value !== "number" || Number.isNaN(value)) return fallback;
   return Math.max(0, Math.min(100, Math.round(value)));
-}
-
-function subjectVisual(subject: string) {
-  const normalized = subject.toLowerCase();
-  if (normalized.includes("chem")) {
-    return {
-      icon: FlaskConical,
-      tint: "bg-orange-50 text-orange-600",
-      accent: "bg-orange-500",
-      badge: "text-orange-700",
-    };
-  }
-  if (normalized.includes("math")) {
-    return {
-      icon: Calculator,
-      tint: "bg-blue-50 text-blue-600",
-      accent: "bg-blue-500",
-      badge: "text-blue-700",
-    };
-  }
-  return {
-    icon: Atom,
-    tint: "bg-primary-tint text-primary",
-    accent: "bg-primary",
-    badge: "text-primary",
-  };
 }
 
 function StatChip({
@@ -449,7 +421,7 @@ export default function JourneyMap() {
             <div className="grid gap-2.5">
               {subjectSummaries.map((summary, index) => {
                 const selected = summary.name === activeSubject;
-                const visual = subjectVisual(summary.name);
+                const visual = getSubjectTheme(summary.name);
                 const Icon = visual.icon;
                 return (
                   <button

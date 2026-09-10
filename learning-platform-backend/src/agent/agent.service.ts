@@ -49,8 +49,6 @@ export interface GeneratedQuestion {
   explanation: string;
 }
 
-/** In-flight request guard per topic: prevents N simultaneous Qdrant searches. */
-type TopicRequestGuard = Promise<string>;
 
 export interface GeneratedLearningQuestionPayload extends GeneratedQuestion {
   hint: string;
@@ -171,12 +169,22 @@ export class AgentService {
     string,
     { expiresAt: number; payload: GeneratedLearningQuestionPayload[] }
   >();
+  /** Best-effort cached vector-grounding text, keyed by resolved topic name. */
+  private readonly supplementalCache = new Map<
+    string,
+    { expiresAt: number; text: string }
+  >();
   /** Structured-source counterpart of `supplementalCache`, for citations. */
   private readonly supplementalSourcesCache = new Map<
     string,
     { expiresAt: number; sources: RetrievedSource[] }
   >();
+  /** In-flight request guards per topic: prevent N simultaneous Qdrant searches for the same topic. Separate maps because the two families return different shapes. */
   private readonly topicRequestGuards = new Map<string, Promise<string>>();
+  private readonly sourcesRequestGuards = new Map<
+    string,
+    Promise<RetrievedSource[]>
+  >();
   private readonly topicNameCache = new Map<string, string>();
 
   constructor(
@@ -233,77 +241,65 @@ export class AgentService {
   /**
    * Qdrant is supplemental grounding. A worker may fall back to other reviewed
    * database material, but an empty source set never becomes a free-form model
-   * prompt. This method is guard-raced so only one in-flight search per topic.
+   * prompt. Delegates to `retrieveSourcesFromQdrant` (guard-raced there) and
+   * joins the snippets, rather than duplicating the search.
    */
   async retrieveContextFromQdrant(topicName: string): Promise<string> {
-    // Request coalescing: if another call for this topic is in flight, reuse it.
-    const existing = this.topicRequestGuards.get(topicName);
-    if (existing) return existing;
-
-    const newPromise = (async () => {
+    const sources = await this.retrieveSourcesFromQdrant(topicName);
+    return sources.map((source) => source.snippet).join('\n\n');
+  }
 
   /**
    * Structured counterpart of `retrieveContextFromQdrant`: returns the reviewed
    * concept notes with their labels so callers can both ground generation on
    * the snippets and cite the titles. Same trust boundary — only reviewed
-   * material is ever surfaced. Guard-raced.
+   * material is ever surfaced. Guard-raced so only one in-flight search per topic.
    */
   async retrieveSourcesFromQdrant(
     topicName: string,
   ): Promise<RetrievedSource[]> {
     // Request coalescing: if another call for this topic is in flight, reuse it.
-    const guard = this.topicRequestGuards.get(topicName);
-    if (guard) {
-      return guard.promise;
-    }
+    const existing = this.sourcesRequestGuards.get(topicName);
+    if (existing) return existing;
 
-    const guardObj: TopicRequestGuard = {
-      promise: (async () => {
-        if (!this.configService.get<string>('QDRANT_URL')) {
-          throw new ServiceUnavailableException('Qdrant is not configured.');
-        }
-        const queryVector = await this.embeddingService.embed(topicName);
-        const searchResult = await this.qdrantClient.search(
-          this.collectionName,
-          {
-            vector: queryVector,
-            limit: 3,
-            with_payload: true,
-          },
-        );
-        return searchResult
-          .map((result) => {
-            const payload = result.payload ?? {};
-            const snippet =
-              typeof payload.text === 'string' ? payload.text : '';
-            const title =
-              (typeof payload.title === 'string' && payload.title) ||
-              (typeof payload.concept === 'string' && payload.concept) ||
-              'Reviewed concept note';
-            return {
-              title,
-              topic: typeof payload.topic === 'string' ? payload.topic : '',
-              chapter:
-                typeof payload.chapter === 'string' ? payload.chapter : '',
-              snippet,
-            };
-          })
-          .filter((source) => source.snippet.length > 0);
-      })(),
-      resolve: async (value: RetrievedSource[]) => {
-        guardObj.resolve(value);
-      },
-      reject: (reason: any) => {
-        guardObj.reject(reason);
-      },
-    };
-    this.topicRequestGuards.set(topicName, guardObj);
+    const promise = (async () => {
+      if (!this.configService.get<string>('QDRANT_URL')) {
+        throw new ServiceUnavailableException('Qdrant is not configured.');
+      }
+      const queryVector = await this.embeddingService.embed(topicName);
+      const searchResult = await this.qdrantClient.search(
+        this.collectionName,
+        {
+          vector: queryVector,
+          limit: 3,
+          with_payload: true,
+        },
+      );
+      return searchResult
+        .map((result) => {
+          const payload = result.payload ?? {};
+          const snippet =
+            typeof payload.text === 'string' ? payload.text : '';
+          const title =
+            (typeof payload.title === 'string' && payload.title) ||
+            (typeof payload.concept === 'string' && payload.concept) ||
+            'Reviewed concept note';
+          return {
+            title,
+            topic: typeof payload.topic === 'string' ? payload.topic : '',
+            chapter:
+              typeof payload.chapter === 'string' ? payload.chapter : '',
+            snippet,
+          };
+        })
+        .filter((source) => source.snippet.length > 0);
+    })();
+    this.sourcesRequestGuards.set(topicName, promise);
 
     try {
-      const result = await guardObj.promise;
-      return result;
+      return await promise;
     } finally {
-      this.topicRequestGuards.delete(topicName);
+      this.sourcesRequestGuards.delete(topicName);
     }
   }
 
@@ -320,48 +316,26 @@ export class AgentService {
     const cached = this.supplementalSourcesCache.get(resolved);
     if (cached && cached.expiresAt > Date.now()) return cached.sources;
 
-    // Request coalescing: if another call for this topic is in flight, reuse it.
-    const guard = this.topicRequestGuards.get(resolved);
-    if (guard) {
-      return guard.promise;
-    }
-
-    const guardObj: TopicRequestGuard = {
-      promise: (async () => {
-        try {
-          const sources = await this.withTimeout(
-            this.retrieveSourcesFromQdrant(resolved),
-            SUPPLEMENTAL_CONTEXT_TIMEOUT_MS,
-          );
-          return sources;
-        } catch {
-          throw new Error('Qdrant citations unavailable');
-        }
-      })(),
-      resolve: async (value: RetrievedSource[]) => {
-        this.rememberSupplementalSources(
-          resolved,
-          value,
-          SUPPLEMENTAL_CACHE_TTL_MS,
-        );
-        guardObj.resolve(value);
-      },
-      reject: (reason: any) => {
-        this.rememberSupplementalSources(
-          resolved,
-          [],
-          SUPPLEMENTAL_NEGATIVE_CACHE_TTL_MS,
-        );
-        guardObj.reject(reason);
-      },
-    };
-    this.topicRequestGuards.set(resolved, guardObj);
-
+    // retrieveSourcesFromQdrant already coalesces concurrent calls for the
+    // same topic; this layer only adds the timeout + success/negative cache.
     try {
-      const result = await guardObj.promise;
-      return result;
-    } finally {
-      this.topicRequestGuards.delete(resolved);
+      const sources = await this.withTimeout(
+        this.retrieveSourcesFromQdrant(resolved),
+        SUPPLEMENTAL_CONTEXT_TIMEOUT_MS,
+      );
+      this.rememberSupplementalSources(
+        resolved,
+        sources,
+        SUPPLEMENTAL_CACHE_TTL_MS,
+      );
+      return sources;
+    } catch {
+      this.rememberSupplementalSources(
+        resolved,
+        [],
+        SUPPLEMENTAL_NEGATIVE_CACHE_TTL_MS,
+      );
+      return [];
     }
   }
 
@@ -808,48 +782,27 @@ export class AgentService {
     const cached = this.supplementalCache.get(resolved);
     if (cached && cached.expiresAt > Date.now()) return cached.text;
 
-    // Request coalescing: if another call for this topic is in flight, reuse it.
-    const guard = this.topicRequestGuards.get(resolved);
-    if (guard) {
-      return guard.promise;
-    }
-
-    const guardObj: TopicRequestGuard = {
-      promise: (async () => {
-        try {
-          const text = await this.withTimeout(
-            this.retrieveContextFromQdrant(resolved),
-            SUPPLEMENTAL_CONTEXT_TIMEOUT_MS,
-          );
-          return text;
-        } catch {
-          return '';
-        }
-      })(),
-      resolve: async (value: string) => {
-        this.rememberSupplementalContext(
-          resolved,
-          value,
-          SUPPLEMENTAL_CACHE_TTL_MS,
-        );
-        guardObj.resolve(value);
-      },
-      reject: (reason: any) => {
-        this.rememberSupplementalContext(
-          resolved,
-          '',
-          SUPPLEMENTAL_NEGATIVE_CACHE_TTL_MS,
-        );
-        guardObj.reject(reason);
-      },
-    };
-    this.topicRequestGuards.set(resolved, guardObj);
-
+    // retrieveContextFromQdrant already coalesces concurrent calls for the
+    // same topic (via retrieveSourcesFromQdrant); this layer only adds the
+    // timeout + success/negative cache.
     try {
-      const result = await guardObj.promise;
-      return result;
-    } finally {
-      this.topicRequestGuards.delete(resolved);
+      const text = await this.withTimeout(
+        this.retrieveContextFromQdrant(resolved),
+        SUPPLEMENTAL_CONTEXT_TIMEOUT_MS,
+      );
+      this.rememberSupplementalContext(
+        resolved,
+        text,
+        SUPPLEMENTAL_CACHE_TTL_MS,
+      );
+      return text;
+    } catch {
+      this.rememberSupplementalContext(
+        resolved,
+        '',
+        SUPPLEMENTAL_NEGATIVE_CACHE_TTL_MS,
+      );
+      return '';
     }
   }
 

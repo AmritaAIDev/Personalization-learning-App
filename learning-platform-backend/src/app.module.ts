@@ -51,6 +51,11 @@ import { MisconceptionsModule } from './misconceptions/misconceptions.module';
 import { TargetedPracticeQuestion } from './targeted-practice/targeted-practice-question.entity';
 import { TargetedPracticeModule } from './targeted-practice/targeted-practice.module';
 import { AdminModule } from './admin/admin.module';
+import { AchievementsModule } from './achievements/achievements.module';
+import { StudentAchievement } from './achievements/student-achievement.entity';
+import { BookmarksModule } from './bookmarks/bookmarks.module';
+import { BookmarkedQuestion } from './bookmarks/bookmarked-question.entity';
+import { RevisionModule } from './revision/revision.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -105,6 +110,8 @@ import { validateEnv } from './config/env.validation';
             MockTestAnswer,
             MisconceptionHit,
             TargetedPracticeQuestion,
+            StudentAchievement,
+            BookmarkedQuestion,
           ],
           migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
           synchronize: false,
@@ -130,6 +137,9 @@ import { validateEnv } from './config/env.validation';
     MisconceptionsModule,
     TargetedPracticeModule,
     AdminModule,
+    AchievementsModule,
+    BookmarksModule,
+    RevisionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

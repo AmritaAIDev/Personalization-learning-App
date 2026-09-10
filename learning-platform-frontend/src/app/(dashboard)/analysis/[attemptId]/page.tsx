@@ -23,7 +23,10 @@ import { friendlyBloomLabel } from "@/lib/learning";
 import { useAuth } from "@/context/AuthContext";
 import ExplainThis from "@/components/learning/ExplainThis";
 import TargetedPracticeCard from "@/components/learning/TargetedPracticeCard";
+import BookmarkButton from "@/components/learning/BookmarkButton";
+import BloomAccordionGroup from "@/components/learning/BloomAccordionGroup";
 import ConfidenceBadge from "@/components/diagnostic/ConfidenceBadge";
+import { useBookmarkedQuestions } from "@/lib/useBookmarkedQuestions";
 import type {
   AnalysisPayload,
   DiagnosticReviewItem,
@@ -32,6 +35,7 @@ import type {
 } from "@/lib/diagnostic-types";
 import { formatDateTime } from "@/lib/format";
 import BloomRadar from "@/components/diagnostic/BloomRadar";
+import MasteryLadder from "@/components/diagnostic/MasteryLadder";
 import PerformanceBars from "@/components/diagnostic/PerformanceBars";
 import ScoreRing from "@/components/diagnostic/ScoreRing";
 import AttemptResultHero from "@/components/results/AttemptResultHero";
@@ -243,6 +247,7 @@ export default function AnalysisPage() {
                 label: friendlyBloomLabel(row.label),
               }))}
             />
+            <MasteryLadder grade={analysis.grade} />
             <section className="rounded-2xl border border-hairline bg-surface p-6 shadow-[0_8px_22px_rgba(20,20,30,0.04)]">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-mute">
                 Repair priority
@@ -374,6 +379,7 @@ function ReviewSection({ attemptId }: { attemptId: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { bookmarkedIds, pendingIds, toggleBookmark } = useBookmarkedQuestions();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -444,6 +450,14 @@ function ReviewSection({ attemptId }: { attemptId: string }) {
             </p>
           ) : null}
           {review ? (
+            <div className="mb-5">
+              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-mute">
+                Review by cognitive skill
+              </p>
+              <BloomAccordionGroup results={review} />
+            </div>
+          ) : null}
+          {review ? (
             <ol className="grid gap-3">
               {review.map((item) => (
                 <li
@@ -474,6 +488,11 @@ function ReviewSection({ attemptId }: { attemptId: string }) {
                           : "Unanswered"}
                     </span>
                     <ConfidenceBadge calibration={item.calibration} />
+                    <BookmarkButton
+                      bookmarked={bookmarkedIds.has(item.id)}
+                      pending={pendingIds.has(item.id)}
+                      onToggle={() => void toggleBookmark(item.id)}
+                    />
                   </div>
                   <StudyMarkdown className="mt-2 text-sm font-semibold leading-6 text-ink">
                     {item.questionText}

@@ -16,8 +16,11 @@ import {
 } from "lucide-react";
 import ExplainThis from "@/components/learning/ExplainThis";
 import TargetedPracticeCard from "@/components/learning/TargetedPracticeCard";
+import BookmarkButton from "@/components/learning/BookmarkButton";
+import BloomAccordionGroup from "@/components/learning/BloomAccordionGroup";
 import ConfidenceBadge from "@/components/diagnostic/ConfidenceBadge";
 import { apiFetch } from "@/lib/api";
+import { useBookmarkedQuestions } from "@/lib/useBookmarkedQuestions";
 import { friendlyBloomLabel, learningUrl } from "@/lib/learning";
 import { practiceHref } from "@/lib/practice";
 import type {
@@ -78,6 +81,7 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
   const [filter, setFilter] = useState<ResultFilter>("all");
   const [openQuestionId, setOpenQuestionId] = useState<string | null>(null);
   const [hasToggledQuestion, setHasToggledQuestion] = useState(false);
+  const { bookmarkedIds, pendingIds, toggleBookmark } = useBookmarkedQuestions();
 
   const loadReview = useCallback(async () => {
     try {
@@ -295,6 +299,20 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
       </section>
 
       <section className="mt-10">
+        <div className="border-b border-hairline pb-5">
+          <p className="text-xs font-medium text-ink-mute">
+            Review by cognitive skill
+          </p>
+          <h2 className="mt-2 font-heading text-2xl font-bold tracking-tight text-ink">
+            Where each skill stands
+          </h2>
+        </div>
+        <div className="mt-5">
+          <BloomAccordionGroup results={payload.results} />
+        </div>
+      </section>
+
+      <section className="mt-10">
         <div className="flex flex-col gap-3 border-b border-hairline pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-medium text-ink-mute">
@@ -342,45 +360,63 @@ export default function PracticeReview({ attemptId }: { attemptId: string }) {
                 key={result.questionId}
                 className="overflow-hidden rounded-2xl border border-hairline bg-surface shadow-[0_6px_18px_rgba(20,20,30,0.035)]"
               >
-                <button
-                  type="button"
-                  aria-expanded={isOpen}
-                  onClick={() => {
-                    setHasToggledQuestion(true);
-                    setOpenQuestionId(isOpen ? null : result.questionId);
-                  }}
-                  className="flex w-full items-center gap-4 p-5 text-left sm:p-6"
-                >
-                  <span
-                    className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
-                      result.isCorrect
-                        ? "bg-success-tint text-success"
-                        : "bg-danger-tint text-danger"
-                    }`}
+                <div className="flex w-full items-center gap-2 p-5 sm:p-6">
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    onClick={() => {
+                      setHasToggledQuestion(true);
+                      setOpenQuestionId(isOpen ? null : result.questionId);
+                    }}
+                    className="flex min-w-0 flex-1 items-center gap-4 text-left"
                   >
-                    {result.isCorrect ? (
-                      <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
-                    ) : (
-                      <CircleX className="h-5 w-5" aria-hidden="true" />
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-2 text-xs font-medium text-ink-mute">
-                      <span>
-                        Question {result.position} · {result.difficulty} ·{" "}
-                        {friendlyBloomLabel(result.bloomLevel)}
+                    <span
+                      className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+                        result.isCorrect
+                          ? "bg-success-tint text-success"
+                          : "bg-danger-tint text-danger"
+                      }`}
+                    >
+                      {result.isCorrect ? (
+                        <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+                      ) : (
+                        <CircleX className="h-5 w-5" aria-hidden="true" />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-2 text-xs font-medium text-ink-mute">
+                        <span>
+                          Question {result.position} · {result.difficulty} ·{" "}
+                          {friendlyBloomLabel(result.bloomLevel)}
+                        </span>
+                        <ConfidenceBadge calibration={result.calibration} />
                       </span>
-                      <ConfidenceBadge calibration={result.calibration} />
+                      <span className="mt-1 block text-sm font-bold leading-6 text-ink">
+                        {result.questionText}
+                      </span>
                     </span>
-                    <span className="mt-1 block text-sm font-bold leading-6 text-ink">
-                      {result.questionText}
-                    </span>
-                  </span>
-                  <ChevronDown
-                    className={`h-5 w-5 shrink-0 text-ink-mute transition ${isOpen ? "rotate-180" : ""}`}
-                    aria-hidden="true"
+                  </button>
+                  <BookmarkButton
+                    bookmarked={bookmarkedIds.has(result.id)}
+                    pending={pendingIds.has(result.id)}
+                    onToggle={() => void toggleBookmark(result.id)}
                   />
-                </button>
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-label={isOpen ? "Collapse" : "Expand"}
+                    onClick={() => {
+                      setHasToggledQuestion(true);
+                      setOpenQuestionId(isOpen ? null : result.questionId);
+                    }}
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-mute hover:bg-canvas"
+                  >
+                    <ChevronDown
+                      className={`h-5 w-5 transition ${isOpen ? "rotate-180" : ""}`}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
 
                 {isOpen ? (
                   <div className="border-t border-hairline px-5 pb-6 pt-5 sm:px-6">

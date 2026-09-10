@@ -8,6 +8,7 @@ import {
   Ellipsis,
   HelpCircle,
   Home,
+  ListChecks,
   LoaderCircle,
   LogOut,
   Map,
@@ -45,13 +46,14 @@ const navigation: NavItem[] = [
   { label: "Practice", href: "/practice", icon: SquarePen, roles: ["student"] },
   { label: "Tests", href: "/tests", icon: Timer, roles: ["student"] },
   { label: "Notebook", href: "/notebook", icon: NotebookTabs, roles: ["student"] },
+  { label: "Revision", href: "/revision", icon: ListChecks, roles: ["student"] },
   { label: "Doubts", href: "/doubts", icon: HelpCircle, roles: ["student"] },
   { label: "Content", href: "/content", icon: PenLine, roles: ["admin"] },
   { label: "Admin", href: "/admin", icon: ShieldCheck, roles: ["admin"] },
 ];
 
 const overviewLabels = new Set(["Dashboard", "Journey"]);
-const studyLabels = new Set(["Learn", "Practice", "Tests", "Notebook", "Doubts"]);
+const studyLabels = new Set(["Learn", "Practice", "Tests", "Notebook", "Revision", "Doubts"]);
 const planningLabels = new Set(["Content", "Admin"]);
 
 /** Destinations promoted to the phone/tablet bar; everything else lives in the More sheet. */

@@ -4,6 +4,8 @@ import { useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CircleAlert } from "lucide-react";
 import StudentActionCenter from "@/components/dashboard/StudentActionCenter";
+import SubjectOverviewGrid from "@/components/dashboard/SubjectOverviewGrid";
+import AchievementsPanel from "@/components/dashboard/AchievementsPanel";
 import LearningOverview from "@/components/learning/LearningOverview";
 import TopicSearch from "@/components/search/TopicSearch";
 import { useAuth } from "@/context/AuthContext";
@@ -106,6 +108,12 @@ export default function DashboardPage() {
         {data ? (
           <div className="animate-rise [animation-delay:120ms]">
             <StudentActionCenter data={data} />
+            <div className="mt-8">
+              <SubjectOverviewGrid subjects={data.subjectCoverage} />
+            </div>
+            <div className="mt-8">
+              <AchievementsPanel />
+            </div>
             <div className="mt-8">
               <LearningOverview data={data.learning} />
             </div>

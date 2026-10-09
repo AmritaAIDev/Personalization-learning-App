@@ -8,3 +8,5 @@ jee-ai-professional-platform-ui.html
 learning-platform-frontend/frontend-run.log
 learning-platform-frontend/.claude/
 *.log
+# Untrusted third-party download; only reviewed extractions belong in the repo.
+jee-compass-main.zip

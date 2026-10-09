@@ -31,7 +31,7 @@ Supersedes the scope of `JEE-COMPASS-INSPIRATION-PLAN.md`. That plan covered the
 
 **Already built (commits `0a44856`, `9acda86`, `6babe56`)**: `lib/subject-theme.ts`, `AchievementsPanel`, `SubjectOverviewGrid`, `MasteryLadder`, `BloomAccordionGroup`, `BookmarkButton` + `useBookmarkedQuestions`, `/revision` page, and the `achievements`, `bookmarks`, `revision` backend modules with migrations `1786900700000` and `1786900800000`.
 
-**Uncommitted in the working tree**: 13 modified backend files, including `achievements`, `bookmarks` and `revision` specs and both migrations. Also in that set but unrelated to Compass: `agent.service.ts`, `embedding.service.ts`, `auth/roles.guard.ts`, `auth/session-auth.guard.ts`, `main.ts`, `health.controller.spec.ts`, `questions.service.spec.ts`. These must be reviewed before any new work is stacked on top.
+**Uncommitted in the working tree** _(historical audit — resolved by Phase 0 on 2026-10-09, committed as `86f2780`/`34b6e7a`)_: 13 modified backend files, including `achievements`, `bookmarks` and `revision` specs and both migrations. Also in that set but unrelated to Compass: `agent.service.ts`, `embedding.service.ts`, `auth/roles.guard.ts`, `auth/session-auth.guard.ts`, `main.ts`, `health.controller.spec.ts`, `questions.service.spec.ts`. These must be reviewed before any new work is stacked on top.
 
 **The real gap**
 
@@ -64,7 +64,7 @@ Supersedes the scope of `JEE-COMPASS-INSPIRATION-PLAN.md`. That plan covered the
 
 Question count, topic count and student progress are **computed at read time** from `questions`, `topics` and `learning_topic_state`, so they cannot go stale.
 
-**4.3 Mapping, not copying.** Create `scripts/content/compass-chapter-map.ts`: `{ compassSubject, compassChapterId } → our chapter name | null`, plus `unit` for each of our chapters. By chapter title alone, roughly 28 to 30 of the 41 Compass chapters match one of ours. Several merge (Compass Ch 1 and 2 → our *Electrostatics*; Ray + Wave Optics → *Optics*; Atoms + Nuclei → *Atoms and Nuclei*; Matrices + Determinants → *Matrices and Determinants*; Continuity + Applications of derivatives → *Differential Calculus*). A merged chapter's `overview` is concatenated, `objectives` and `keyFormulas` are unioned, and `studyMinutes` is summed. The **dry-run report** (section 8, Phase 1) is the source of truth for the exact counts, not this estimate.
+**4.3 Mapping, not copying.** Create `scripts/content/compass-chapter-map.ts`: `{ compassSubject, compassChapterId } → our chapter name | null`, plus `unit` for each of our chapters. By chapter title alone, roughly 28 to 30 of the 41 Compass chapters match one of ours _(estimate at audit time; the verified dry-run result in §11: **36 of 41 compass chapters map onto 28 of our 55**, the difference being intended merges and Maths pairings — see `compass-chapter-map.ts`)_. Several merge (Compass Ch 1 and 2 → our *Electrostatics*; Ray + Wave Optics → *Optics*; Atoms + Nuclei → *Atoms and Nuclei*; Matrices + Determinants → *Matrices and Determinants*; Continuity + Applications of derivatives → *Differential Calculus*). A merged chapter's `overview` is concatenated, `objectives` and `keyFormulas` are unioned, and `studyMinutes` is summed. The **dry-run report** (section 8, Phase 1) is the source of truth for the exact counts, not this estimate.
 
 **4.4 What happens to the rest**
 - *Compass chapters with no equivalent in our syllabus* (e.g. Surface Chemistry, Polymers, Chemistry in Everyday Life, Linear Programming, Inverse Trigonometric Functions): **skipped**. They are outside JEE Main. *Decision for you:* if you also want CBSE board coverage, they become new chapters with seeded `topics`.
@@ -135,7 +135,7 @@ Order: stabilise → data → API → screens → analytics → polish. Each pha
 - Click-through the shipped pieces: earn a badge, bookmark, open `/revision`, subject grid, mastery ladder. Record failures as a list.
 - **Exit:** green tests/builds, clean `git status`, a written "known issues" list.
 
-### Phase 1: Chapter metadata data layer (M)
+### Phase 1: Chapter metadata data layer (M) ✅ DELIVERED 2026-10-09 (see §11)
 - Migration `CreateChapterMeta` (+ `unit` column strategy as designed in 4.2). Entity, DTOs.
 - `compass-chapter-map.ts` and `seed-chapter-meta.ts` (idempotent, keyed by `topic_id`, UTF-8, dry-run flag `--dry-run` printing: mapped / merged / unmapped-compass / our-chapters-without-meta / topic-name diffs / formula sample).
 - Run dry-run, **review the report with you**, then seed.
@@ -192,7 +192,28 @@ Order: stabilise → data → API → screens → analytics → polish. Each pha
 | 6 | Slug stability if a chapter is renamed | Slug derived from name; redirect old slug lookups through a case-insensitive name match, covered by a test |
 | 7 | I have not re-run the existing test suites or builds in this audit | Phase 0 does it first |
 
-**Decisions needed from you before Phase 1:**
-1. Skip CBSE-only chapters (Surface Chemistry, Polymers, Chemistry in Everyday Life, LPP, Inverse Trig), or add them?
-2. Do you want a JEE weightage note per chapter (admin-entered), or none?
-3. Should "Subjects" be a new sidebar item (recommended), or replace "Journey" as the main entry?
+**Decisions (asked before Phase 1; resolved with the recommended defaults and approved 2026-10-09):**
+1. CBSE-only chapters (Surface Chemistry, Polymers, Chemistry in Everyday Life, LPP, Inverse Trig) → **skipped**, mapped to `null` in `compass-chapter-map.ts` and listed in every dry-run report.
+2. JEE weightage note per chapter → **none auto-filled**; the nullable `jee_weightage_note` column exists for admins only, and the seed never writes it.
+3. "Subjects" → **new sidebar item** (Journey remains the guided path; the two cross-link).
+
+## 11. Status log (dated)
+
+### 2026-10-09 — Phase 0 + Phase 1 complete, Phase 2 not started
+
+**Phase 0 (done, pushed as `86f2780`, `34b6e7a`, `eefa799`)**
+- Auth/bootstrap repair committed; entities aligned with migrations; both test suites and both builds green.
+- Schema-drift check clean on a fresh Postgres. Risk #7 above is therefore resolved.
+
+**Phase 1 (done)**
+- Table: `chapter_meta` via migration `1787000000000-CreateChapterMeta` (one row per chapter topic; PK/FK `topic_id` cascade; `unit`, `overview`, `objectives`/`key_formulas` jsonb, `difficulty`, `study_minutes`, admin-only `jee_weightage_note`, `source`, `status`). Registered in `app.module.ts` + `data-source.ts`. Module docs: `learning-platform-backend/src/catalog/README.md`.
+- Content data (all reviewed in-repo; compass files were parsed as text and never executed): `compass-chapters.ts` (41), `compass-chapter-map.ts` (map + `CHAPTER_UNITS` for all 55), `authored-chapter-meta.ts` (27 hand drafts).
+- Verified mapping outcome (supersedes the §4.3 estimate): **36 of 41 compass chapters → 28 of our 55 chapters** through 8 merge targets (Electrostatics, Optics, Atoms and Nuclei, Magnetic Effects, EMI & AC, Matrices and Determinants, Differential Calculus, Integral Calculus); 5 skipped as CBSE-only; 27 chapters covered by authored drafts; **0 unit-only gaps**.
+- Seeder: `src/scripts/seed-chapter-meta.ts` with `--dry-run` (prints planned/merged/skipped/unit-only, compass-chip vs sub-topic diffs, UTF-8 formula samples) and npm scripts `seed:chapter-meta[:dry]`. Idempotent by `topic_id`; `ADMIN` rows and `jee_weightage_note` are never overwritten.
+- Tests added: `catalog/chapter-meta.plan.spec.ts` (merge + plan logic, 13 cases) and `scripts/content/compass-chapter-map.spec.ts` (data integrity + full-plan invariants, 13 cases). Backend suite now **34 suites / 218 tests, all passing**; `nest build` and `lint:check` clean.
+- Verification against a throwaway Postgres (`jee-verify-pg`:54329, no real data): all migrations + `seed-jee-syllabus` (55 chapters) + `seed:chapter-meta` → 55 rows (`COMPASS_IMPORT/PUBLISHED = 28`, `AI_DRAFT/DRAFT = 27`); re-run reported `inserted 0, updated 54, admin-owned rows left untouched 1` after manually promoting one row to `ADMIN` with a weightage note — the guard held; final `check:schema-drift` clean.
+- Deviations noted: (a) authored drafts were hand-written into the repo data file instead of generated through `generate-chapter-content.ts`, because the throwaway/CI path has no LLM credentials and the file is exactly what that pipeline would need to produce for review; (b) DTOs listed in Phase 1 live in `chapter-meta.types.ts` — API request/response DTOs ship with Phase 2; (c) compass formula-less chapters (p-Block, Amines, …) are seeded with empty `key_formulas` — faithful to source, the UI fallback in Phase 3 handles it.
+
+**Exit check (§8 Phase 1):** every compass-mapped chapter has `PUBLISHED` meta ✅; coverage report lists exactly the 27 chapters still draft ✅.
+
+**Next up — Phase 2:** `CatalogModule` endpoints (§6), shared progress provider, admin PATCH, README, specs. Run order on a fresh local DB: migrate → `seed:syllabus` → `seed:chapter-meta` (dry-run first).

@@ -133,6 +133,11 @@ checking that `/health` is still 200 and that non-AI routes respond.
 
 - Seed scripts that delete rows require `ALLOW_DESTRUCTIVE_SEED` to be set.
   Never set it against production.
+- `seed:chapter-meta` is non-destructive and idempotent, but must run **after**
+  `seed:syllabus` (it keys rows to existing chapter topics). It never
+  overwrites `source=ADMIN` rows or the admin-owned `jee_weightage_note`.
+  Review first with `npm run seed:chapter-meta:dry`. Order: migrate →
+  `seed:syllabus` → `seed:chapter-meta`.
 - The integration suite writes and deletes rows and refuses to run without an
   explicit `DATABASE_URL`. Point it only at a disposable database.
 - Session cookies are `HttpOnly`, and `Secure` + `SameSite=None` in production.

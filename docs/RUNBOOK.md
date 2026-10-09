@@ -173,6 +173,14 @@ checking that `/health` is still 200 and that non-AI routes respond.
   backfilling. Demo data for local databases only: `npm run seed:demo-study-plan` (also part of
   `seed:demo-experience`) gives the demo student a profile and a plan with ticked and skipped
   tasks; it refuses a cloud `DATABASE_URL` unless `ALLOW_CLOUD_DEMO_SEED=true`.
+- **Dependency audit (October 2026):** `npm audit fix` cleared the critical findings (frontend
+  `next` is now 16.4.0; backend `proxy-addr`, `multer`, `qs` and `undici` were updated). What is
+  left needs a major upgrade: `@huggingface/transformers` (and its `sharp` / `onnxruntime-node`,
+  used only for local embeddings on our own data) and `@nestjs/swagger` (`js-yaml`, docs UI only,
+  disabled in production). Plan those as a separate, tested upgrade.
+- Migration `1787000300000-IndexHotForeignKeys` adds indexes on foreign keys the product queries
+  (answer tables by `question_id`, `test_sessions.user_id`, `doubts.thread_id`, and so on). It is
+  index-only and reversible. Remaining unindexed foreign keys are on rarely read columns.
 - The backend `.env` can point at a shared cloud database. Scripts that write
   (every `seed:*` except the `:dry` variants) use whatever `DATABASE_URL` is in
   scope, so override it explicitly when testing, and never run an import "just to

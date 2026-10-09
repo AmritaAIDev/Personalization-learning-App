@@ -185,6 +185,31 @@ describe('generatePlan', () => {
     expect(plan.tasks.map((t) => t.date)).toEqual(['2026-10-31']);
   });
 
+  it('does not stack new topics on a day already full of kept work', () => {
+    const plan = generatePlan(
+      input([topic('Physics', 'Optics'), topic('Physics', 'Optics')], {
+        startDate: '2026-10-09',
+        endDate: '2026-10-12',
+        reservedByDate: { '2026-10-09': 120, '2026-10-10': 90 },
+      }),
+    );
+    // day 1 is full; day 2 has room for exactly one 30-minute topic
+    expect(plan.tasks.map((t) => t.date)).toEqual(['2026-10-10', '2026-10-11']);
+    expect(plan.paceWarning).toBe(false);
+  });
+
+  it('counts kept work when deciding whether the plan fits', () => {
+    const plan = generatePlan(
+      input([topic('Physics', 'Optics')], {
+        startDate: '2026-10-09',
+        endDate: '2026-10-09',
+        reservedByDate: { '2026-10-09': 110 },
+      }),
+    );
+    expect(plan.paceWarning).toBe(true);
+    expect(plan.tasks).toHaveLength(1);
+  });
+
   it('copes with more subjects than days', () => {
     const topics = [
       topic('Physics', 'Optics'),

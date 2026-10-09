@@ -287,4 +287,14 @@ the server.
   (360 / 768 / 1280 px, dark mode, keyboard); decide on the timed chapter quiz and CBSE-only
   chapters; migrate and seed the real (Neon) database when ready. It has not been touched.
 
+### Audit pass (done)
+- **Bug fixed:** a rebuild on the same day stacked new topics on top of ticked ones (one day
+  reached 250 of 120 minutes). The generator now takes `reservedByDate` and plans around kept work.
+- **DB:** schema drift clean (153 statements); integrity queries on profile, plan and chapter
+  data all zero; new migration indexes hot foreign keys; applied, reverted and re-applied.
+- **Security:** guards, validation, throttles, helmet, body limit and exception filter reviewed;
+  dependency critical findings cleared (see the runbook for what remains).
+- **Frontend:** dashboard card reuses the shared task-action hook; tsc, eslint, 217 tests, build.
+- Re-ran the 30-check live API test: all pass.
+
 _(Append dated entries as phases land.)_

@@ -94,6 +94,7 @@ export class StudyPlanService {
       startDate: today,
       endDate,
       dailyMinutes: user.dailyMinutes,
+      reservedByDate: reservedMinutes(done, today),
     });
 
     const saved = await this.dataSource.transaction(async (manager) => {
@@ -283,4 +284,18 @@ export class StudyPlanService {
     }
     return { plan, tasks, user };
   }
+}
+
+/** Minutes ticked tasks already take on each day from `from` on, so a rebuild does not double them. */
+function reservedMinutes(
+  done: ReadonlyArray<Pick<StudyPlanTask, 'date' | 'estMinutes'>>,
+  from: string,
+): Record<string, number> {
+  const reserved: Record<string, number> = {};
+  for (const task of done) {
+    const date = String(task.date);
+    if (date < from) continue;
+    reserved[date] = (reserved[date] ?? 0) + task.estMinutes;
+  }
+  return reserved;
 }

@@ -7,13 +7,13 @@ the adaptive engine, topic status or mastery.
 
 ## API (all require a session and act on the caller; no user id in any URL)
 
-| Method | Path | Returns |
-|---|---|---|
-| POST | `/api/study-plan/generate` | build or rebuild the plan: `{ plan, planned, keptCompleted, unplacedTopics }` |
-| GET | `/api/study-plan/today` | today's tasks, overdue tasks, and "N of M, X%" totals |
-| GET | `/api/study-plan/week?d=YYYY-MM-DD` | the Monday-to-Sunday week of `d` (default this week): tasks by day, per-subject totals, weekly % |
-| GET | `/api/study-plan/month?m=YYYY-MM` | the month (default the target month): planned vs completed by subject and chapter, days remaining, on-track % |
-| PATCH | `/api/study-plan/tasks/:taskId` | `{ "action": "complete" \| "undo" \| "skip" }` |
+| Method | Path                                | Returns                                                                                                       |
+| ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/study-plan/generate`          | build or rebuild the plan: `{ plan, planned, keptCompleted, unplacedTopics }`                                 |
+| GET    | `/api/study-plan/today`             | today's tasks, overdue tasks, and "N of M, X%" totals                                                         |
+| GET    | `/api/study-plan/week?d=YYYY-MM-DD` | the Monday-to-Sunday week of `d` (default this week): tasks by day, per-subject totals, weekly %              |
+| GET    | `/api/study-plan/month?m=YYYY-MM`   | the month (default the target month): planned vs completed by subject and chapter, days remaining, on-track % |
+| PATCH  | `/api/study-plan/tasks/:taskId`     | `{ "action": "complete" \| "undo" \| "skip" }`                                                                |
 
 `hasPlan: false` (with empty data) is returned before a plan exists, never an error.
 
@@ -55,14 +55,14 @@ the adaptive engine, topic status or mastery.
 
 ## Files
 
-| File | Role |
-|---|---|
-| `plan-dates.ts` | `YYYY-MM-DD` arithmetic and `todayIST` (the server decides "today", in IST) |
-| `plan-generator.ts` | the pure scheduler |
-| `plan-topics.ts` | class filter and topic selection |
-| `plan-views.ts` | pure shaping of Today / Week / Month responses and totals |
-| `study-plan.service.ts` | persistence, auto-completion on read, task actions |
-| `study-plan.entity.ts` + migration `1787000200000-CreateStudyPlan` | `study_plans` (one per user), `study_plan_tasks` |
+| File                                                               | Role                                                                        |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `plan-dates.ts`                                                    | `YYYY-MM-DD` arithmetic and `todayIST` (the server decides "today", in IST) |
+| `plan-generator.ts`                                                | the pure scheduler                                                          |
+| `plan-topics.ts`                                                   | class filter and topic selection                                            |
+| `plan-views.ts`                                                    | pure shaping of Today / Week / Month responses and totals                   |
+| `study-plan.service.ts`                                            | persistence, auto-completion on read, task actions                          |
+| `study-plan.entity.ts` + migration `1787000200000-CreateStudyPlan` | `study_plans` (one per user), `study_plan_tasks`                            |
 
 ## Tests
 

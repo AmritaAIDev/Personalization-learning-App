@@ -12,10 +12,10 @@ import {
   isDone,
   progressHeadline,
   taskLearnHref,
-  updateTaskRequest,
 } from "@/lib/study-plan";
 import type { StudyTaskView } from "@/lib/study-plan-types";
 import { getSubjectTheme } from "@/lib/subject-theme";
+import { usePlanTaskActions } from "@/lib/usePlanTaskActions";
 import { useTodayPlan } from "@/lib/useStudyPlan";
 
 /**
@@ -27,35 +27,21 @@ import { useTodayPlan } from "@/lib/useStudyPlan";
 export default function TodayProgressCard() {
   const { user } = useAuth();
   const { data, loading, error, reload } = useTodayPlan();
-  const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
-  const [actionError, setActionError] = useState<string | null>(null);
+  const { pending, error: taskError, run } = usePlanTaskActions();
+  const [buildError, setBuildError] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
+  const actionError = taskError ?? buildError;
 
-  const toggle = async (task: StudyTaskView, wantDone: boolean) => {
-    setActionError(null);
-    setPending((current) => new Set(current).add(task.id));
-    try {
-      await updateTaskRequest(task.id, wantDone ? "complete" : "undo");
-    } catch (reason) {
-      setActionError(
-        reason instanceof Error ? reason.message : "That could not be saved.",
-      );
-    } finally {
-      setPending((current) => {
-        const next = new Set(current);
-        next.delete(task.id);
-        return next;
-      });
-    }
-  };
+  const toggle = (task: StudyTaskView, wantDone: boolean) =>
+    run(task, wantDone ? "complete" : "undo");
 
   const build = async () => {
-    setActionError(null);
+    setBuildError(null);
     setBuilding(true);
     try {
       await generatePlanRequest();
     } catch (reason) {
-      setActionError(
+      setBuildError(
         reason instanceof Error
           ? reason.message
           : "Your plan could not be built. Please try again.",

@@ -44,6 +44,11 @@ export interface GenerateInput {
   /** Last day to plan, `YYYY-MM-DD` (the end of the target month). */
   endDate: string;
   dailyMinutes: number;
+  /**
+   * Minutes already taken on a day by work that is kept (ticked tasks of an
+   * earlier plan), by `YYYY-MM-DD`. New topics only use what is left.
+   */
+  reservedByDate?: Readonly<Record<string, number>>;
 }
 
 export const DEFAULT_TOPIC_MINUTES = 30;
@@ -126,8 +131,14 @@ export function generatePlan(input: GenerateInput): GeneratedPlan {
     };
   }
 
-  const requiredMinutesPerDay = ceilTo(totalMinutes / days.length, ROUND_TO);
-  let paceWarning = totalMinutes > days.length * input.dailyMinutes;
+  const reserved = (date: string) => input.reservedByDate?.[date] ?? 0;
+  const reservedTotal = days.reduce((sum, date) => sum + reserved(date), 0);
+  const requiredMinutesPerDay = ceilTo(
+    (totalMinutes + reservedTotal) / days.length,
+    ROUND_TO,
+  );
+  let paceWarning =
+    totalMinutes + reservedTotal > days.length * input.dailyMinutes;
   const budget = paceWarning
     ? Math.max(input.dailyMinutes, requiredMinutesPerDay)
     : input.dailyMinutes;
@@ -150,7 +161,7 @@ export function generatePlan(input: GenerateInput): GeneratedPlan {
   const slots: DaySlot[] = days.map((date) => ({
     date,
     subject: null,
-    load: 0,
+    load: reserved(date),
     tasks: [],
   }));
   const place = (slot: DaySlot, item: (typeof withMinutes)[number]) => {
@@ -167,6 +178,8 @@ export function generatePlan(input: GenerateInput): GeneratedPlan {
 
   let turn = 0;
   for (const slot of slots) {
+    // A day already full of kept work takes nothing new and keeps its turn.
+    if (slot.load >= budget) continue;
     let pick: string | null = null;
     for (let offset = 0; offset < subjects.length; offset += 1) {
       const candidate = subjects[(turn + offset) % subjects.length];

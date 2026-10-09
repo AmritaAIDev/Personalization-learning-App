@@ -58,6 +58,8 @@ import { BookmarkedQuestion } from './bookmarks/bookmarked-question.entity';
 import { RevisionModule } from './revision/revision.module';
 import { ChapterMeta } from './catalog/chapter-meta.entity';
 import { StudyPlan, StudyPlanTask } from './study-plan/study-plan.entity';
+import { SkillMastery } from './knowledge-tracing/skill-mastery.entity';
+import { KnowledgeTracingModule } from './knowledge-tracing/knowledge-tracing.module';
 import { StudyPlanModule } from './study-plan/study-plan.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { validateEnv } from './config/env.validation';
@@ -117,6 +119,7 @@ import { validateEnv } from './config/env.validation';
             StudentAchievement,
             BookmarkedQuestion,
             ChapterMeta,
+            SkillMastery,
             StudyPlan,
             StudyPlanTask,
           ],
@@ -149,6 +152,7 @@ import { validateEnv } from './config/env.validation';
     RevisionModule,
     CatalogModule,
     StudyPlanModule,
+    KnowledgeTracingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

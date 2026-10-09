@@ -175,12 +175,19 @@ platform. Higher effort, sequenced after Phases 1–2 give a solid base.
 ### 3.1 Probabilistic knowledge tracing (BKT/DKT/IRT)
 **Modules:** new `knowledge-tracing` service · `adaptive` (competency) · `diagnostics` analysis
 
-- [ ] New `KnowledgeTracingService` estimating per-skill mastery probability from answer history (start with BKT — interpretable, low-data).
-- [ ] Migration for a `skill_mastery` table (per user × skill: probability, last-updated).
-- [ ] Replace the heuristic weak-topic threshold with low-confidence skills; analysis page shows mastery % with a confidence band.
+- [x] New `KnowledgeTracingService` estimating per-skill mastery probability from answer history (start with BKT — interpretable, low-data).
+- [x] Migration for a `skill_mastery` table (per user × skill: probability, last-updated).
+- [~] Replace the heuristic weak-topic threshold with low-confidence skills; analysis page shows mastery % with a confidence band. _(2026-10-10: `/api/knowledge-tracing/mastery|weak` live and the /progress "Focus areas" panel shipped with bands + low-confidence flags; the diagnostics analysis page and the catalog heuristics still show score-band views — swap when the adaptive integration lands.)_
 - [ ] Adaptive engine consumes mastery probability for level decisions (replaces/augments the accuracy gate).
-- [ ] Tests: BKT update math; small-sample behaviour vs classical %.
-- [ ] Docs: new `knowledge-tracing` README; update `adaptive`/`diagnostics`.
+- [x] Tests: BKT update math; small-sample behaviour vs classical %.
+- [~] Docs: new `knowledge-tracing` README; update `adaptive`/`diagnostics`. _(README shipped 2026-10-10; adaptive/diagnostics updates land with the integration.)_
+
+**Shipped 2026-10-10 (slice 1):** pure BKT model (`bkt.ts`, global
+literature-range parameters, explicit params for future EM fitting),
+recompute-on-read snapshot service over the shared `loadAnswerEvents`
+contract, student-scoped read API, `/progress` Focus areas panel.
+17 unit tests. Deliberately *not* yet wired into level decisions — that
+changes learner behaviour and gets its own reviewed slice.
 
 ### 3.2 Unified persistent tutor with long-term memory
 **Modules:** `agent` · `doubts` · `adaptive` tutor · `notebook`

@@ -20,6 +20,7 @@ import { TargetedPracticeQuestion } from '../targeted-practice/targeted-practice
 import { StudentAchievement } from '../achievements/student-achievement.entity';
 import { BookmarkedQuestion } from '../bookmarks/bookmarked-question.entity';
 import { ChapterMeta } from '../catalog/chapter-meta.entity';
+import { SkillMastery } from '../knowledge-tracing/skill-mastery.entity';
 import { StudyPlan, StudyPlanTask } from '../study-plan/study-plan.entity';
 import { LearningTopicState } from '../adaptive/learning-topic-state.entity';
 import { LearningSession } from '../adaptive/learning-session.entity';
@@ -82,6 +83,7 @@ export default new DataSource({
     StudentAchievement,
     BookmarkedQuestion,
     ChapterMeta,
+    SkillMastery,
     StudyPlan,
     StudyPlanTask,
   ],

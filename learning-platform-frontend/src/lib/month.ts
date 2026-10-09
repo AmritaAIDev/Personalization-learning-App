@@ -103,3 +103,23 @@ export function lastDayOfMonth(month: string): string {
   const { year, month: number } = parseMonth(month);
   return new Date(Date.UTC(year, number, 0)).toISOString().slice(0, 10);
 }
+
+/** `date` (YYYY-MM-DD) moved by `delta` days. */
+export function addDays(date: string, delta: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + delta * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+/** "Mon, 12 Oct" for a YYYY-MM-DD date (calendar arithmetic, no time zone). */
+export function formatDay(date: string): string {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  return `${WEEKDAYS[parsed.getUTCDay()]}, ${parsed.getUTCDate()} ${monthName(parsed.getUTCMonth() + 1).slice(0, 3)}`;
+}
+
+/** "Mon" for a YYYY-MM-DD date. */
+export function weekdayShort(date: string): string {
+  return WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()];
+}

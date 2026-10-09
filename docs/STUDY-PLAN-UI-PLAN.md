@@ -262,4 +262,11 @@ the server.
   `/api/study-plan/month|today` and `/api/catalog/progress`.
 - Verification: frontend tsc/eslint clean, 187 tests; study-plan module 98 backend tests.
 
+### Phase E: /plan screens (done)
+- `/plan` with Today / Week / Month tabs (reusing the catalog `Tabs` and `Breadcrumb`), a stale
+  banner with Rebuild, the pace note, and an empty state that builds the plan or opens the
+  profile setup. Week and Month step with previous/next (month limited to the current month up
+  to the target month). Tasks can be ticked, skipped, restored, or opened with Start Learning.
+- Verification: frontend tsc/eslint clean, plan component tests (14).
+
 _(Append dated entries as phases land.)_

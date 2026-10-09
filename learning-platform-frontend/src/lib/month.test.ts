@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  addDays,
   addMonths,
   currentMonthIST,
   daysUntil,
+  formatDay,
   formatMonth,
   isMonth,
   isMonthInRange,
@@ -11,6 +13,7 @@ import {
   parseMonth,
   targetMonthBounds,
   todayIST,
+  weekdayShort,
 } from "./month";
 
 describe("currentMonthIST", () => {
@@ -103,5 +106,16 @@ describe("todayIST and lastDayOfMonth", () => {
     expect(
       daysUntil(todayIST(new Date("2026-10-09T10:00:00Z")), lastDayOfMonth("2026-12")),
     ).toBe(83);
+  });
+  it("addDays crosses month and year ends", () => {
+    expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+    expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
+    expect(addDays("2026-10-09", -7)).toBe("2026-10-02");
+  });
+
+  it("formats days as weekday, date and month", () => {
+    expect(formatDay("2026-10-09")).toBe("Fri, 9 Oct");
+    expect(weekdayShort("2026-10-12")).toBe("Mon");
   });
 });

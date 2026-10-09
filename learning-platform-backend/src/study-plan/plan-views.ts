@@ -189,6 +189,7 @@ export function buildMonthView(
       })),
     })),
     totals: totalsOf(views),
+    planTotals: totalsOf(tasks.map((task) => toTaskView(task, today))),
     // Nothing due yet counts as on track, not 0%.
     onTrack: {
       due: due.length,

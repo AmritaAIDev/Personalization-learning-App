@@ -5,12 +5,16 @@ import { useRouter } from "next/navigation";
 import { CircleAlert } from "lucide-react";
 import StudentActionCenter from "@/components/dashboard/StudentActionCenter";
 import SubjectOverviewGrid from "@/components/dashboard/SubjectOverviewGrid";
+import SyllabusProgressPanel from "@/components/dashboard/SyllabusProgressPanel";
+import TargetCard from "@/components/dashboard/TargetCard";
+import TodayProgressCard from "@/components/dashboard/TodayProgressCard";
 import AchievementsPanel from "@/components/dashboard/AchievementsPanel";
 import LearningOverview from "@/components/learning/LearningOverview";
 import TopicSearch from "@/components/search/TopicSearch";
 import { useAuth } from "@/context/AuthContext";
 import { LEARNING_DATA_UPDATED_EVENT, apiFetch } from "@/lib/api";
 import type { StudentDashboardPayload } from "@/lib/student-dashboard-types";
+import { useSyllabusProgress } from "@/lib/useCatalog";
 import { useApiResource } from "@/lib/useApiResource";
 
 function DashboardSkeleton() {
@@ -36,6 +40,8 @@ export default function DashboardPage() {
     fetchDashboard,
     "Your learning dashboard could not be loaded.",
   );
+
+  const syllabus = useSyllabusProgress();
 
   useEffect(() => {
     const refreshDashboard = () => void loadDashboard();
@@ -107,9 +113,24 @@ export default function DashboardPage() {
 
         {data ? (
           <div className="animate-rise [animation-delay:120ms]">
-            <StudentActionCenter data={data} />
+            <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+              <TodayProgressCard />
+              <TargetCard />
+            </div>
+            <div className="mt-5">
+              <SyllabusProgressPanel
+                progress={syllabus.data}
+                loading={syllabus.loading}
+                error={syllabus.error}
+                onRetry={() => void syllabus.reload()}
+              />
+            </div>
+            <StudentActionCenter data={data} syllabus={syllabus.data} />
             <div className="mt-8">
-              <SubjectOverviewGrid subjects={data.subjectCoverage} />
+              <SubjectOverviewGrid
+                subjects={data.subjectCoverage}
+                syllabus={syllabus.data}
+              />
             </div>
             <div className="mt-8">
               <AchievementsPanel />

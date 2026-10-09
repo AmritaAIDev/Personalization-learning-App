@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { learningUrl } from "@/lib/learning";
 import { Stagger, StaggerItem } from "@/components/motion/MotionPrimitives";
+import type { SyllabusProgress } from "@/lib/catalog-types";
 import type { GrowthPoint } from "@/lib/growth-types";
 import type {
   StudentDashboardAction,
@@ -81,8 +82,11 @@ function momentumPoints(timeline: GrowthPoint[]): string {
 
 export default function StudentActionCenter({
   data,
+  syllabus,
 }: {
   data: StudentDashboardPayload;
+  /** Shared syllabus progress; replaces the tracked-topics "Coverage" signal. */
+  syllabus?: SyllabusProgress | null;
 }) {
   const xpIntoLevel = data.student.xp % 250;
   const xpProgress = Math.round((xpIntoLevel / 250) * 100);
@@ -164,17 +168,17 @@ export default function StudentActionCenter({
           <div className="flex items-end justify-between gap-3 border-b border-hairline pb-3">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
-                Today
+                Suggested
               </p>
               <h2
                 id="plan-heading"
                 className="mt-1 font-heading text-2xl font-bold tracking-tight text-ink"
               >
-                Action rail
+                Recommended next steps
               </h2>
             </div>
             <span className="text-xs font-medium text-ink-mute">
-              {data.today.actions.length} tasks
+              {data.today.actions.length} suggestions
             </span>
           </div>
           <ol className="divide-y divide-hairline">
@@ -232,12 +236,21 @@ export default function StudentActionCenter({
               center={`${data.growth.overall.momentum > 0 ? "+" : ""}${data.growth.overall.momentum}%`}
               detail={`Recent movement: ${data.growth.overall.momentum > 0 ? "+" : ""}${data.growth.overall.momentum} points across the latest checkpoints.`}
             />
-            <SignalCircle
-              label="Coverage"
-              value={data.courseProgress.percent}
-              center={`${data.courseProgress.percent}%`}
-              detail={`${data.courseProgress.masteredTopics} mastered out of ${data.courseProgress.trackedTopics} tracked topics.`}
-            />
+            {syllabus && syllabus.overall.total > 0 ? (
+              <SignalCircle
+                label="Syllabus"
+                value={syllabus.overall.percent}
+                center={`${syllabus.overall.percent}%`}
+                detail={`${syllabus.overall.completed} of ${syllabus.overall.total} topics completed.`}
+              />
+            ) : (
+              <SignalCircle
+                label="Coverage"
+                value={data.courseProgress.percent}
+                center={`${data.courseProgress.percent}%`}
+                detail={`${data.courseProgress.masteredTopics} mastered out of ${data.courseProgress.trackedTopics} tracked topics.`}
+              />
+            )}
           </div>
           <div className="mt-4 rounded-2xl bg-canvas px-3 py-2 text-xs text-ink-soft">
             <Link

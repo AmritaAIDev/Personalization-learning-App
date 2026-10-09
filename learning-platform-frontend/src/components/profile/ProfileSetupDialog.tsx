@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { useAuth } from "@/context/AuthContext";
 import {
+  OPEN_PROFILE_SETUP_EVENT,
   rememberSetupSkipped,
   savePersonalization,
   shouldShowSetup,
@@ -11,19 +12,24 @@ import {
   wasSetupSkipped,
   type PersonalizationValues,
 } from "@/lib/personalization";
+import { generatePlanRequest } from "@/lib/study-plan";
 import PersonalizationForm from "./PersonalizationForm";
 
 /**
- * After sign-in, asks a student for class, stream, target month and daily study
- * time (the inputs of the personalised study plan). Shown only to students whose
- * profile is incomplete; "Skip for now" hides it for the rest of the browser
- * session and it asks again at the next sign-in.
+ * Asks a student for class, stream, target month and daily study time (the
+ * inputs of the personalised study plan), then builds their first plan.
+ *
+ * Opens by itself after sign-in for students whose profile is incomplete
+ * ("Skip for now" hides it for the rest of the browser session), and on request
+ * from anywhere via `requestProfileSetup()` (for example the dashboard's
+ * "Set your target month" button).
  */
 export default function ProfileSetupDialog() {
   const { user, refreshAuth } = useAuth();
   const formId = useId();
   // Read from sessionStorage after mount so server and client render the same.
   const [skipped, setSkipped] = useState<boolean | null>(null);
+  const [requested, setRequested] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,12 +43,27 @@ export default function ProfileSetupDialog() {
     return () => window.clearTimeout(timeout);
   }, [userId]);
 
+  useEffect(() => {
+    const open = () => setRequested(true);
+    window.addEventListener(OPEN_PROFILE_SETUP_EVENT, open);
+    return () => window.removeEventListener(OPEN_PROFILE_SETUP_EVENT, open);
+  }, []);
+
   if (!user || skipped === null) return null;
-  const open = shouldShowSetup(user, skipped);
+  // Admins have no study plan, so they are never asked, even on request.
+  const open =
+    user.role === "student" &&
+    (requested || shouldShowSetup(user, skipped));
+
+  const close = () => {
+    setRequested(false);
+    setError(null);
+  };
 
   const skip = () => {
     rememberSetupSkipped(user.id);
     setSkipped(true);
+    close();
   };
 
   const save = async (values: PersonalizationValues) => {
@@ -50,8 +71,12 @@ export default function ProfileSetupDialog() {
     setError(null);
     try {
       await savePersonalization(values);
-      // The saved profile arrives with the refreshed user; that closes the dialog.
+      // Build the first plan right away. If that fails the profile is still
+      // saved; the dashboard offers "Build my plan" so nothing is lost.
+      await generatePlanRequest().catch(() => undefined);
+      // The saved profile arrives with the refreshed user.
       await refreshAuth();
+      close();
     } catch (reason) {
       setError(
         reason instanceof Error

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { subjectHref } from "@/lib/catalog";
 import { SUBJECT_THEMES } from "@/lib/subject-theme";
+import type { SyllabusProgress } from "@/lib/catalog-types";
 import type { StudentDashboardPayload } from "@/lib/student-dashboard-types";
 
 type SubjectCoverage = StudentDashboardPayload["subjectCoverage"][number];
@@ -31,8 +32,11 @@ function scoreTone(score: number) {
  */
 export default function SubjectOverviewGrid({
   subjects,
+  syllabus,
 }: {
   subjects: StudentDashboardPayload["subjectCoverage"];
+  /** Shared syllabus progress; when present it drives the bar and counts. */
+  syllabus?: SyllabusProgress | null;
 }) {
   return (
     <section aria-labelledby="subject-overview-heading">
@@ -64,8 +68,12 @@ export default function SubjectOverviewGrid({
                   ) / scoredTopics.length,
                 )
               : null;
-          const masteredPercent =
-            coverage.totalTopics > 0
+          const shared = syllabus?.subjects.find(
+            (subject) => subject.slug === theme.id,
+          );
+          const masteredPercent = shared
+            ? shared.percent
+            : coverage.totalTopics > 0
               ? Math.round(
                   (coverage.masteredTopics / coverage.totalTopics) * 100,
                 )
@@ -90,8 +98,9 @@ export default function SubjectOverviewGrid({
                     {theme.label}
                   </p>
                   <p className="text-[11px] text-white/80">
-                    {coverage.masteredTopics}/{coverage.totalTopics} topics
-                    mastered
+                    {shared
+                      ? `${shared.completed}/${shared.total} topics completed`
+                      : `${coverage.masteredTopics}/${coverage.totalTopics} topics mastered`}
                   </p>
                 </div>
               </div>

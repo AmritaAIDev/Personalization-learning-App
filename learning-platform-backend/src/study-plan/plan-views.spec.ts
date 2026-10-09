@@ -229,6 +229,17 @@ describe('buildMonthView', () => {
     ]);
   });
 
+  it('also reports totals for the whole plan, across every month', () => {
+    const view = buildMonthView(tasks, PLAN, '2026-10', TODAY);
+    // 5 tasks overall; the skipped one is left out; 1 completed
+    expect(view.planTotals).toMatchObject({
+      total: 4,
+      completed: 1,
+      percent: 25,
+    });
+    expect(view.totals.total).toBe(3); // October alone
+  });
+
   it('measures "on track" against only what was due by today', () => {
     const view = buildMonthView(tasks, PLAN, '2026-10', TODAY);
     expect(view.onTrack).toEqual({ due: 2, completedDue: 1, percent: 50 });

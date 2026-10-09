@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 import {
+  act,
   cleanup,
   fireEvent,
   render,
   screen,
   waitFor,
 } from "@testing-library/react";
+import { OPEN_PROFILE_SETUP_EVENT } from "@/lib/personalization";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthenticatedUser } from "@/lib/diagnostic-types";
 import { currentMonthIST, formatMonth } from "@/lib/month";
@@ -15,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   user: null as AuthenticatedUser | null,
   refreshAuth: vi.fn(),
   save: vi.fn(),
+  generate: vi.fn(),
 }));
 
 vi.mock("@/context/AuthContext", () => ({
@@ -27,6 +30,10 @@ vi.mock("@/lib/personalization", async () => {
   );
   return { ...actual, savePersonalization: mocks.save };
 });
+
+vi.mock("@/lib/study-plan", () => ({
+  generatePlanRequest: mocks.generate,
+}));
 
 import ProfileSetupDialog from "./ProfileSetupDialog";
 
@@ -58,6 +65,7 @@ const SKIP_KEY = "jee-ai:profile-setup-skipped:u1";
 beforeEach(() => {
   mocks.user = studentUser();
   mocks.refreshAuth.mockReset().mockResolvedValue(undefined);
+  mocks.generate.mockReset().mockResolvedValue({ planned: 12 });
   mocks.save.mockReset().mockResolvedValue({
     user: studentUser(),
     targetMonthChanged: true,
@@ -205,6 +213,39 @@ describe("ProfileSetupDialog", () => {
       dailyMinutes: 120,
     });
     await waitFor(() => expect(mocks.refreshAuth).toHaveBeenCalledTimes(1));
+    // the first plan is built straight after the profile is saved
+    expect(mocks.generate).toHaveBeenCalledTimes(1);
+  });
+
+  it("still finishes when building the plan fails: the profile is saved, the dashboard offers 'Build my plan'", async () => {
+    mocks.generate.mockRejectedValue(new Error("plan service down"));
+    render(<ProfileSetupDialog />);
+    await screen.findByRole("dialog", { name: dialogName });
+    fireEvent.click(screen.getByRole("radio", { name: "Class 12" }));
+    fireEvent.click(thisMonthButton());
+    fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
+    await waitFor(() => expect(mocks.refreshAuth).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText("plan service down")).toBeNull();
+  });
+
+  it("opens on request even after being skipped, but never for an admin", async () => {
+    window.sessionStorage.setItem(SKIP_KEY, "1");
+    const { unmount } = render(<ProfileSetupDialog />);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    act(() => {
+      window.dispatchEvent(new Event(OPEN_PROFILE_SETUP_EVENT));
+    });
+    expect(await screen.findByRole("dialog", { name: dialogName })).toBeTruthy();
+    unmount();
+
+    mocks.user = studentUser({}, "admin");
+    render(<ProfileSetupDialog />);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    act(() => {
+      window.dispatchEvent(new Event(OPEN_PROFILE_SETUP_EVENT));
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("keeps the dialog open and shows the reason when saving fails", async () => {

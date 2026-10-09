@@ -6,9 +6,11 @@ import {
   formatMonth,
   isMonth,
   isMonthInRange,
+  lastDayOfMonth,
   monthsBetween,
   parseMonth,
   targetMonthBounds,
+  todayIST,
 } from "./month";
 
 describe("currentMonthIST", () => {
@@ -79,5 +81,27 @@ describe("daysUntil", () => {
     expect(daysUntil("2026-10-09", "2026-12-31")).toBe(83);
     expect(daysUntil("2027-12-31", "2028-03-01")).toBe(61); // 2028 is a leap year
     expect(daysUntil("2026-12-31", "2026-10-09")).toBe(-83);
+  });
+});
+
+describe("todayIST and lastDayOfMonth", () => {
+  it("todayIST is the IST day, not the UTC one", () => {
+    expect(todayIST(new Date("2026-10-09T10:00:00Z"))).toBe("2026-10-09");
+    expect(todayIST(new Date("2026-10-09T20:00:00Z"))).toBe("2026-10-10");
+    expect(todayIST(new Date("2026-12-31T19:00:00Z"))).toBe("2027-01-01");
+  });
+
+  it("lastDayOfMonth handles month lengths and leap years", () => {
+    expect(lastDayOfMonth("2026-10")).toBe("2026-10-31");
+    expect(lastDayOfMonth("2026-04")).toBe("2026-04-30");
+    expect(lastDayOfMonth("2026-02")).toBe("2026-02-28");
+    expect(lastDayOfMonth("2028-02")).toBe("2028-02-29");
+    expect(lastDayOfMonth("2026-12")).toBe("2026-12-31");
+  });
+
+  it("together give the days left to the end of a target month", () => {
+    expect(
+      daysUntil(todayIST(new Date("2026-10-09T10:00:00Z")), lastDayOfMonth("2026-12")),
+    ).toBe(83);
   });
 });

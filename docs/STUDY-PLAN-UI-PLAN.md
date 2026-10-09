@@ -251,4 +251,15 @@ the server.
   exactly the rest, the plan turns stale when the month changes and a rebuild clears it, 401 when
   signed out.
 
+### Phase D: dashboard personalisation (done)
+- Dashboard gained **Today's Progress** (tasks with tick, Start Learning, overdue link, empty
+  and error states), **Target** card (month, days left, plan done, on track, stale rebuild,
+  pace note, "View My Study Plan") and **Overall Syllabus Progress** (shared definition, subject
+  bars linking to the drill-down). The subject cards and the "Coverage" signal now use the same
+  shared syllabus progress; the old heuristic list was retitled "Recommended next steps".
+- Backend: `MonthView.planTotals` (whole-plan totals).
+- **Deviation:** the dashboard payload was not extended with a `target` block; the frontend uses
+  `/api/study-plan/month|today` and `/api/catalog/progress`.
+- Verification: frontend tsc/eslint clean, 187 tests; study-plan module 98 backend tests.
+
 _(Append dated entries as phases land.)_

@@ -90,3 +90,16 @@ export function daysUntil(from: string, to: string): number {
   const b = Date.parse(`${to}T00:00:00Z`);
   return Math.round((b - a) / 86_400_000);
 }
+
+/** The IST calendar day containing `now`, as YYYY-MM-DD. */
+export function todayIST(now: Date = new Date()): string {
+  return new Date(now.getTime() + IST_OFFSET_MINUTES * 60_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+/** The last day of a YYYY-MM month, as YYYY-MM-DD (handles leap years). */
+export function lastDayOfMonth(month: string): string {
+  const { year, month: number } = parseMonth(month);
+  return new Date(Date.UTC(year, number, 0)).toISOString().slice(0, 10);
+}

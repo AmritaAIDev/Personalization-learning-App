@@ -134,3 +134,12 @@ export function rememberSetupSkipped(userId: string): void {
     // Not remembering is harmless: the prompt simply shows again next page load.
   }
 }
+
+/** Asks the setup dialog (mounted once in the dashboard layout) to open. */
+export const OPEN_PROFILE_SETUP_EVENT = "jee-ai:open-profile-setup";
+
+export function requestProfileSetup(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(OPEN_PROFILE_SETUP_EVENT));
+  }
+}

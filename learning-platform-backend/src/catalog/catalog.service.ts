@@ -37,6 +37,7 @@ import type {
   CatalogSubjectChapters,
   CatalogSubjectSummary,
   CatalogTopicDetail,
+  PlanTopicRow,
   SyllabusProgress,
   SyllabusSubjectProgress,
 } from './catalog.types';
@@ -167,6 +168,46 @@ export class CatalogService {
       };
     });
     return { overall: sumCounts(subjects), subjects };
+  }
+
+  /**
+   * Every teachable topic in syllabus order, with the student's status on it,
+   * for the study planner. Uses the same topic list as the chapter pages, so a
+   * chapter whose tree node has no sub-topics (Electrostatics) is still
+   * planned from its questions' topics.
+   */
+  async getPlanTopics(userId: string): Promise<PlanTopicRow[]> {
+    const ctx = await this.loadContext(userId);
+    return ctx.tree.flatMap((subject) => {
+      const chapters = subject.chapters
+        .map((node, order) => ({
+          node,
+          order,
+          meta: ctx.meta.get(node.topic.id),
+          built: this.buildChapter(ctx, subject, node),
+        }))
+        // Class 11 chapters first, then Class 12; unknown level last; stable.
+        .sort(
+          (a, b) =>
+            (a.meta?.classLevel ?? 99) - (b.meta?.classLevel ?? 99) ||
+            a.order - b.order,
+        );
+      return chapters.flatMap(({ node, meta, built }) => {
+        const teachable = built.topics.filter(
+          (topic) => topic.questionCount > 0,
+        );
+        return teachable.map((topic) => ({
+          subject: subject.topic.name,
+          chapter: node.topic.name,
+          scopeChapter: topic.scopeChapter,
+          topic: topic.name,
+          classLevel: meta?.classLevel ?? null,
+          chapterMinutes: meta?.studyMinutes ?? null,
+          chapterTopicCount: teachable.length,
+          learningStatus: topic.learningStatus,
+        }));
+      });
+    });
   }
 
   async getSubjectChapters(

@@ -57,6 +57,8 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
 import { BookmarkedQuestion } from './bookmarks/bookmarked-question.entity';
 import { RevisionModule } from './revision/revision.module';
 import { ChapterMeta } from './catalog/chapter-meta.entity';
+import { StudyPlan, StudyPlanTask } from './study-plan/study-plan.entity';
+import { StudyPlanModule } from './study-plan/study-plan.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { validateEnv } from './config/env.validation';
 
@@ -115,6 +117,8 @@ import { validateEnv } from './config/env.validation';
             StudentAchievement,
             BookmarkedQuestion,
             ChapterMeta,
+            StudyPlan,
+            StudyPlanTask,
           ],
           migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
           synchronize: false,
@@ -144,6 +148,7 @@ import { validateEnv } from './config/env.validation';
     BookmarksModule,
     RevisionModule,
     CatalogModule,
+    StudyPlanModule,
   ],
   controllers: [AppController],
   providers: [AppService],

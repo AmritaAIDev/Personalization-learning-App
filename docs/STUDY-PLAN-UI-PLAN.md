@@ -227,4 +227,28 @@ the server.
   `components/profile/README.md`.
 - **Not yet:** generating the first plan after saving (Phase C).
 
+### 2026-10-10: Phase C complete (study-plan engine)
+
+- **Schema** (migration `1787000200000-CreateStudyPlan`, new tables only; applied, reverted and
+  re-applied on the throwaway database, drift clean): `study_plans` (one per student) and
+  `study_plan_tasks` (unique per plan + subject + chapter + topic, indexed by plan + date).
+- **Engine:** pure scheduler `generatePlan` (one subject per day, subjects rotate, syllabus order
+  kept, budget respected, pace warning with the minutes/day that would fit, nothing dropped),
+  class filtering, and the Today / Week / Month views. Documented in
+  `learning-platform-backend/src/study-plan/README.md`.
+- **API:** `POST /generate`, `GET /today`, `GET /week`, `GET /month`, `PATCH /tasks/:id`
+  (`complete`, `undo`, `skip`). Auto-completion on read from real answers; ticking never
+  changes topic status (decision 4).
+- **Deviations from the plan:** the stored `status` of a plan (ACTIVE/STALE) is derived instead
+  (stale when the target month or daily minutes changed since generation); tasks have a
+  `position` column so a day's order is stable; `CatalogService.getPlanTopics` supplies topics,
+  so aliased chapters (Electrostatics) are planned too.
+- **Verification:** backend `tsc`, eslint, prettier clean; study-plan module **97 tests** (full
+  suite in the commit). A scripted **30-check end-to-end run** against a real server and database
+  passed: 96 teachable topics planned across Oct to Dec, one subject per day within the 120
+  minute budget, all topics accounted for across the months, bad dates/months/actions rejected,
+  another student gets 404 on a task and sees no plan, rebuild keeps ticked tasks and re-plans
+  exactly the rest, the plan turns stale when the month changes and a rebuild clears it, 401 when
+  signed out.
+
 _(Append dated entries as phases land.)_

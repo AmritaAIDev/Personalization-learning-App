@@ -67,6 +67,27 @@ export interface CatalogSubjectChapters {
 /** Completed / In Progress / Pending: see catalog.progress.ts `topicLearningStatus`. */
 export type LearningStatus = 'COMPLETED' | 'IN_PROGRESS' | 'PENDING';
 
+/**
+ * A studyable topic for the study planner: one row per teachable topic, already
+ * in syllabus order (subjects as in the tree, Class 11 chapters before Class 12
+ * within a subject, then tree order).
+ */
+export interface PlanTopicRow {
+  subject: string;
+  /** Curriculum chapter name (display and plan key). */
+  chapter: string;
+  /** Chapter name the topic's questions are tagged with; what /learn needs. */
+  scopeChapter: string;
+  topic: string;
+  /** 11, 12, or null when the chapter has no class level yet. */
+  classLevel: number | null;
+  /** Study minutes for the whole chapter, or null when unknown. */
+  chapterMinutes: number | null;
+  /** Teachable topics in the chapter. */
+  chapterTopicCount: number;
+  learningStatus: LearningStatus;
+}
+
 /** Counts over teachable topics (topics with at least one published question). */
 export interface SyllabusCounts {
   total: number;

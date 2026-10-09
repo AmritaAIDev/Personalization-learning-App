@@ -57,6 +57,7 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
 import { BookmarkedQuestion } from './bookmarks/bookmarked-question.entity';
 import { RevisionModule } from './revision/revision.module';
 import { ChapterMeta } from './catalog/chapter-meta.entity';
+import { CatalogModule } from './catalog/catalog.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -142,6 +143,7 @@ import { validateEnv } from './config/env.validation';
     AchievementsModule,
     BookmarksModule,
     RevisionModule,
+    CatalogModule,
   ],
   controllers: [AppController],
   providers: [AppService],

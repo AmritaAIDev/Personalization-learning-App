@@ -1,4 +1,4 @@
-# JEE Compass → Learning Platform: Detailed Adoption Plan (v2)
+﻿# JEE Compass → Learning Platform: Detailed Adoption Plan (v2)
 
 Supersedes the scope of `JEE-COMPASS-INSPIRATION-PLAN.md`. That plan covered the *widgets* (badges, bookmarks, ladder, revision hub). This one covers what the original request is really about: **the subject → chapter → topic structure, the per-chapter and per-subject screens, and the chapter/topic data behind them**, rebuilt on our backend, in our theme.
 
@@ -216,4 +216,12 @@ Order: stabilise → data → API → screens → analytics → polish. Each pha
 
 **Exit check (§8 Phase 1):** every compass-mapped chapter has `PUBLISHED` meta ✅; coverage report lists exactly the 27 chapters still draft ✅.
 
-**Next up — Phase 2:** `CatalogModule` endpoints (§6), shared progress provider, admin PATCH, README, specs. Run order on a fresh local DB: migrate → `seed:syllabus` → `seed:chapter-meta` (dry-run first).
+### 2026-10-09 — Phase 2 complete (Catalog API)
+
+- `CatalogModule` (`learning-platform-backend/src/catalog/`): `GET /api/catalog/subjects`, `/subjects/:subject/chapters`, `/subjects/:subject/chapters/:chapter` (student), `GET /api/catalog/admin/chapters` and `PATCH /api/catalog/admin/chapters/:topicId/meta` (admin). Contract and RBAC are documented in `catalog/README.md`.
+- Design: read model only, no new tables. Curriculum tree (`topics`) + `chapter_meta` + live PUBLISHED question counts + the student's `learning_topic_states`, joined by subject/chapter/topic **names** (verified identical on the seeded DB: 55 chapters, 0 unmatched). Draft study guides are never serialised to students. Admin edits flip `source` to `ADMIN`; publish needs an overview and one objective.
+- Pure, tested logic: `catalog.progress.ts` (topic score, chapter status rules), `catalog.slug.ts` (slugs unique across all 55 chapters).
+- Verification: backend `tsc`, `nest build`, `lint:check` clean; **37 suites / 246 tests pass**; service exercised against the seeded throwaway Postgres (20 Physics chapters, 8+ unit tabs, published guide visible, draft hidden, 55 review rows).
+- Deviations: (a) Bloom breakdown and bookmark/wrong-answer counts beyond `bookmarkedCount` are left to Phase 4 so the chapter detail stays cheap; (b) no HTTP-level e2e yet — guards are global and covered by their own suites; add supertest when the frontend lands.
+
+**Next up — Phase 3** (Subjects + Chapter screens, consumes the endpoints above) and **Phase 4** (per-subject analytics endpoint + screen).

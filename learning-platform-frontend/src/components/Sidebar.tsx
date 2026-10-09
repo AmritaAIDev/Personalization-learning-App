@@ -7,6 +7,7 @@ import {
   Compass,
   Ellipsis,
   HelpCircle,
+  Library,
   Home,
   ListChecks,
   LoaderCircle,
@@ -42,6 +43,7 @@ type NavItem = {
 const navigation: NavItem[] = [
   { label: "Dashboard", href: "/", icon: Home, roles: ["student"] },
   { label: "Journey", href: "/journey", icon: Map, roles: ["student"] },
+  { label: "Subjects", href: "/subjects", icon: Library, roles: ["student"] },
   { label: "Learn", href: "/learn", icon: Compass, roles: ["student"] },
   { label: "Practice", href: "/practice", icon: SquarePen, roles: ["student"] },
   { label: "Tests", href: "/tests", icon: Timer, roles: ["student"] },
@@ -52,7 +54,7 @@ const navigation: NavItem[] = [
   { label: "Admin", href: "/admin", icon: ShieldCheck, roles: ["admin"] },
 ];
 
-const overviewLabels = new Set(["Dashboard", "Journey"]);
+const overviewLabels = new Set(["Dashboard", "Journey", "Subjects"]);
 const studyLabels = new Set(["Learn", "Practice", "Tests", "Notebook", "Revision", "Doubts"]);
 const planningLabels = new Set(["Content", "Admin"]);
 

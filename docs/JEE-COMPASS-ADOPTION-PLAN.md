@@ -225,3 +225,12 @@ Order: stabilise → data → API → screens → analytics → polish. Each pha
 - Deviations: (a) Bloom breakdown and bookmark/wrong-answer counts beyond `bookmarkedCount` are left to Phase 4 so the chapter detail stays cheap; (b) no HTTP-level e2e yet — guards are global and covered by their own suites; add supertest when the frontend lands.
 
 **Next up — Phase 3** (Subjects + Chapter screens, consumes the endpoints above) and **Phase 4** (per-subject analytics endpoint + screen).
+
+### 2026-10-09 — Phase 3 complete (Subjects and Chapter screens)
+
+- Routes: `/subjects`, `/subjects/[subject]`, `/subjects/[subject]/[chapter]`, plus a **Subjects** sidebar item (overview group, next to Journey). Components, hooks and behaviour are documented in `learning-platform-frontend/src/components/catalog/README.md`.
+- Built on the Phase 2 API only: no static curriculum or progress in the UI. Chapter actions reuse the existing `/learn` workspace on the chapter's most useful topic (`pickFocusTopic`), so no learning UI is duplicated. Unpublished guides degrade to an explanatory state, never a broken page.
+- Verification: frontend `tsc`, eslint (new files + sidebar), `next build` (all three routes present) clean; **vitest 10 files / 76 tests pass** (25 new: helpers and jsdom component tests for tab keyboard behaviour and the no-guide / no-topics fallbacks). Backend booted from the compiled build against the seeded throwaway Postgres and exercised over HTTP: 401 unauthenticated, 403 for a student on both admin routes, 404 for unknown/malformed slugs, 400 for unknown fields / out-of-range values / non-UUID ids, and an admin publish making a draft chapter's guide visible to students (state restored afterwards).
+- Deviations: (a) the **Bloom tab** and the **Analytics action** are deferred to Phase 4 rather than linking to a page that doesn't exist; (b) vitest config now includes `*.test.tsx`, an `@` alias and the automatic JSX runtime (via `oxc`) so component tests can use the app's import style; (c) **not yet checked in a real browser** (visual pass at 360/768/1280 px, dark mode, keyboard-only walk-through): left for the manual pass.
+
+**Next up — Phase 4** (per-subject analytics endpoint + screen, adds the Bloom tab) then **Phase 5** (cross-links and polish).

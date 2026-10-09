@@ -34,7 +34,7 @@ export class TestSession {
   @Column({ default: 'in-progress' })
   status: string; // 'in-progress', 'completed'
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ name: 'current_score', type: 'int', default: 0 })
   currentScore: number;
 
   // --- Algorithmic Routing State ---
@@ -50,12 +50,12 @@ export class TestSession {
   @Column({ type: 'int', default: 0 })
   failed_attempts: number; // Failed attempts on the current question
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'started_at' })
   startedAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ name: 'ended_at', type: 'timestamp', nullable: true })
   endedAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

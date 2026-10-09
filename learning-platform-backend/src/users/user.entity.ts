@@ -18,7 +18,7 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  @Column({ name: 'password_hash' })
   passwordHash: string; // Store hashed passwords, never plain text!
 
   @Column({ default: 'student' })
@@ -56,9 +56,9 @@ export class User {
   })
   personalizationCompletedAt: Date | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

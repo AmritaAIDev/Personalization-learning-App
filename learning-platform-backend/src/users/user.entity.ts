@@ -34,10 +34,6 @@ export class User {
   @Column({ type: 'int', default: 0 })
   streak: number; // consecutive active days
 
-  @Column({ type: 'simple-array', default: [], select: false })
-  @Index()
-  concurrentSessions: string[]; // active session token hashes for this user (for logout-all)
-
   @CreateDateColumn()
   createdAt: Date;
 

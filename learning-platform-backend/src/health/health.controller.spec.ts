@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { HttpException } from '@nestjs/common';
 import { HealthController } from './health.controller';
 
@@ -11,7 +12,17 @@ describe('HealthController', () => {
     query = jest.fn();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [HealthController],
-      providers: [{ provide: getDataSourceToken(), useValue: { query } }],
+      providers: [
+        { provide: getDataSourceToken(), useValue: { query } },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) =>
+              key === 'DEEPSEEK_API_KEY' ? 'test-key' : undefined,
+            ),
+          },
+        },
+      ],
     }).compile();
 
     controller = module.get(HealthController);

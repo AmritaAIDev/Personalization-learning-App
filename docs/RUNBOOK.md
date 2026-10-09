@@ -159,6 +159,20 @@ checking that `/health` is still 200 and that non-AI routes respond.
   4. Optional: `npm run seed:compass-questions:dry`, then
      `npm run seed:compass-questions`. These land as **drafts**; nothing reaches
      students until an admin publishes them in Content.
+- **Releasing personalisation and the study plan** (Class / target month / daily time on
+  the profile, the dashboard panels, `/plan` and `/progress`). Two migrations are new:
+  `1787000100000-AddPersonalization` (user profile columns and `chapter_meta.class_level`) and
+  `1787000200000-CreateStudyPlan` (`study_plans`, `study_plan_tasks`). Order:
+  1. `npm run migrate:deploy`
+  2. `npm run seed:syllabus`, then `npm run seed:chapter-meta` (this sets the Class 11 / 12 split
+     the plan uses; an owner should confirm the split, and admins can edit it per chapter with
+     `classLevel` on the chapter meta PATCH)
+  3. `npm run audit:catalog` (read-only)
+  A student with no target month sees "Set up my plan"; nothing breaks for existing users.
+  Plans are built per student on request (`POST /api/study-plan/generate`); nothing needs
+  backfilling. Demo data for local databases only: `npm run seed:demo-study-plan` (also part of
+  `seed:demo-experience`) gives the demo student a profile and a plan with ticked and skipped
+  tasks; it refuses a cloud `DATABASE_URL` unless `ALLOW_CLOUD_DEMO_SEED=true`.
 - The backend `.env` can point at a shared cloud database. Scripts that write
   (every `seed:*` except the `:dry` variants) use whatever `DATABASE_URL` is in
   scope, so override it explicitly when testing, and never run an import "just to

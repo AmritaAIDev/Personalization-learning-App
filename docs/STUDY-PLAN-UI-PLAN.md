@@ -278,4 +278,13 @@ the server.
   Plan). The dashboard syllabus panel now links to `/progress`.
 - Verification: frontend tsc/eslint clean, 217 tests, `next build` lists /plan and /progress.
 
+### Phase G: demo data and release notes (done)
+- `npm run seed:demo-study-plan` (and `seed:demo-experience`): profile plus a real plan for the
+  demo student through the real service, 3 ticked and 1 skipped on the first run, idempotent,
+  refuses cloud databases. Verified twice on the throwaway database.
+- `docs/RUNBOOK.md`: release order for the two new migrations, seeds and audit.
+- **Still needs the owner:** confirm the Class 11 / 12 split; run the manual browser pass
+  (360 / 768 / 1280 px, dark mode, keyboard); decide on the timed chapter quiz and CBSE-only
+  chapters; migrate and seed the real (Neon) database when ready. It has not been touched.
+
 _(Append dated entries as phases land.)_

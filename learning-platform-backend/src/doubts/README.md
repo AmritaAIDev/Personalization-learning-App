@@ -15,4 +15,5 @@ Citations: finalization also fetches `AgentService.retrieveSupplementalSources(t
 | GET | `/api/doubts` | threads, message history, summary counts, recent topics |
 | POST | `/api/doubts/threads` | create a new topic-scoped doubt chat |
 | POST | `/api/doubts` | save a doubt message in a thread; returns immediately as `OPEN` |
+| POST | `/api/doubts/:id/retry` | re-queue an offline fallback answer (owner-only; genuine answers are refused) |
 | POST | `/api/doubts/stream` | SSE: create + stream the tutor answer (`start`/`chunk`/`done`/`error`) |

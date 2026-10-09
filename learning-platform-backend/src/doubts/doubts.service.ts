@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -86,6 +91,33 @@ export class DoubtsService {
     const saved = await this.createDoubtRow(userId, dto);
     // The tutor response is generated out-of-band so the create call returns
     // immediately; the frontend polls until the doubt flips to ANSWERED.
+    void this.resolveDoubtInBackground(saved.id);
+    return this.toCard(saved);
+  }
+
+  /**
+   * Re-queue a doubt that was answered by the offline fallback: the canned
+   * answer is cleared, the doubt flips back to OPEN and background
+   * resolution runs again (now with the tutor's intent-aware prompting).
+   * Only fallback answers are retryable — a genuine tutor answer must not
+   * be re-billed, and an OPEN doubt is already being resolved.
+   */
+  async retry(userId: string, doubtId: string): Promise<DoubtCard> {
+    const doubt = await this.doubtsRepository.findOne({
+      where: { id: doubtId, userId },
+    });
+    if (!doubt) throw new NotFoundException('Doubt was not found.');
+    if (doubt.status !== DoubtStatus.ANSWERED || !doubt.answeredWithFallback) {
+      throw new BadRequestException(
+        'Only offline fallback answers can be retried.',
+      );
+    }
+    doubt.status = DoubtStatus.OPEN;
+    doubt.assistantResponse = null;
+    doubt.answeredWithFallback = false;
+    doubt.answeredAt = null;
+    doubt.sources = null;
+    const saved = await this.doubtsRepository.save(doubt);
     void this.resolveDoubtInBackground(saved.id);
     return this.toCard(saved);
   }
@@ -244,9 +276,7 @@ export class DoubtsService {
    * Shared prompt inputs for both resolver paths: the anchored question (when
    * the doubt points at one) and the thread's earlier turns.
    */
-  private async buildTutorContext(
-    doubt: Doubt,
-  ): Promise<{
+  private async buildTutorContext(doubt: Doubt): Promise<{
     context: TutorPromptContext;
     question: DoubtQuestionContext | null;
   }> {

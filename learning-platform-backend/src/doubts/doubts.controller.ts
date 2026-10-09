@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -28,6 +37,18 @@ export class DoubtsController {
   ) {
     return {
       data: await this.doubtsService.create(user.id, body),
+    };
+  }
+
+  /** One-tap re-queue of an offline fallback answer. */
+  @Post(':id/retry')
+  @Throttle({ default: { limit: 6, ttl: 60_000 } })
+  async retry(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return {
+      data: await this.doubtsService.retry(user.id, id),
     };
   }
 

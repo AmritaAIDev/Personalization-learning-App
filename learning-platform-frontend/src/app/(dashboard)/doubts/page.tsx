@@ -25,6 +25,7 @@ import {
   MessageSquareText,
   PenLine,
   Plus,
+  RefreshCw,
   Send,
   Sparkles,
   X,
@@ -150,11 +151,15 @@ function DoubtTurn({
   isPending,
   elapsedSeconds,
   streamText,
+  onRetry,
+  retrying,
 }: {
   doubt: DoubtCard;
   isPending: boolean;
   elapsedSeconds: number;
   streamText?: string;
+  onRetry: (doubtId: string) => void;
+  retrying: boolean;
 }) {
   const answered = doubt.status === "ANSWERED";
   const isFallback = answered && doubt.answeredWithFallback;
@@ -213,10 +218,25 @@ function DoubtTurn({
               </StudyMarkdown>
               <SourceCitations sources={doubt.sources} />
               {isFallback ? (
-                <p className="mt-3 rounded-xl border border-warning/25 bg-warning-tint px-3 py-2 text-xs leading-5 font-medium text-warning">
-                  The tutor was unreachable when this was answered. Send a
-                  follow-up now to get a full explanation.
-                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-warning/25 bg-warning-tint px-3 py-2">
+                  <p className="min-w-0 flex-1 text-xs leading-5 font-medium text-warning">
+                    The tutor was unreachable when this was answered. Retry to
+                    get a full grounded explanation.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onRetry(doubt.id)}
+                    disabled={retrying}
+                    className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-warning px-3.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+                  >
+                    {retrying ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                    )}
+                    Try again
+                  </button>
+                </div>
               ) : null}
             </>
           ) : streamText ? (
@@ -272,6 +292,7 @@ export default function DoubtsPage() {
   const [pendingElapsed, setPendingElapsed] = useState(0);
   // Live partial answer text while the tutor streams it in.
   const [streamText, setStreamText] = useState("");
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewFileName, setPreviewFileName] = useState<string | null>(null);
@@ -522,6 +543,29 @@ export default function DoubtsPage() {
     }
   }
 
+  /** Re-queue an offline fallback answer and let the poller surface the redo. */
+  async function retryDoubt(doubtId: string) {
+    setRetryingId(doubtId);
+    setError(null);
+    try {
+      await apiFetch<DoubtCard>(`/api/doubts/${doubtId}/retry`, {
+        method: "POST",
+      });
+      setStreamText("");
+      setPendingElapsed(0);
+      setPendingDoubtId(doubtId);
+      await loadDoubts();
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "Could not retry this answer right now.",
+      );
+    } finally {
+      setRetryingId(null);
+    }
+  }
+
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -710,6 +754,8 @@ export default function DoubtsPage() {
                       streamText={
                         doubt.id === pendingDoubtId ? streamText : undefined
                       }
+                      onRetry={(id) => void retryDoubt(id)}
+                      retrying={retryingId === doubt.id}
                     />
                   ))
                 ) : (

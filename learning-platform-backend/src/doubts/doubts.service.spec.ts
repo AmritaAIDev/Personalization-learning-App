@@ -324,6 +324,73 @@ describe('DoubtsService', () => {
     expect(card.assistantResponse).toContain('could not reach the AI tutor');
   });
 
+  it('retries an offline fallback answer by re-opening and re-resolving it', async () => {
+    const fallback = makeDoubt({
+      status: DoubtStatus.ANSWERED,
+      assistantResponse: '### Gauss Law doubt\nI could not reach the AI tutor',
+      answeredWithFallback: true,
+    });
+    const repository = {
+      create: jest.fn(),
+      save: jest.fn().mockResolvedValue(fallback),
+      find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue(fallback),
+    };
+    const agentService = {
+      generateTutorResponse: jest
+        .fn()
+        .mockResolvedValue('### Gauss\nA real answer at last.'),
+      retrieveSupplementalSources: jest.fn().mockResolvedValue([]),
+    };
+    const service = new DoubtsService(
+      makeThreadRepo() as never,
+      repository as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      agentService as never,
+    );
+
+    const card = await service.retry('user-1', 'doubt-1');
+    expect(card.status).toBe(DoubtStatus.OPEN);
+    expect(card.assistantResponse).toBeNull();
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(agentService.generateTutorResponse).toHaveBeenCalled();
+    expect(fallback.assistantResponse).toBe(
+      '### Gauss\nA real answer at last.',
+    );
+    expect(fallback.answeredWithFallback).toBe(false);
+  });
+
+  it('refuses to retry a genuine tutor answer', async () => {
+    const real = makeDoubt({
+      status: DoubtStatus.ANSWERED,
+      assistantResponse: '### Gauss\nGenuine.',
+      answeredWithFallback: false,
+    });
+    const service = new DoubtsService(
+      makeThreadRepo() as never,
+      {
+        create: jest.fn(),
+        save: jest.fn().mockResolvedValue(real),
+        find: jest.fn(),
+        findOne: jest.fn().mockResolvedValue(real),
+      } as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      {
+        generateTutorResponse: jest.fn(),
+        retrieveSupplementalSources: jest.fn(),
+      } as never,
+    );
+
+    await expect(service.retry('user-1', 'doubt-1')).rejects.toThrow(
+      /Only offline fallback answers/,
+    );
+  });
+
   it('answers with a deterministic fallback when tutor generation is unavailable', async () => {
     const created = makeDoubt();
     const saved: Doubt[] = [];

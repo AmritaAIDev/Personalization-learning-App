@@ -17,6 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { LEARNING_DATA_UPDATED_EVENT, apiFetch } from "@/lib/api";
+import StudyPlanSettings from "@/components/profile/StudyPlanSettings";
 import { useAuth } from "@/context/AuthContext";
 import { Stagger, StaggerItem, Pressable } from "@/components/motion/MotionPrimitives";
 import CountUp from "@/components/motion/CountUp";
@@ -430,6 +431,9 @@ export default function ProfilePage() {
           <MilestoneStack badges={model.badges} />
         </section>
       </div>
+
+      {/* Study plan settings */}
+      <StudyPlanSettings />
 
       {/* Account */}
       <section className="mt-5 flex flex-col gap-3 rounded-[1.5rem] border border-hairline bg-surface p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">

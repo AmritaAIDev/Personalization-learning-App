@@ -29,3 +29,12 @@ Behaviour worth knowing:
 - An unchanged saved month stays valid even after it has passed, exactly like the server.
 - Admins never see the dialog (they have no study plan).
 - Generating the first plan after saving arrives with the study-plan engine (Phase C).
+
+## StudyPlanSettings
+
+Editable class, stream, target month and daily time on `/profile`. `planSettingsChange` (in
+`lib/personalization.ts`) decides what an edit means: changing an existing target month opens a
+confirmation ("Changing your target month will update your personalized study plan." with
+Cancel / Rebuild My Plan) and rebuilds the plan after saving; class or daily-time edits save and
+offer "Rebuild my plan"; a first target month builds the first plan. Tests:
+`study-plan-settings.test.tsx`.

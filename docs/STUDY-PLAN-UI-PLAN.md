@@ -269,4 +269,13 @@ the server.
   to the target month). Tasks can be ticked, skipped, restored, or opened with Start Learning.
 - Verification: frontend tsc/eslint clean, plan component tests (14).
 
+### Phase F: Progress, navigation, editable profile (done)
+- `/progress`: syllabus panel, plan progress (completion, on track, days left, streak, planned vs
+  completed, weekly chart) and the existing readiness map (`GrowthPanel`, now used).
+- Sidebar: Dashboard, Study Plan, Progress, Journey, Subjects under Overview; Learn first in
+  Study; phone bar is Dashboard, Study Plan, Learn, Progress (Profile stays in More).
+- `/profile` gained Study plan settings with the target-month confirmation (Cancel / Rebuild My
+  Plan). The dashboard syllabus panel now links to `/progress`.
+- Verification: frontend tsc/eslint clean, 217 tests, `next build` lists /plan and /progress.
+
 _(Append dated entries as phases land.)_

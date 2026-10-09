@@ -6,6 +6,7 @@ import type {
 import {
   DEFAULT_DAILY_MINUTES,
   formatDailyMinutes,
+  planSettingsChange,
   rememberSetupSkipped,
   shouldShowSetup,
   validatePersonalization,
@@ -166,5 +167,34 @@ describe("formatDailyMinutes", () => {
     [150, "2 h 30 min"],
   ])("formats %i", (minutes, text) => {
     expect(formatDailyMinutes(minutes)).toBe(text);
+  });
+});
+
+describe("planSettingsChange", () => {
+  const before: PersonalizationValues = {
+    className: "12",
+    stream: "Science (PCM)",
+    targetMonth: "2027-01",
+    dailyMinutes: 120,
+  };
+
+  it("reports no change for identical values", () => {
+    expect(planSettingsChange(before, { ...before })).toBe("none");
+  });
+
+  it("asks for confirmation when the target month changes", () => {
+    expect(planSettingsChange(before, { ...before, targetMonth: "2027-03" })).toBe("target");
+    expect(planSettingsChange(before, { ...before, targetMonth: null })).toBe("target");
+  });
+
+  it("treats class or daily time edits as a replan, not a confirmation", () => {
+    expect(planSettingsChange(before, { ...before, dailyMinutes: 180 })).toBe("replan");
+    expect(planSettingsChange(before, { ...before, className: "11" })).toBe("replan");
+  });
+
+  it("does not ask for confirmation when there was no target month before", () => {
+    expect(
+      planSettingsChange({ ...before, targetMonth: null }, { ...before, targetMonth: "2027-01" }),
+    ).toBe("replan");
   });
 });

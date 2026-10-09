@@ -16,11 +16,16 @@ export default function SyllabusProgressPanel({
   loading,
   error,
   onRetry,
+  detailHref = "/progress",
+  detailLabel = "View progress",
 }: {
   progress: SyllabusProgress | null;
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  /** Where the header link goes; the dashboard sends students to /progress. */
+  detailHref?: string;
+  detailLabel?: string;
 }) {
   const overall = progress?.overall;
 
@@ -42,10 +47,10 @@ export default function SyllabusProgressPanel({
           </h2>
         </div>
         <Link
-          href="/subjects"
+          href={detailHref}
           className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-hairline px-4 text-sm font-semibold text-ink-soft transition hover:border-primary/30 hover:text-primary"
         >
-          Subject, chapter, topic
+          {detailLabel}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       </div>

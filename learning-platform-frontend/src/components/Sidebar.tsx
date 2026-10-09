@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Atom,
+  CalendarCheck,
   Compass,
   Ellipsis,
   HelpCircle,
@@ -22,6 +23,7 @@ import {
   Sun,
   SquarePen,
   Timer,
+  TrendingUp,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -42,9 +44,11 @@ type NavItem = {
 /** Single source of truth for every destination in the app. */
 const navigation: NavItem[] = [
   { label: "Dashboard", href: "/", icon: Home, roles: ["student"] },
+  { label: "Study Plan", href: "/plan", icon: CalendarCheck, roles: ["student"] },
+  { label: "Learn", href: "/learn", icon: Compass, roles: ["student"] },
+  { label: "Progress", href: "/progress", icon: TrendingUp, roles: ["student"] },
   { label: "Journey", href: "/journey", icon: Map, roles: ["student"] },
   { label: "Subjects", href: "/subjects", icon: Library, roles: ["student"] },
-  { label: "Learn", href: "/learn", icon: Compass, roles: ["student"] },
   { label: "Practice", href: "/practice", icon: SquarePen, roles: ["student"] },
   { label: "Tests", href: "/tests", icon: Timer, roles: ["student"] },
   { label: "Notebook", href: "/notebook", icon: NotebookTabs, roles: ["student"] },
@@ -54,12 +58,12 @@ const navigation: NavItem[] = [
   { label: "Admin", href: "/admin", icon: ShieldCheck, roles: ["admin"] },
 ];
 
-const overviewLabels = new Set(["Dashboard", "Journey", "Subjects"]);
+const overviewLabels = new Set(["Dashboard", "Study Plan", "Progress", "Journey", "Subjects"]);
 const studyLabels = new Set(["Learn", "Practice", "Tests", "Notebook", "Revision", "Doubts"]);
 const planningLabels = new Set(["Content", "Admin"]);
 
 /** Destinations promoted to the phone/tablet bar; everything else lives in the More sheet. */
-const mobilePrimaryLabels = new Set(["Dashboard", "Learn", "Practice", "Tests"]);
+const mobilePrimaryLabels = new Set(["Dashboard", "Study Plan", "Learn", "Progress"]);
 
 export default function Sidebar() {
   const pathname = usePathname();

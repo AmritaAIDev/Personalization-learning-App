@@ -143,3 +143,24 @@ export function requestProfileSetup(): void {
     window.dispatchEvent(new Event(OPEN_PROFILE_SETUP_EVENT));
   }
 }
+
+/**
+ * What a profile edit means for the study plan:
+ * - `none`: nothing changed
+ * - `target`: the target month changed (needs the student's confirmation, since it rebuilds the plan)
+ * - `replan`: class, stream or daily time changed (the plan goes out of date; a rebuild is offered)
+ */
+export function planSettingsChange(
+  before: PersonalizationValues,
+  after: PersonalizationValues,
+): "none" | "target" | "replan" {
+  if (before.targetMonth && before.targetMonth !== after.targetMonth) {
+    return "target";
+  }
+  const same =
+    before.className === after.className &&
+    before.stream === after.stream &&
+    before.targetMonth === after.targetMonth &&
+    before.dailyMinutes === after.dailyMinutes;
+  return same ? "none" : "replan";
+}

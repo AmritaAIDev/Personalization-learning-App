@@ -210,4 +210,21 @@ the server.
 - **Frontend:** `AuthenticatedUser.personalization` type added; nothing renders it yet
   (Phase B).
 
+### 2026-10-10: Phase B complete (UI kit and onboarding dialog)
+
+- **Kit** (`components/ui/`): `Modal` (focus in/out, Tab trap, Escape/backdrop/X unless
+  `dismissible={false}`, scroll lock, bottom sheet on phones), `MonthPicker` (12-month grid
+  with year arrows and disabled out-of-range months; works on iOS Safari, unlike the native
+  month input), `TaskCheckbox` (whole-row checkbox, ignores taps while pending).
+- **Onboarding:** `ProfileSetupDialog` mounted in the dashboard layout; students only, until
+  class, stream and month are set; "Skip for now" lasts for the browser session; saving calls
+  the Phase A endpoint and refreshes the signed-in user. Shared `PersonalizationForm` (reused
+  by Profile in Phase F). `lib/month.ts` mirrors the backend's IST month rule.
+- **Verification:** frontend `tsc`, eslint (all of `src`) and `next build` clean; **15 test
+  files / 157 tests pass** (new: month helpers, profile rules and gating, Modal focus and
+  keyboard behaviour, MonthPicker range and year navigation, TaskCheckbox pending/disabled,
+  the form, and the dialog's gating, skip, validation, save and failure paths). Docs:
+  `components/profile/README.md`.
+- **Not yet:** generating the first plan after saving (Phase C).
+
 _(Append dated entries as phases land.)_

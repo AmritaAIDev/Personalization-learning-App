@@ -2,6 +2,7 @@ import React from "react";
 import Sidebar from "@/components/Sidebar";
 import DashboardAccess from "@/components/DashboardAccess";
 import PageTransition from "@/components/motion/PageTransition";
+import ProfileSetupDialog from "@/components/profile/ProfileSetupDialog";
 import { CommandPaletteProvider } from "@/context/CommandPaletteContext";
 
 export default function DashboardLayout({
@@ -17,6 +18,7 @@ export default function DashboardLayout({
           <main className="min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
             <PageTransition>{children}</PageTransition>
           </main>
+          <ProfileSetupDialog />
         </div>
       </CommandPaletteProvider>
     </DashboardAccess>

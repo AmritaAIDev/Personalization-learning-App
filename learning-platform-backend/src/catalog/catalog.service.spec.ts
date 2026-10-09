@@ -276,6 +276,19 @@ describe('CatalogService', () => {
       expect(result.source).toBe(ChapterMetaSource.ADMIN);
     });
 
+    it('lets an admin correct the class level and protects it from re-seeding', async () => {
+      chapterMeta.findOne.mockResolvedValue(
+        meta({ source: ChapterMetaSource.COMPASS_IMPORT, classLevel: 12 }),
+      );
+      const result = await service.updateChapterMeta('c1', { classLevel: 11 });
+      const saved = chapterMeta.save.mock.calls[0][0] as ChapterMeta;
+      expect(saved.classLevel).toBe(11);
+      expect(result).toMatchObject({
+        classLevel: 11,
+        source: ChapterMetaSource.ADMIN,
+      });
+    });
+
     it('refuses to publish without an overview and an objective', async () => {
       chapterMeta.findOne.mockResolvedValue(null);
       await expect(

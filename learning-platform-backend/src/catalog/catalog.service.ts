@@ -262,6 +262,7 @@ export class CatalogService {
           subject: subject.topic.name,
           chapter: chapter.topic.name,
           unit: meta?.unit ?? null,
+          classLevel: meta?.classLevel ?? null,
           source: meta?.source ?? null,
           status: meta?.status ?? null,
           hasOverview: Boolean(meta?.overview?.trim()),
@@ -290,6 +291,7 @@ export class CatalogService {
       this.chapterMeta.create({
         topicId,
         unit: null,
+        classLevel: null,
         overview: null,
         objectives: [],
         keyFormulas: [],
@@ -304,6 +306,7 @@ export class CatalogService {
       ...new Set(values.map((v) => v.trim()).filter(Boolean)),
     ];
     if (dto.unit !== undefined) row.unit = dto.unit.trim();
+    if (dto.classLevel !== undefined) row.classLevel = dto.classLevel;
     if (dto.overview !== undefined) row.overview = dto.overview.trim() || null;
     if (dto.objectives !== undefined)
       row.objectives = cleanList(dto.objectives);
@@ -318,6 +321,7 @@ export class CatalogService {
 
     const contentTouched =
       dto.unit !== undefined ||
+      dto.classLevel !== undefined ||
       dto.overview !== undefined ||
       dto.objectives !== undefined ||
       dto.keyFormulas !== undefined ||
@@ -352,6 +356,7 @@ export class CatalogService {
       subject: topic.parent?.name ?? '',
       chapter: topic.name,
       unit: saved.unit,
+      classLevel: saved.classLevel,
       source: saved.source,
       status: saved.status,
       hasOverview: Boolean(saved.overview?.trim()),

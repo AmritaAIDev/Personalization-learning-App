@@ -1,3 +1,4 @@
+import { EMPTY_PERSONALIZATION } from '../users/personalization';
 import { DashboardService } from './dashboard.service';
 
 const user = {
@@ -8,6 +9,7 @@ const user = {
   level: 4,
   xp: 120,
   streak: 3,
+  personalization: EMPTY_PERSONALIZATION,
 };
 
 function learningDashboard() {

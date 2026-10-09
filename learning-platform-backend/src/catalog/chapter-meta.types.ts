@@ -50,6 +50,8 @@ export interface PlannedChapterMeta extends ChapterMetaDraft {
   subject: SubjectName;
   chapter: string;
   unit: string;
+  /** 11 or 12; null when the plan was built without a class-level map. */
+  classLevel: number | null;
   source: ChapterMetaSource;
   status: ChapterMetaStatus;
   /** Compass chapter ids merged into this row, for the dry-run report. */

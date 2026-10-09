@@ -27,6 +27,7 @@ import { buildChapterMetaPlan } from '../catalog/chapter-meta.plan';
 import type { ChapterRef, CompassChapter } from '../catalog/chapter-meta.types';
 import { COMPASS_CHAPTERS } from './content/compass-chapters';
 import {
+  CHAPTER_CLASS_LEVELS,
   CHAPTER_UNITS,
   COMPASS_CHAPTER_MAP,
   chapterKey,
@@ -185,6 +186,7 @@ async function persist(
     const entity: Partial<ChapterMeta> = {
       topicId,
       unit: row.unit,
+      classLevel: row.classLevel,
       overview: row.overview,
       objectives: row.objectives,
       keyFormulas: row.keyFormulas,
@@ -258,6 +260,7 @@ async function main(): Promise<void> {
       compass: COMPASS_CHAPTERS,
       compassMap: COMPASS_CHAPTER_MAP,
       units: CHAPTER_UNITS,
+      classLevels: CHAPTER_CLASS_LEVELS,
       authored: AUTHORED_CHAPTER_META,
     });
     printPlan(report);

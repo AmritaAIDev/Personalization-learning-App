@@ -8,6 +8,18 @@ export interface AuthenticatedUser {
   xp: number;
   level: number;
   streak: number;
+  personalization: PersonalizationProfile;
+}
+
+/** Class / stream / target month / daily budget the student chose (all optional until set up). */
+export interface PersonalizationProfile {
+  className: "11" | "12" | "Dropper" | null;
+  stream: "Science (PCM)" | null;
+  /** YYYY-MM */
+  targetMonth: string | null;
+  dailyMinutes: number;
+  /** ISO time the profile was first completed; null until class, stream and month are all set. */
+  completedAt: string | null;
 }
 
 export type DiagnosticStatus = "IN_PROGRESS" | "SUBMITTED" | "EXPIRED";

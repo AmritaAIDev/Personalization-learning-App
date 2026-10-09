@@ -14,6 +14,7 @@ import type { ChapterRef, SubjectName } from '../../catalog/chapter-meta.types';
 import { EXISTING_CHAPTERS, NEW_CHAPTERS } from './index';
 import { COMPASS_CHAPTERS } from './compass-chapters';
 import {
+  CHAPTER_CLASS_LEVELS,
   CHAPTER_UNITS,
   COMPASS_CHAPTER_MAP,
   compassKey,
@@ -42,7 +43,39 @@ const plan = buildChapterMetaPlan({
   compass: COMPASS_CHAPTERS,
   compassMap: COMPASS_CHAPTER_MAP,
   units: CHAPTER_UNITS,
+  classLevels: CHAPTER_CLASS_LEVELS,
   authored: AUTHORED_CHAPTER_META,
+});
+
+describe('chapter class levels (draft Class 11 / 12 split)', () => {
+  it('gives every syllabus chapter exactly one level, 11 or 12', () => {
+    expect(Object.keys(CHAPTER_CLASS_LEVELS).sort()).toEqual(
+      Object.keys(CHAPTER_UNITS).sort(),
+    );
+    for (const level of Object.values(CHAPTER_CLASS_LEVELS)) {
+      expect([11, 12]).toContain(level);
+    }
+  });
+
+  it('splits each subject across both classes', () => {
+    const count = (subject: string, level: number) =>
+      Object.entries(CHAPTER_CLASS_LEVELS).filter(
+        ([key, value]) => key.startsWith(`${subject}|`) && value === level,
+      ).length;
+    expect([count('Physics', 11), count('Physics', 12)]).toEqual([11, 9]);
+    expect([count('Chemistry', 11), count('Chemistry', 12)]).toEqual([10, 11]);
+    expect([count('Mathematics', 11), count('Mathematics', 12)]).toEqual([
+      7, 7,
+    ]);
+  });
+
+  it('puts the level on every planned row without any plan error', () => {
+    expect(plan.report.errors).toEqual([]);
+    expect(plan.rows).toHaveLength(55);
+    for (const row of plan.rows) {
+      expect([11, 12]).toContain(row.classLevel);
+    }
+  });
 });
 
 describe('compass chapter data', () => {

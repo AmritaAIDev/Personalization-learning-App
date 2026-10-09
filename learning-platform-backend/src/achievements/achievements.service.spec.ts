@@ -1,3 +1,4 @@
+import { EMPTY_PERSONALIZATION } from '../users/personalization';
 import { AchievementsService } from './achievements.service';
 import { DiagnosticAttemptStatus } from '../diagnostics/diagnostic.types';
 import { PracticeAttemptStatus } from '../practice/practice.types';
@@ -15,6 +16,7 @@ function makeUser(
     xp: 0,
     level: 1,
     streak: 0,
+    personalization: EMPTY_PERSONALIZATION,
     ...overrides,
   };
 }

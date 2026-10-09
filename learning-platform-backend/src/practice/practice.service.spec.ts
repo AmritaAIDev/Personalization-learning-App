@@ -1,3 +1,4 @@
+import { EMPTY_PERSONALIZATION } from '../users/personalization';
 import {
   BadRequestException,
   ConflictException,
@@ -116,6 +117,7 @@ describe('PracticeService', () => {
         xp: 0,
         level: 1,
         streak: 0,
+        personalization: EMPTY_PERSONALIZATION,
       },
       {
         subject: 'Physics',
@@ -171,6 +173,7 @@ describe('PracticeService', () => {
         xp: 0,
         level: 1,
         streak: 0,
+        personalization: EMPTY_PERSONALIZATION,
       },
       {
         subject: 'Physics',
@@ -210,6 +213,7 @@ describe('PracticeService', () => {
           xp: 0,
           level: 1,
           streak: 0,
+          personalization: EMPTY_PERSONALIZATION,
         },
         {
           subject: 'Physics',

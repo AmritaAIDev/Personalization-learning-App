@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { PersonalizationProfile } from '../users/personalization';
 
 export type StudentRole = 'student' | 'admin';
 
@@ -10,6 +11,7 @@ export interface AuthenticatedUser {
   xp: number;
   level: number;
   streak: number;
+  personalization: PersonalizationProfile;
 }
 
 export interface AuthenticatedRequest extends Request {

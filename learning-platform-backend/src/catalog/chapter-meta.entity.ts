@@ -51,6 +51,13 @@ export class ChapterMeta {
   @Column({ type: 'varchar', length: 60, nullable: true })
   unit: string | null;
 
+  /**
+   * Which class the chapter is taught in (11 or 12). Lets the study plan give a
+   * Class 11 student only Class 11 chapters. Draft split, admin-editable.
+   */
+  @Column({ name: 'class_level', type: 'smallint', nullable: true })
+  classLevel: number | null;
+
   @Column({ type: 'text', nullable: true })
   overview: string | null;
 

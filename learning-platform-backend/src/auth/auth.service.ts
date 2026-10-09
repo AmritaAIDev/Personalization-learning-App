@@ -13,6 +13,7 @@ import type { CookieOptions } from 'express';
 import { Repository } from 'typeorm';
 import { User } from '../users/user.entity';
 import { levelForXp } from '../users/user-progress';
+import { toPersonalization } from '../users/personalization';
 import type { LoginDto, RegisterDto } from './auth.dto';
 import { isPasswordValid, PASSWORD_POLICY_MESSAGE } from './password-policy';
 import { AuthSession } from './auth-session.entity';
@@ -163,6 +164,7 @@ export class AuthService implements OnModuleInit {
       xp: user.xp,
       level: levelForXp(user.xp),
       streak: user.streak,
+      personalization: toPersonalization(user),
     };
   }
 

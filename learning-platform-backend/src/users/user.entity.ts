@@ -34,6 +34,28 @@ export class User {
   @Column({ type: 'int', default: 0 })
   streak: number; // consecutive active days
 
+  // Personalisation (see users/personalization.ts). All optional until the
+  // student completes the profile step.
+  @Column({ name: 'class_name', type: 'varchar', length: 20, nullable: true })
+  className: string | null; // '11' | '12' | 'Dropper'
+
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  stream: string | null;
+
+  /** Target month as YYYY-MM. */
+  @Column({ name: 'target_month', type: 'char', length: 7, nullable: true })
+  targetMonth: string | null;
+
+  @Column({ name: 'daily_minutes', type: 'int', default: 120 })
+  dailyMinutes: number;
+
+  @Column({
+    name: 'personalization_completed_at',
+    type: 'timestamp',
+    nullable: true,
+  })
+  personalizationCompletedAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

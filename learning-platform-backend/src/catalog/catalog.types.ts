@@ -127,6 +127,8 @@ export interface AdminChapterMetaRow {
   subject: string;
   chapter: string;
   unit: string | null;
+  /** 11 or 12; null until set. */
+  classLevel: number | null;
   source: ChapterMetaSource | null;
   status: ChapterMetaStatus | null;
   hasOverview: boolean;

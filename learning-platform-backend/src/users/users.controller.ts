@@ -7,9 +7,13 @@ import {
   Patch,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import { toPersonalization } from './personalization';
+import { UpdatePersonalizationDto } from './update-personalization.dto';
+import { User } from './user.entity';
 import { levelForXp } from './user-progress';
 import { UpdateUserRoleDto } from './update-user-role.dto';
 import { UsersService } from './users.service';
@@ -22,18 +26,39 @@ export class UsersController {
   @Get('me')
   async getCurrentUser(@CurrentUser() user: AuthenticatedUser) {
     const currentUser = await this.usersService.findById(user.id);
+    return { data: { user: this.toMe(currentUser) } };
+  }
+
+  /**
+   * The signed-in student's own class / stream / target month / daily budget.
+   * Always acts on the caller (never on an id from the URL or body).
+   * `targetMonthChanged` tells the client the study plan needs rebuilding.
+   */
+  @Patch('me/personalization')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  async updatePersonalization(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdatePersonalizationDto,
+  ) {
+    const result = await this.usersService.updatePersonalization(user.id, dto);
     return {
       data: {
-        user: {
-          id: currentUser.id,
-          name: currentUser.name,
-          email: currentUser.email,
-          role: currentUser.role,
-          xp: currentUser.xp,
-          level: levelForXp(currentUser.xp),
-          streak: currentUser.streak,
-        },
+        user: this.toMe(result.user),
+        targetMonthChanged: result.targetMonthChanged,
       },
+    };
+  }
+
+  private toMe(user: User) {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      xp: user.xp,
+      level: levelForXp(user.xp),
+      streak: user.streak,
+      personalization: toPersonalization(user),
     };
   }
 

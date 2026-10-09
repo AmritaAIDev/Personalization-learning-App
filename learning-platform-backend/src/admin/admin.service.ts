@@ -3,6 +3,7 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { DiagnosticsService } from '../diagnostics/diagnostics.service';
 import { levelForXp } from '../users/user-progress';
+import { toPersonalization } from '../users/personalization';
 import { UsersService } from '../users/users.service';
 
 @Injectable()
@@ -38,6 +39,7 @@ export class AdminService {
       xp: user.xp,
       level: levelForXp(user.xp),
       streak: user.streak,
+      personalization: toPersonalization(user),
     };
 
     const [dashboard, history] = await Promise.all([

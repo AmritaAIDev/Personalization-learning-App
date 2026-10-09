@@ -188,4 +188,26 @@ the server.
 - **Owner input still needed before Phase A/C:** the Class 11 / Class 12 split of the 55
   chapters (for `chapter_meta.class_level`), and a yes/no on the defaults in section 1.
 
+### 2026-10-10: Phase A complete (personalisation fields and endpoint)
+
+- **Schema** (migration `1787000100000-AddPersonalization`, additive, reversible):
+  `users.class_name`, `stream`, `target_month`, `daily_minutes` (default 120),
+  `personalization_completed_at`; `chapter_meta.class_level`. Applied, reverted and
+  re-applied on the throwaway database; `check:schema-drift` clean.
+- **API:** `PATCH /api/users/me/personalization` (caller only, whitelisted DTO). `GET
+  /api/users/me`, the auth session endpoints and the admin student detail now return
+  `personalization`; the PATCH also returns `targetMonthChanged`. Rules and rationale are
+  in `learning-platform-backend/src/users/README.md`.
+- **Class levels:** draft Class 11 / 12 split of the 55 chapters in `CHAPTER_CLASS_LEVELS`
+  (Physics 11 + 9, Chemistry 10 + 11, Mathematics 7 + 7), seeded by `seed:chapter-meta`, and
+  editable by an admin. **Owner still needs to confirm the split** (judgement calls:
+  p-Block Elements and Differential Calculus are placed in Class 12).
+- **Verification:** backend `tsc`, eslint, prettier clean; catalog + users + scripts specs
+  193 passing, full suite in the commit below. Over real HTTP: 401 unauthenticated; a
+  partial save does not complete the profile; the full save records `completedAt`; a past
+  month, an unknown class and smuggled `role`/`xp` fields are rejected with clear 400s; a
+  real month change returns `targetMonthChanged: true`.
+- **Frontend:** `AuthenticatedUser.personalization` type added; nothing renders it yet
+  (Phase B).
+
 _(Append dated entries as phases land.)_

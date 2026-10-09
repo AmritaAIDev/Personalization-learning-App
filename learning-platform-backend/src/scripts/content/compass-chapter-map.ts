@@ -180,3 +180,74 @@ export const CHAPTER_UNITS: Readonly<Record<string, string>> = {
   'Mathematics|Three Dimensional Geometry': 'Vectors & 3D',
   'Mathematics|Statistics and Probability': 'Probability & Statistics',
 };
+
+/**
+ * Class (11 or 12) each syllabus chapter is taught in, following the usual JEE
+ * Main split. This is a DRAFT for the owner to confirm: chapters that straddle
+ * both years sit with the class where most of the chapter is taught
+ * (p-Block Elements and Differential Calculus are Class 12), and an admin can
+ * correct any value afterwards in the chapter review screen.
+ */
+export const CHAPTER_CLASS_LEVELS: Readonly<Record<string, number>> = {
+  // Physics, Class 11
+  'Physics|Units and Measurements': 11,
+  'Physics|Kinematics': 11,
+  'Physics|Laws of Motion': 11,
+  'Physics|Work, Energy and Power': 11,
+  'Physics|Rotational Motion': 11,
+  'Physics|Gravitation': 11,
+  'Physics|Properties of Solids and Liquids': 11,
+  'Physics|Thermodynamics': 11,
+  'Physics|Kinetic Theory of Gases': 11,
+  'Physics|Oscillations': 11,
+  'Physics|Waves': 11,
+  // Physics, Class 12
+  'Physics|Electrostatics': 12,
+  'Physics|Current Electricity': 12,
+  'Physics|Magnetic Effects of Current and Magnetism': 12,
+  'Physics|Electromagnetic Induction and Alternating Currents': 12,
+  'Physics|Electromagnetic Waves': 12,
+  'Physics|Optics': 12,
+  'Physics|Dual Nature of Matter and Radiation': 12,
+  'Physics|Atoms and Nuclei': 12,
+  'Physics|Electronic Devices': 12,
+  // Chemistry, Class 11
+  'Chemistry|Some Basic Concepts of Chemistry': 11,
+  'Chemistry|Structure of Atom': 11,
+  'Chemistry|Classification of Elements': 11,
+  'Chemistry|Chemical Bonding and Molecular Structure': 11,
+  'Chemistry|States of Matter': 11,
+  'Chemistry|Chemical Thermodynamics': 11,
+  'Chemistry|Equilibrium': 11,
+  'Chemistry|Redox Reactions': 11,
+  'Chemistry|Basic Principles of Organic Chemistry': 11,
+  'Chemistry|Hydrocarbons': 11,
+  // Chemistry, Class 12
+  'Chemistry|Solutions': 12,
+  'Chemistry|Electrochemistry': 12,
+  'Chemistry|Chemical Kinetics': 12,
+  'Chemistry|p-Block Elements': 12,
+  'Chemistry|d- and f-Block Elements': 12,
+  'Chemistry|Coordination Compounds': 12,
+  'Chemistry|Haloalkanes and Haloarenes': 12,
+  'Chemistry|Alcohols, Phenols and Ethers': 12,
+  'Chemistry|Aldehydes, Ketones and Carboxylic Acids': 12,
+  'Chemistry|Amines': 12,
+  'Chemistry|Biomolecules': 12,
+  // Mathematics, Class 11
+  'Mathematics|Sets, Relations and Functions': 11,
+  'Mathematics|Complex Numbers and Quadratic Equations': 11,
+  'Mathematics|Permutations and Combinations': 11,
+  'Mathematics|Binomial Theorem': 11,
+  'Mathematics|Sequences and Series': 11,
+  'Mathematics|Trigonometric Functions': 11,
+  'Mathematics|Coordinate Geometry': 11,
+  // Mathematics, Class 12
+  'Mathematics|Matrices and Determinants': 12,
+  'Mathematics|Differential Calculus': 12,
+  'Mathematics|Integral Calculus': 12,
+  'Mathematics|Differential Equations': 12,
+  'Mathematics|Vector Algebra': 12,
+  'Mathematics|Three Dimensional Geometry': 12,
+  'Mathematics|Statistics and Probability': 12,
+};

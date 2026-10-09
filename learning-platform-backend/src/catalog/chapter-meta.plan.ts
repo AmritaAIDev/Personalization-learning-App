@@ -63,6 +63,11 @@ export interface ChapterMetaPlanInput {
   compass: readonly CompassChapter[];
   compassMap: Readonly<Record<string, ChapterRef | null>>;
   units: Readonly<Record<string, string>>;
+  /**
+   * Class (11 or 12) each chapter is taught in. When given, every chapter must
+   * have one; when omitted, rows carry `classLevel: null`.
+   */
+  classLevels?: Readonly<Record<string, number>>;
   authored: readonly AuthoredChapterMeta[];
 }
 
@@ -136,7 +141,20 @@ export function buildChapterMetaPlan(
       errors.push(`No unit defined for ${key}.`);
       continue;
     }
-    const base = { subject: ref.subject, chapter: ref.chapter, unit };
+    let classLevel: number | null = null;
+    if (input.classLevels) {
+      classLevel = input.classLevels[key] ?? null;
+      if (classLevel === null) {
+        errors.push(`No class level defined for ${key}.`);
+        continue;
+      }
+    }
+    const base = {
+      subject: ref.subject,
+      chapter: ref.chapter,
+      unit,
+      classLevel,
+    };
     const compassSources = compassByTarget.get(key);
     const authored = authoredByKey.get(key);
 

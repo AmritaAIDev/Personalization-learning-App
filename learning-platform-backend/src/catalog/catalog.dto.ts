@@ -2,6 +2,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -19,6 +20,12 @@ export class UpdateChapterMetaDto {
   @MinLength(1)
   @MaxLength(60)
   unit?: string;
+
+  /** Class the chapter is taught in; drives which chapters a Class 11 / 12 student is planned. */
+  @IsOptional()
+  @IsInt()
+  @IsIn([11, 12])
+  classLevel?: number;
 
   @IsOptional()
   @IsString()

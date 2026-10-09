@@ -3,6 +3,7 @@
 import Breadcrumb from "@/components/catalog/Breadcrumb";
 import GrowthPanel from "@/components/dashboard/GrowthPanel";
 import SyllabusProgressPanel from "@/components/dashboard/SyllabusProgressPanel";
+import FocusAreasPanel from "@/components/progress/FocusAreasPanel";
 import PlanProgressPanel from "@/components/progress/PlanProgressPanel";
 import { useSyllabusProgress } from "@/lib/useCatalog";
 
@@ -37,6 +38,10 @@ export default function ProgressPage() {
             detailLabel="Browse subjects"
           />
           <PlanProgressPanel />
+        </div>
+
+        <div className="mt-5">
+          <FocusAreasPanel />
         </div>
 
         <GrowthPanel />

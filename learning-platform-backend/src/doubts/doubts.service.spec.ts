@@ -32,6 +32,12 @@ function makeDoubt(overrides: Partial<Doubt> = {}): Doubt {
   } as Doubt;
 }
 
+/** Async generator that fails before producing any chunk. */
+async function* failingStream(): AsyncGenerator<string> {
+  yield* [];
+  throw new Error('LLM unavailable');
+}
+
 function makeThread(overrides: Partial<DoubtThread> = {}): DoubtThread {
   return {
     id: 'thread-1',
@@ -231,6 +237,91 @@ describe('DoubtsService', () => {
         ],
       }),
     );
+  });
+
+  it('streams the tutor answer chunk-by-chunk and persists the final card', async () => {
+    const created = makeDoubt({ assistantResponse: null });
+    const repository = {
+      create: jest.fn(() => created),
+      save: jest.fn().mockImplementation((doubt: Doubt) => {
+        created.assistantResponse = doubt.assistantResponse;
+        created.status = doubt.status;
+        created.answeredWithFallback = doubt.answeredWithFallback;
+        return Promise.resolve(created);
+      }),
+      find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue(created),
+    };
+    const agentService = {
+      generateTutorResponseStream: jest.fn(async function* () {
+        yield '### Gauss';
+        yield '\nFlux is enclosed charge.';
+      }),
+      retrieveSupplementalSources: jest.fn().mockResolvedValue([]),
+    };
+    const service = new DoubtsService(
+      makeThreadRepo() as never,
+      repository as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      agentService as never,
+    );
+
+    const doubt = await service.createForStreaming('user-1', {
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic: 'Gauss Law',
+      message: 'What does Gauss law say?',
+    } as never);
+    const received: string[] = [];
+    const card = await service.respondToDoubtStreaming(doubt, (text) =>
+      received.push(text),
+    );
+
+    expect(received).toEqual(['### Gauss', '\nFlux is enclosed charge.']);
+    expect(card.status).toBe(DoubtStatus.ANSWERED);
+    expect(card.assistantResponse).toBe('### Gauss\nFlux is enclosed charge.');
+    expect(card.answeredWithFallback).toBe(false);
+  });
+
+  it('persists the deterministic fallback when the stream fails before output', async () => {
+    const created = makeDoubt({ assistantResponse: null });
+    const repository = {
+      create: jest.fn(() => created),
+      save: jest.fn().mockImplementation((doubt: Doubt) => {
+        created.assistantResponse = doubt.assistantResponse;
+        created.status = doubt.status;
+        created.answeredWithFallback = doubt.answeredWithFallback;
+        return Promise.resolve(created);
+      }),
+      find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue(created),
+    };
+    const agentService = {
+      generateTutorResponseStream: jest.fn(() => failingStream()),
+      retrieveSupplementalSources: jest.fn().mockResolvedValue([]),
+    };
+    const service = new DoubtsService(
+      makeThreadRepo() as never,
+      repository as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      agentService as never,
+    );
+
+    const doubt = await service.createForStreaming('user-1', {
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic: 'Gauss Law',
+      message: 'What does Gauss law say?',
+    } as never);
+    const card = await service.respondToDoubtStreaming(doubt, () => undefined);
+
+    expect(card.status).toBe(DoubtStatus.ANSWERED);
+    expect(card.answeredWithFallback).toBe(true);
+    expect(card.assistantResponse).toContain('could not reach the AI tutor');
   });
 
   it('answers with a deterministic fallback when tutor generation is unavailable', async () => {

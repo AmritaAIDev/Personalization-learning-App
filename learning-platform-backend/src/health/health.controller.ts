@@ -49,10 +49,9 @@ export class HealthController {
         const t = setTimeout(() => controller.abort(), 1500);
         // Qdrant has no /health route; /collections answers 200 on cloud and
         // on the local compose instance, with or without auth.
-        const res = await fetch(
-          `${qdrantUrl.replace(/\/$/, '')}/collections`,
-          { signal: controller.signal },
-        );
+        const res = await fetch(`${qdrantUrl.replace(/\/$/, '')}/collections`, {
+          signal: controller.signal,
+        });
         clearTimeout(t);
         checks.qdrant = res.ok ? 'ok' : `http_${res.status}`;
         if (!res.ok) degraded = true;

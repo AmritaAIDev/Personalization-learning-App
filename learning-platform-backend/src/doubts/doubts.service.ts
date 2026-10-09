@@ -1,7 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AgentService, RetrievedSource } from '../agent/agent.service';
+import {
+  AgentService,
+  RetrievedSource,
+  type TutorPromptContext,
+} from '../agent/agent.service';
 import { TutorMessageType } from '../adaptive/adaptive.types';
 import { toCitations } from '../citation.util';
 import { LearningSessionItem } from '../adaptive/learning-session-item.entity';
@@ -79,6 +83,22 @@ export class DoubtsService {
   }
 
   async create(userId: string, dto: CreateDoubtDto): Promise<DoubtCard> {
+    const saved = await this.createDoubtRow(userId, dto);
+    // The tutor response is generated out-of-band so the create call returns
+    // immediately; the frontend polls until the doubt flips to ANSWERED.
+    void this.resolveDoubtInBackground(saved.id);
+    return this.toCard(saved);
+  }
+
+  /**
+   * Persists the doubt and its thread touch, shared by the polling and the
+   * streaming entry points. The streaming caller keeps the returned entity and
+   * resolves it itself instead of firing the background task.
+   */
+  private async createDoubtRow(
+    userId: string,
+    dto: CreateDoubtDto,
+  ): Promise<Doubt> {
     const thread = dto.threadId
       ? await this.threadsRepository.findOne({
           where: { id: dto.threadId, userId },
@@ -103,12 +123,54 @@ export class DoubtsService {
       answeredAt: null,
     });
 
-    // The tutor response is generated out-of-band so the create call returns
-    // immediately; the frontend polls until the doubt flips to ANSWERED.
     const saved = await this.doubtsRepository.save(doubt);
     await this.threadsRepository.update(thread.id, { updatedAt: new Date() });
-    void this.resolveDoubtInBackground(saved.id);
-    return this.toCard(saved);
+    return saved;
+  }
+
+  /**
+   * Streaming variant: creates the doubt, generates the answer chunk-by-chunk
+   * through `onChunk`, and persists the result. Deliberately does NOT fire the
+   * background resolver — this call owns resolution. If the client hangs up
+   * mid-generation the generator keeps running server-side and the answer is
+   * still saved, so the polling path remains a correct fallback.
+   */
+  async respondToDoubtStreaming(
+    doubt: Doubt,
+    onChunk: (text: string) => void,
+  ): Promise<DoubtCard> {
+    const { context, question } = await this.buildTutorContext(doubt);
+    let content = '';
+    let usedFallback = false;
+    try {
+      for await (const chunk of this.agentService.generateTutorResponseStream(
+        context,
+      )) {
+        content += chunk;
+        onChunk(chunk);
+      }
+      content = this.agentService.normalizeTutorResponse(content);
+    } catch (error) {
+      this.logger.warn(
+        `Streaming tutor response failed for doubt ${doubt.id}.`,
+        error as Error,
+      );
+      if (!content) {
+        content = this.buildFallbackTutorResponse(doubt, question);
+        usedFallback = true;
+      }
+      // A partial stream is a real (if truncated) answer: keep it as-is.
+    }
+    const resolved = await this.finalizeDoubt(doubt, content, usedFallback);
+    return this.toCard(resolved);
+  }
+
+  /** Streaming entry point: create the row without scheduling background work. */
+  async createForStreaming(
+    userId: string,
+    dto: CreateDoubtDto,
+  ): Promise<Doubt> {
+    return this.createDoubtRow(userId, dto);
   }
 
   async createThread(
@@ -167,19 +229,9 @@ export class DoubtsService {
         where: { id: doubtId },
       });
       if (!doubt || doubt.status !== DoubtStatus.OPEN) return;
-      const tutorResponse = await this.tryGenerateTutorResponse(doubt);
-      doubt.assistantResponse = tutorResponse.content;
-      doubt.answeredWithFallback = tutorResponse.usedFallback;
-      // Grounding is best-effort; a missing/slow vector store just means no
-      // citations, never a failed or delayed answer.
-      const sources = await this.agentService
-        .retrieveSupplementalSources(doubt.topic)
-        .catch(() => [] as RetrievedSource[]);
-      const citations = toCitations(sources);
-      doubt.sources = citations.length > 0 ? citations : null;
-      doubt.status = DoubtStatus.ANSWERED;
-      doubt.answeredAt = new Date();
-      await this.doubtsRepository.save(doubt);
+      const { content, usedFallback } =
+        await this.tryGenerateTutorResponse(doubt);
+      await this.finalizeDoubt(doubt, content, usedFallback);
     } catch (error) {
       this.logger.warn(
         `Background tutor response failed for doubt ${doubtId}.`,
@@ -188,16 +240,21 @@ export class DoubtsService {
     }
   }
 
-  private async tryGenerateTutorResponse(
+  /**
+   * Shared prompt inputs for both resolver paths: the anchored question (when
+   * the doubt points at one) and the thread's earlier turns.
+   */
+  private async buildTutorContext(
     doubt: Doubt,
-  ): Promise<{ content: string; usedFallback: boolean }> {
+  ): Promise<{
+    context: TutorPromptContext;
+    question: DoubtQuestionContext | null;
+  }> {
     const question = await this.resolveQuestionContext(doubt);
     const recentMessages = await this.loadThreadHistory(doubt);
-    try {
-      // When the doubt was raised from a specific question, fold that question
-      // in so the answer addresses the learner's actual attempt. Resolution is
-      // best-effort: a missing reference degrades to a topic-level explanation.
-      const content = await this.agentService.generateTutorResponse({
+    return {
+      question,
+      context: {
         subject: doubt.subject,
         chapter: doubt.chapter,
         topic: doubt.topic,
@@ -218,7 +275,39 @@ export class DoubtsService {
         // The learner is reviewing an item they already faced, so the worked
         // answer is theirs to see.
         answerRevealed: Boolean(question),
-      });
+      },
+    };
+  }
+
+  /** Persist the answer, best-effort citations, and flip the doubt to ANSWERED. */
+  private async finalizeDoubt(
+    doubt: Doubt,
+    content: string,
+    usedFallback: boolean,
+  ): Promise<Doubt> {
+    doubt.assistantResponse = content;
+    doubt.answeredWithFallback = usedFallback;
+    // Grounding is best-effort; a missing/slow vector store just means no
+    // citations, never a failed or delayed answer.
+    const sources = await this.agentService
+      .retrieveSupplementalSources(doubt.topic)
+      .catch(() => [] as RetrievedSource[]);
+    const citations = toCitations(sources);
+    doubt.sources = citations.length > 0 ? citations : null;
+    doubt.status = DoubtStatus.ANSWERED;
+    doubt.answeredAt = new Date();
+    return this.doubtsRepository.save(doubt);
+  }
+
+  private async tryGenerateTutorResponse(
+    doubt: Doubt,
+  ): Promise<{ content: string; usedFallback: boolean }> {
+    const { context, question } = await this.buildTutorContext(doubt);
+    try {
+      // When the doubt was raised from a specific question, fold that question
+      // in so the answer addresses the learner's actual attempt. Resolution is
+      // best-effort: a missing reference degrades to a topic-level explanation.
+      const content = await this.agentService.generateTutorResponse(context);
       return { content, usedFallback: false };
     } catch (error) {
       this.logger.warn(
@@ -387,7 +476,7 @@ export class DoubtsService {
     };
   }
 
-  private toCard(doubt: Doubt): DoubtCard {
+  toCard(doubt: Doubt): DoubtCard {
     return {
       id: doubt.id,
       threadId: doubt.threadId,

@@ -1085,7 +1085,8 @@ export class AgentService {
     }
   }
 
-  private normalizeTutorResponse(value: string): string {
+  /** Final guardrail for model output: trimmed, capped, never empty. */
+  normalizeTutorResponse(value: string): string {
     return (
       value.trim().slice(0, 2_000) ||
       'Let’s break the idea into one smaller step.'

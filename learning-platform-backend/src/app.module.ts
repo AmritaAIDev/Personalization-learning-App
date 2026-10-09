@@ -56,6 +56,7 @@ import { StudentAchievement } from './achievements/student-achievement.entity';
 import { BookmarksModule } from './bookmarks/bookmarks.module';
 import { BookmarkedQuestion } from './bookmarks/bookmarked-question.entity';
 import { RevisionModule } from './revision/revision.module';
+import { ChapterMeta } from './catalog/chapter-meta.entity';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -112,6 +113,7 @@ import { validateEnv } from './config/env.validation';
             TargetedPracticeQuestion,
             StudentAchievement,
             BookmarkedQuestion,
+            ChapterMeta,
           ],
           migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
           synchronize: false,

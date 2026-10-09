@@ -19,6 +19,7 @@ import { MisconceptionHit } from '../misconceptions/misconception-hit.entity';
 import { TargetedPracticeQuestion } from '../targeted-practice/targeted-practice-question.entity';
 import { StudentAchievement } from '../achievements/student-achievement.entity';
 import { BookmarkedQuestion } from '../bookmarks/bookmarked-question.entity';
+import { ChapterMeta } from '../catalog/chapter-meta.entity';
 import { LearningTopicState } from '../adaptive/learning-topic-state.entity';
 import { LearningSession } from '../adaptive/learning-session.entity';
 import { LearningSessionItem } from '../adaptive/learning-session-item.entity';
@@ -79,6 +80,7 @@ export default new DataSource({
     TargetedPracticeQuestion,
     StudentAchievement,
     BookmarkedQuestion,
+    ChapterMeta,
   ],
   migrations: [join(__dirname, '..', 'migrations', '*{.ts,.js}')],
   synchronize: false,

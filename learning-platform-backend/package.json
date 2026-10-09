@@ -56,7 +56,9 @@
     "lint:check": "eslint \"{src,apps,libs,test}/**/*.ts\" --max-warnings=0",
     "typecheck": "tsc --noEmit -p tsconfig.build.json",
     "migrate:deploy": "typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts",
-    "audit:coverage": "ts-node -r tsconfig-paths/register src/scripts/audit-question-coverage.ts"
+    "audit:coverage": "ts-node -r tsconfig-paths/register src/scripts/audit-question-coverage.ts",
+    "seed:chapter-meta": "ts-node -r tsconfig-paths/register src/scripts/seed-chapter-meta.ts",
+    "seed:chapter-meta:dry": "ts-node -r tsconfig-paths/register src/scripts/seed-chapter-meta.ts --dry-run"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",

@@ -338,6 +338,7 @@ export class TutorService {
       subject: session.subject,
       chapter: session.chapter,
       topic: session.topic,
+      userId: session.userId,
       learnerMessage: message.trim(),
       mode: TutorMessageType.GENERAL,
       questionText: question?.questionText,

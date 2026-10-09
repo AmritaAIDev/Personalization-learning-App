@@ -17,6 +17,7 @@ import {
   TutorMessageType,
 } from '../adaptive/adaptive.types';
 import { EmbeddingService } from './embedding.service';
+import { TutorMemoryService } from '../tutor-memory/tutor-memory.service';
 import { DEEPSEEK_DEFAULT_BASE_URL } from './llm-config';
 
 const UUID_REGEX =
@@ -149,6 +150,11 @@ export interface TutorPromptContext {
    * revealed explanation; it never relaxes the unrevealed-answer boundary.
    */
   depth?: ExplanationDepth;
+  /**
+   * Owner of the conversation. When present, the prompt may include the
+   * derived learner-memory block (weak skills, recent misses — never PII).
+   */
+  userId?: string;
 }
 
 /**
@@ -192,6 +198,7 @@ export class AgentService {
     private readonly embeddingService: EmbeddingService,
     @InjectRepository(Topic)
     private readonly topicsRepository: Repository<Topic>,
+    private readonly tutorMemory: TutorMemoryService,
   ) {
     const deepseekKey = this.configService.get<string>('DEEPSEEK_API_KEY');
     // The OpenAI SDK throws on an empty apiKey at construction time, so the
@@ -555,7 +562,7 @@ export class AgentService {
     this.assertConfigured();
     const { prompt, system, maxTokens } = context.explanatory
       ? await this.buildConceptExplanationPrompt(context)
-      : this.buildSocraticPrompt(context);
+      : await this.buildSocraticPrompt(context);
     const response = await this.callTextModel(prompt, system, maxTokens);
     return this.normalizeTutorResponse(response);
   }
@@ -573,15 +580,35 @@ export class AgentService {
     this.assertConfigured();
     const { prompt, system, maxTokens } = context.explanatory
       ? await this.buildConceptExplanationPrompt(context)
-      : this.buildSocraticPrompt(context);
+      : await this.buildSocraticPrompt(context);
     yield* this.streamTextModel(prompt, system, maxTokens);
   }
 
-  private buildSocraticPrompt(context: TutorPromptContext): {
-    prompt: string;
-    system: string;
-    maxTokens: number;
-  } {
+  /**
+   * The derived learner-memory block, or '' when unavailable. Best-effort by
+   * design: a memory failure must never block or fail a tutor answer.
+   */
+  private async learnerMemoryBlock(
+    context: TutorPromptContext,
+  ): Promise<string> {
+    if (!context.userId) return '';
+    try {
+      const memory = await this.tutorMemory.buildLearnerMemory(context.userId);
+      if (!memory) return '';
+      return [
+        '<learner-memory>',
+        memory,
+        'Use this to tailor depth and examples; you may refer to it naturally ("you found X tricky recently"), but never invent history beyond it. This is private learner data: do not echo identifiers or contact details.',
+        '</learner-memory>',
+      ].join('\n');
+    } catch {
+      return '';
+    }
+  }
+
+  private async buildSocraticPrompt(
+    context: TutorPromptContext,
+  ): Promise<{ prompt: string; system: string; maxTokens: number }> {
     // A free-form doubt has no hidden practice answer, so the Socratic
     // withholding path would only produce an evasive, truncated hint — that
     // case is routed to buildConceptExplanationPrompt by the caller instead.
@@ -630,6 +657,7 @@ export class AgentService {
       history
         ? `<recent-conversation>\n${history}\n</recent-conversation>`
         : '',
+      await this.learnerMemoryBlock(context),
       `<learner-message>\n${context.learnerMessage}\n</learner-message>`,
       context.answerRevealed
         ? 'Keep the response under 160 words across at most three short sections. Skip pleasantries and restatements of the question.'
@@ -710,6 +738,7 @@ export class AgentService {
       history
         ? `<recent-conversation>\n${history}\n</recent-conversation>`
         : '',
+      await this.learnerMemoryBlock(context),
       `<learner-doubt>\n${context.learnerMessage}\n</learner-doubt>`,
       'Length: conceptual answers under 180 words in at most four short sections; greetings and practice-question requests under 60 words. Do not restate the question.',
     ]

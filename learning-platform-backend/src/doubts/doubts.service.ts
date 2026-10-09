@@ -285,6 +285,7 @@ export class DoubtsService {
     return {
       question,
       context: {
+        userId: doubt.userId,
         subject: doubt.subject,
         chapter: doubt.chapter,
         topic: doubt.topic,

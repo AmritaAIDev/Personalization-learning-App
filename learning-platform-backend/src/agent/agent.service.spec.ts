@@ -1,5 +1,10 @@
 import { AgentService, type ExplanationDepth } from './agent.service';
 
+/** Shared learner-memory stub (module scope: used by every describe). */
+const tutorMemoryStub = {
+  buildLearnerMemory: jest.fn().mockResolvedValue(null),
+};
+
 /**
  * The depth toggle only shapes prompt wording, so it is verified directly on
  * the pure directive builder without touching the external model.
@@ -22,6 +27,7 @@ describe('AgentService depth directive', () => {
       configService as never,
       embeddingService as never,
       topicsRepository as never,
+      tutorMemoryStub as never,
     );
     directiveFor = (depth) =>
       (
@@ -65,6 +71,7 @@ describe('AgentService source retrieval (RAG citations)', () => {
       configService as never,
       embeddingService as never,
       topicsRepository as never,
+      tutorMemoryStub as never,
     );
   }
 
@@ -144,6 +151,7 @@ describe('AgentService misconception classification', () => {
       configService as never,
       embeddingService as never,
       topicsRepository as never,
+      tutorMemoryStub as never,
     );
   });
 
@@ -217,5 +225,58 @@ describe('AgentService without an LLM configured', () => {
         sourceMaterial: '',
       }),
     ).rejects.toThrow(/DEEPSEEK_API_KEY/);
+  });
+});
+
+describe('AgentService learner memory injection', () => {
+  type PromptBuilder = (context: unknown) => Promise<{ prompt: string }>;
+
+  function serviceWith(memory: string | null): AgentService {
+    return new AgentService(
+      { get: jest.fn().mockReturnValue(undefined) } as never,
+      { embed: jest.fn() } as never,
+      {} as never,
+      {
+        buildLearnerMemory: jest.fn().mockResolvedValue(memory),
+      } as never,
+    );
+  }
+
+  function socratic(
+    service: AgentService,
+    context: unknown,
+  ): Promise<{ prompt: string }> {
+    return (
+      service as unknown as { buildSocraticPrompt: PromptBuilder }
+    ).buildSocraticPrompt(context);
+  }
+
+  const baseContext = {
+    subject: 'Physics',
+    chapter: 'Electrostatics',
+    topic: 'Gauss Law',
+    learnerMessage: 'why is flux zero here',
+    mode: 'general',
+    answerRevealed: false,
+  };
+
+  it('embeds the memory block when the learner is identified', async () => {
+    const { prompt } = await socratic(
+      serviceWith('Weakest right now: Capacitance (mastery 17%, 2 attempts).'),
+      { ...baseContext, userId: 'user-1' },
+    );
+    expect(prompt).toContain('<learner-memory>');
+    expect(prompt).toContain('Weakest right now: Capacitance');
+    expect(prompt).toContain('never invent history beyond it');
+  });
+
+  it('omits the block without a user or without memory content', async () => {
+    const noUser = await socratic(serviceWith('anything'), baseContext);
+    expect(noUser.prompt).not.toContain('<learner-memory>');
+    const emptyMemory = await socratic(serviceWith(null), {
+      ...baseContext,
+      userId: 'user-1',
+    });
+    expect(emptyMemory.prompt).not.toContain('<learner-memory>');
   });
 });

@@ -192,12 +192,12 @@ changes learner behaviour and gets its own reviewed slice.
 ### 3.2 Unified persistent tutor with long-term memory
 **Modules:** `agent` · `doubts` · `adaptive` tutor · `notebook`
 
-- [ ] One `TutorMemoryService` holding a compact running profile (weak topics, recent mistakes, mastery) per learner.
-- [ ] All tutor/doubt prompts include this memory; the tutor references cross-surface history ("you've missed flux three times").
+- [x] One `TutorMemoryService` holding a compact running profile (weak topics, recent mistakes, mastery) per learner. _(2026-10-10: derived on demand from BKT + answer events — no table, 600-char cap, per-source degradation.)_
+- [x] All tutor/doubt prompts include this memory; the tutor references cross-surface history ("you've missed flux three times"). _(2026-10-10: `<learner-memory>` block in both prompt builders, blocking + streaming paths.)_
 - [ ] Frontend: a persistent tutor entry point accessible from any tab.
-- [ ] Privacy: memory derived from learner data only; no PII to the model.
-- [ ] Tests: memory assembly; prompt includes memory; truncation/safety.
-- [ ] Docs: `agent` README memory contract.
+- [x] Privacy: memory derived from learner data only; no PII to the model. _(topics/probabilities/relative times only; spec asserts no ids or emails)_
+- [x] Tests: memory assembly; prompt includes memory; truncation/safety. _(7 service + 2 injection specs)_
+- [~] Docs: `agent` README memory contract. _(tutor-memory README shipped; agent README note pending)_
 
 ### 3.3 AI-graded free-response / numerical JEE answers
 **Modules:** `question` entity (answer format) · `practice`/`diagnostics` grading · `agent`

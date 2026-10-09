@@ -62,7 +62,8 @@
     "seed:chapter-meta:dry": "ts-node -r tsconfig-paths/register src/scripts/seed-chapter-meta.ts --dry-run",
     "seed:compass-questions": "ts-node -r tsconfig-paths/register src/scripts/seed-compass-questions.ts",
     "seed:compass-questions:dry": "ts-node -r tsconfig-paths/register src/scripts/seed-compass-questions.ts --dry-run",
-    "audit:catalog": "ts-node -r tsconfig-paths/register src/scripts/audit-catalog-alignment.ts"
+    "audit:catalog": "ts-node -r tsconfig-paths/register src/scripts/audit-catalog-alignment.ts",
+    "fit:bkt-params": "ts-node -r tsconfig-paths/register src/scripts/fit-bkt-params.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",

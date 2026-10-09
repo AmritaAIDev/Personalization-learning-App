@@ -1,0 +1,13 @@
+{
+  "fittedAt": "2026-10-09T19:36:59.957Z",
+  "sequences": 71,
+  "observations": 334,
+  "baselineLogLikelihood": -212.19178463838497,
+  "logLikelihood": -194.96862420972172,
+  "params": {
+    "pL0": 0.15,
+    "pT": 0.01,
+    "pG": 0.31,
+    "pS": 0.09
+  }
+}

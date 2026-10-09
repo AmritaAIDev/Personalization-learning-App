@@ -1,16 +1,51 @@
-﻿import { LearningTopicStatus } from '../adaptive/adaptive.types';
+import { LearningTopicStatus } from '../adaptive/adaptive.types';
+import type { AccuracyStat } from './catalog.analytics.types';
 import type {
   ChapterProgressStatus,
+  MasteryLevel,
   TopicProgressStatus,
 } from './catalog.types';
 
-/** Below this average accuracy a started chapter is flagged "needs work". */
-export const NEEDS_WORK_BELOW = 40;
+/**
+ * Score bands ported from JEE Compass (`curriculum.js` / `SubjectDetail`):
+ *  - a chapter below COMPLETED_AT has not really been learned yet,
+ *  - COMPLETED_AT up to MASTERED_AT counts as "in progress",
+ *  - MASTERED_AT and above is "mastered".
+ */
+export const COMPLETED_AT = 40;
+export const MASTERED_AT = 70;
+
+/** Compass "mastery levels": 20-point bands with a 1-5 star rating. */
+const MASTERY_LEVELS: ReadonlyArray<{
+  min: number;
+  label: string;
+  stars: number;
+}> = [
+  { min: 0, label: 'Beginner', stars: 1 },
+  { min: 20, label: 'Developing', stars: 2 },
+  { min: 40, label: 'Proficient', stars: 3 },
+  { min: 60, label: 'Advanced', stars: 4 },
+  { min: 80, label: 'Master', stars: 5 },
+];
+
+/** Null score (nothing answered yet) has no level, never "Beginner". */
+export function masteryLevel(score: number | null): MasteryLevel | null {
+  if (score === null) return null;
+  const bounded = Math.max(0, Math.min(100, score));
+  let level = MASTERY_LEVELS[0];
+  for (const candidate of MASTERY_LEVELS) {
+    if (bounded >= candidate.min) level = candidate;
+  }
+  const next = MASTERY_LEVELS.find((candidate) => candidate.min > bounded);
+  return {
+    label: level.label,
+    stars: level.stars,
+    next: next ? { label: next.label, pointsNeeded: next.min - bounded } : null,
+  };
+}
 
 export interface TopicStateInput {
   status: LearningTopicStatus;
-  totalAnswered: number;
-  totalCorrect: number;
 }
 
 export interface TopicProgress {
@@ -19,24 +54,28 @@ export interface TopicProgress {
   answered: number;
 }
 
+/**
+ * A topic's score always comes from its graded answers (every source, see
+ * answer-events.query.ts). Its status comes from the adaptive engine when it
+ * has tracked the topic (mastered / paused), otherwise it is simply active
+ * once the student has answered anything and not started before that.
+ */
 export function topicProgress(
   state: TopicStateInput | undefined,
+  answers: AccuracyStat,
 ): TopicProgress {
-  if (!state) return { status: 'NOT_STARTED', score: null, answered: 0 };
-  const status: TopicProgressStatus =
-    state.status === LearningTopicStatus.MASTERED
-      ? 'MASTERED'
-      : state.status === LearningTopicStatus.PAUSED_FOR_PREREQUISITE
-        ? 'PAUSED'
-        : 'ACTIVE';
-  return {
-    status,
-    score:
-      state.totalAnswered > 0
-        ? Math.round((state.totalCorrect / state.totalAnswered) * 100)
-        : null,
-    answered: state.totalAnswered,
-  };
+  let status: TopicProgressStatus;
+  if (state) {
+    status =
+      state.status === LearningTopicStatus.MASTERED
+        ? 'MASTERED'
+        : state.status === LearningTopicStatus.PAUSED_FOR_PREREQUISITE
+          ? 'PAUSED'
+          : 'ACTIVE';
+  } else {
+    status = answers.answered > 0 ? 'ACTIVE' : 'NOT_STARTED';
+  }
+  return { status, score: answers.accuracy, answered: answers.answered };
 }
 
 export function mean(values: readonly number[]): number | null {
@@ -47,32 +86,37 @@ export function mean(values: readonly number[]): number | null {
 export interface ChapterProgress {
   status: ChapterProgressStatus;
   score: number | null;
+  mastery: MasteryLevel | null;
   masteredTopics: number;
   startedTopics: number;
 }
 
+/** Status from the chapter's score, using the Compass bands above. */
+export function chapterStatusFromScore(
+  score: number | null,
+  started: boolean,
+): ChapterProgressStatus {
+  if (score === null) return started ? 'IN_PROGRESS' : 'NOT_STARTED';
+  if (score < COMPLETED_AT) return 'NEEDS_WORK';
+  if (score < MASTERED_AT) return 'IN_PROGRESS';
+  return 'MASTERED';
+}
+
 /**
- * A chapter is MASTERED only when it has topics and all are mastered;
- * NOT_STARTED when nothing was touched; NEEDS_WORK when it was started but
- * accuracy is low; otherwise IN_PROGRESS.
+ * `score` is the chapter's pooled accuracy over all its graded answers, the
+ * same number the analytics page shows for the chapter.
  */
 export function chapterProgress(
   topics: readonly TopicProgress[],
+  score: number | null,
 ): ChapterProgress {
   const masteredTopics = topics.filter((t) => t.status === 'MASTERED').length;
   const startedTopics = topics.filter((t) => t.status !== 'NOT_STARTED').length;
-  const score = mean(
-    topics.flatMap((t) => (t.score === null ? [] : [t.score])),
-  );
-  let status: ChapterProgressStatus;
-  if (topics.length > 0 && masteredTopics === topics.length) {
-    status = 'MASTERED';
-  } else if (startedTopics === 0) {
-    status = 'NOT_STARTED';
-  } else if (score !== null && score < NEEDS_WORK_BELOW) {
-    status = 'NEEDS_WORK';
-  } else {
-    status = 'IN_PROGRESS';
-  }
-  return { status, score, masteredTopics, startedTopics };
+  return {
+    status: chapterStatusFromScore(score, startedTopics > 0),
+    score,
+    mastery: masteryLevel(score),
+    masteredTopics,
+    startedTopics,
+  };
 }

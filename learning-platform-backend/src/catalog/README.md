@@ -60,15 +60,53 @@ unknown or malformed slug returns 404.
 | GET | `/api/catalog/subjects` | student | per-subject counts, chapters started/mastered, average score |
 | GET | `/api/catalog/subjects/:subject/chapters` | student | unit tabs + chapter cards (status, score, topic preview, question count) |
 | GET | `/api/catalog/subjects/:subject/chapters/:chapter` | student | chapter summary, **published** study guide or `null`, per-topic progress, bookmark count |
+| GET | `/api/catalog/subjects/:subject/analytics` | student | per-subject analytics (see below) |
+| GET | `/api/catalog/subjects/:subject/chapters/:chapter/analytics` | student | the same overall / recall / application / Bloom / insights block for one chapter |
 | GET | `/api/catalog/admin/chapters` | admin | every chapter with its meta source/status for review |
 | PATCH | `/api/catalog/admin/chapters/:topicId/meta` | admin | edit / publish a study guide (`UpdateChapterMetaDto`) |
 
-How progress is computed (`catalog.progress.ts`, pure and unit-tested):
-topic score = correct / answered from `learning_topic_states`; chapter score =
-mean of scored topics; chapter status is `MASTERED` (all topics mastered),
-`NOT_STARTED`, `NEEDS_WORK` (started, mean below 40) or `IN_PROGRESS`.
-Question counts are PUBLISHED questions grouped by subject/chapter/topic
-names, which match the `topics` tree exactly (verified on the seeded DB).
+## One source of truth for scores
+
+Every score the catalog returns (topic, chapter card, subject summary and the
+analytics endpoints) is computed from the same set of **graded answers**,
+loaded by `answer-events.query.ts` with a single `UNION ALL` over
+`practice_answers`, `diagnostic_answers`, `mock_test_answers` and
+`learning_answers`. So a chapter card, the subject summary and the analytics
+page can never disagree. Ungraded answers (`is_correct IS NULL`) are ignored;
+adaptive learning counts only the first attempt at each question; AI-generated
+questions are scoped by their learning session. Question counts are PUBLISHED
+questions grouped by subject/chapter/topic names, which match the `topics`
+tree exactly (verified on the seeded DB).
+
+## Criteria ported from JEE Compass
+
+The look, structure and API are ours; the *rules* are Compass's (see
+`curriculum.js`, `SubjectDetail`, `Analytics`, the subject dashboards):
+
+| Rule | Value | Where |
+|---|---|---|
+| Chapter status from score | none = Not started, below 40 = Needs work, 40-69 = In progress, 70+ = Mastered | `catalog.progress.ts` |
+| Chapter "completed" | score 40+ | `COMPLETED_AT` |
+| Mastery level | Beginner 0-19, Developing 20-39, Proficient 40-59, Advanced 60-79, Master 80+ (1-5 stars) | `masteryLevel` |
+| Bloom levels | Remember, Understand, Apply, Analyze | `BLOOM_LEVELS` |
+| Bloom / skill band | 70+ Strong, 40-69 Average, below 40 Weak | `skillBand` |
+| Formula vs numerical accuracy | Remember+Understand vs everything else | `recall` / `application` |
+| Strong / weak topics | 70%+ strong, below 50% weak, top 5 each (no minimum answers) | `STRONG_AT_OR_ABOVE`, `WEAK_BELOW`, `MIN_TOPIC_ANSWERS` |
+| Skill-card tips | switch at 60% (Accuracy, Formula recall, Problem solving) | `skillCards` |
+| Insight cards | strongest / weakest Bloom level, "practice more X", study tip from overall accuracy (<40 / <70 / else) | `insightsFor` |
+
+A student with no answers gets `null` accuracy and no mastery level (never a
+fake 0% or "Beginner"); empty weeks in the trend are `null`, not 0.
+Compass's "speed" skill is not ported (answer times are not recorded for
+every source).
+
+## Subject analytics payload
+
+`SubjectAnalytics` (`catalog.analytics.types.ts`): `overall`, `mastery`,
+`skills[]`, `insights`, `recall`, `application`, `bloom[]` (per level: accuracy,
+band, mastery), `chaptersCompleted`, `units[]` (for the radar), `chapters[]`,
+`strongTopics[]`, `weakTopics[]`, `trend[]` (last 8 weeks, Monday-based UTC) and
+`hasData`. All of it is built by the pure `buildSubjectAnalytics`.
 
 ## RBAC
 
@@ -78,11 +116,6 @@ names, which match the `topics` tree exactly (verified on the seeded DB).
   non-empty overview and at least one objective, and a published row cannot be
   blanked out.
 - Inputs are validated by `UpdateChapterMetaDto` (length/array caps, enums).
-
-## Not in this module yet
-
-Bloom breakdown and formula-vs-numerical accuracy per subject arrive with the
-Phase 4 analytics endpoint; the chapter detail deliberately stays cheap.
 
 ## Ops
 

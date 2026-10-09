@@ -3,16 +3,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { LearningTopicState } from '../adaptive/learning-topic-state.entity';
 import { BookmarkedQuestion } from '../bookmarks/bookmarked-question.entity';
 import { Question, QuestionPublicationStatus } from '../question.entity';
 import { Topic, TopicLevel } from '../topics/topic.entity';
+import { loadAnswerEvents } from './answer-events.query';
+import { tally, type AnswerEvent } from './catalog.analytics';
 import { findBySlug, slugify } from './catalog.slug';
 import {
+  COMPLETED_AT,
   chapterProgress,
-  mean,
+  masteryLevel,
   topicProgress,
   type TopicProgress,
 } from './catalog.progress';
@@ -33,6 +36,11 @@ import type {
 
 const TOPIC_PREVIEW_COUNT = 4;
 
+export interface SubjectOutline {
+  subject: { slug: string; name: string };
+  chapters: Array<{ slug: string; name: string; unit: string | null }>;
+}
+
 interface ChapterNode {
   topic: Topic;
   subtopics: Topic[];
@@ -48,6 +56,10 @@ interface CatalogContext {
   meta: Map<string, ChapterMeta>;
   questionCounts: Map<string, number>;
   states: Map<string, LearningTopicState>;
+  /** Graded answers from every source, indexed for chapter and topic lookups. */
+  events: AnswerEvent[];
+  chapterEvents: Map<string, AnswerEvent[]>;
+  topicEvents: Map<string, AnswerEvent[]>;
 }
 
 interface BuiltChapter {
@@ -76,6 +88,7 @@ export class CatalogService {
     private readonly questions: Repository<Question>,
     @InjectRepository(BookmarkedQuestion)
     private readonly bookmarks: Repository<BookmarkedQuestion>,
+    @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
   async getSubjects(userId: string): Promise<CatalogSubjectSummary[]> {
@@ -84,10 +97,19 @@ export class CatalogService {
       const built = subject.chapters.map((chapter) =>
         this.buildChapter(ctx, subject, chapter),
       );
+      // Pooled accuracy over every answer in the subject: the same figure the
+      // subject analytics page shows.
+      const averageScore = tally(
+        ctx.events.filter((event) => event.subject === subject.topic.name),
+      ).accuracy;
       return {
         slug: slugify(subject.topic.name),
         name: subject.topic.name,
         chapterCount: built.length,
+        chaptersCompleted: built.filter(
+          (c) => c.summary.score !== null && c.summary.score >= COMPLETED_AT,
+        ).length,
+        mastery: masteryLevel(averageScore),
         chaptersStarted: built.filter((c) => c.summary.status !== 'NOT_STARTED')
           .length,
         chaptersMastered: built.filter((c) => c.summary.status === 'MASTERED')
@@ -97,11 +119,7 @@ export class CatalogService {
           (sum, c) => sum + c.summary.questionCount,
           0,
         ),
-        averageScore: mean(
-          built.flatMap((c) =>
-            c.summary.score === null ? [] : [c.summary.score],
-          ),
-        ),
+        averageScore,
       };
     });
   }
@@ -284,6 +302,20 @@ export class CatalogService {
     };
   }
 
+  /** Subject + chapter list (slugs, names, units) without any student data. */
+  async getSubjectOutline(subjectSlug: string): Promise<SubjectOutline> {
+    const ctx = await this.loadContext(null);
+    const subject = this.requireSubject(ctx, subjectSlug);
+    return {
+      subject: { slug: slugify(subject.topic.name), name: subject.topic.name },
+      chapters: subject.chapters.map((chapter) => ({
+        slug: slugify(chapter.topic.name),
+        name: chapter.topic.name,
+        unit: ctx.meta.get(chapter.topic.id)?.unit ?? null,
+      })),
+    };
+  }
+
   private requireSubject(ctx: CatalogContext, slug: string): SubjectNode {
     const subject = findBySlug(
       ctx.tree.map((node) => ({ name: node.topic.name, node })),
@@ -301,7 +333,10 @@ export class CatalogService {
     const subjectName = subject.topic.name;
     const topics: CatalogTopicDetail[] = chapter.subtopics.map((subtopic) => {
       const key = scopeKey(subjectName, chapter.topic.name, subtopic.name);
-      const progress: TopicProgress = topicProgress(ctx.states.get(key));
+      const progress: TopicProgress = topicProgress(
+        ctx.states.get(key),
+        tally(ctx.topicEvents.get(key) ?? []),
+      );
       return {
         name: subtopic.name,
         status: progress.status,
@@ -310,7 +345,13 @@ export class CatalogService {
         questionCount: ctx.questionCounts.get(key) ?? 0,
       };
     });
-    const progress = chapterProgress(topics);
+    // Pooled accuracy over all the chapter's answers (even ones whose topic is
+    // not in the tree), identical to the chapter row on the analytics page.
+    const progress = chapterProgress(
+      topics,
+      tally(ctx.chapterEvents.get(`${subjectName}|${chapter.topic.name}`) ?? [])
+        .accuracy,
+    );
     const meta = ctx.meta.get(chapter.topic.id);
     const published =
       meta?.status === ChapterMetaStatus.PUBLISHED && Boolean(meta.overview);
@@ -336,7 +377,7 @@ export class CatalogService {
 
   /** `userId` null loads no per-student state (admin review). */
   private async loadContext(userId: string | null): Promise<CatalogContext> {
-    const [rows, metaRows, countRows, stateRows] = await Promise.all([
+    const [rows, metaRows, countRows, stateRows, events] = await Promise.all([
       this.topics.find({
         where: {
           level: In([
@@ -370,7 +411,22 @@ export class CatalogService {
       userId
         ? this.topicStates.find({ where: { userId } })
         : Promise.resolve([] as LearningTopicState[]),
+      userId
+        ? loadAnswerEvents(this.dataSource, userId, null, null)
+        : Promise.resolve([] as AnswerEvent[]),
     ]);
+
+    const chapterEvents = new Map<string, AnswerEvent[]>();
+    const topicEvents = new Map<string, AnswerEvent[]>();
+    for (const event of events) {
+      const chapterKey = `${event.subject}|${event.chapter}`;
+      chapterEvents.set(chapterKey, [
+        ...(chapterEvents.get(chapterKey) ?? []),
+        event,
+      ]);
+      const topicKey = scopeKey(event.subject, event.chapter, event.topic);
+      topicEvents.set(topicKey, [...(topicEvents.get(topicKey) ?? []), event]);
+    }
 
     const subjects = rows.filter((r) => r.level === TopicLevel.SUBJECT);
     const chaptersByParent = new Map<string, Topic[]>();
@@ -405,6 +461,9 @@ export class CatalogService {
       states: new Map(
         stateRows.map((s) => [scopeKey(s.subject, s.chapter, s.topic), s]),
       ),
+      events,
+      chapterEvents,
+      topicEvents,
     };
   }
 }

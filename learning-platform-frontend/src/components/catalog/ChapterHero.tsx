@@ -8,6 +8,7 @@ import {
 } from "@/lib/catalog";
 import type { CatalogChapterDetail } from "@/lib/catalog-types";
 import { getSubjectTheme } from "@/lib/subject-theme";
+import MasteryStars from "./MasteryStars";
 import ProgressRing from "./ProgressRing";
 
 export default function ChapterHero({
@@ -93,6 +94,16 @@ export default function ChapterHero({
             <p className="text-xs text-white/75">
               {chapter.masteredTopics}/{chapter.topicCount} topics mastered
             </p>
+            {chapter.mastery ? (
+              <div className="mt-1.5 md:flex md:justify-center">
+                <MasteryStars
+                  mastery={chapter.mastery}
+                  showNext
+                  tone="text-white"
+                  labelTone="text-white"
+                />
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

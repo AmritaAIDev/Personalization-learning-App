@@ -78,6 +78,23 @@ describe('CatalogService', () => {
   const topicStates = { find: jest.fn() };
   const questions = { createQueryBuilder: jest.fn() };
   const bookmarks = { createQueryBuilder: jest.fn() };
+  const dataSource = { query: jest.fn() };
+
+  /** Graded answer rows as the SQL returns them. */
+  const answerRows = (
+    chapter: string,
+    topic: string,
+    total: number,
+    correct: number,
+  ) =>
+    Array.from({ length: total }, (_, index) => ({
+      subject: 'Physics',
+      chapter,
+      topic,
+      bloom: 'Apply',
+      is_correct: index < correct,
+      answered_at: '2026-10-06T09:00:00Z',
+    }));
   let service: CatalogService;
 
   beforeEach(() => {
@@ -94,10 +111,10 @@ describe('CatalogService', () => {
         chapter: 'Optics',
         topic: 'Lenses',
         status: LearningTopicStatus.ACTIVE,
-        totalAnswered: 10,
-        totalCorrect: 8,
       },
     ]);
+    // 10 graded answers in Optics / Lenses, 8 of them correct -> 80%
+    dataSource.query.mockResolvedValue(answerRows('Optics', 'Lenses', 10, 8));
     questions.createQueryBuilder.mockReturnValue(
       chain([
         { subject: 'Physics', chapter: 'Optics', topic: 'Lenses', count: '12' },
@@ -116,6 +133,7 @@ describe('CatalogService', () => {
       topicStates as never,
       questions as never,
       bookmarks as never,
+      dataSource as never,
     );
   });
 
@@ -125,7 +143,9 @@ describe('CatalogService', () => {
       slug: 'physics',
       chapterCount: 2,
       chaptersStarted: 1,
-      chaptersMastered: 0,
+      chaptersMastered: 1,
+      chaptersCompleted: 1,
+      mastery: { label: 'Master', stars: 5, next: null },
       topicCount: 3,
       questionCount: 15,
       averageScore: 80,
@@ -137,7 +157,8 @@ describe('CatalogService', () => {
     expect(result.units).toEqual([{ name: 'Optics', count: 1 }]);
     const optic = result.chapters.find((c) => c.slug === 'optics');
     expect(optic).toMatchObject({
-      status: 'IN_PROGRESS',
+      status: 'MASTERED',
+      mastery: { label: 'Master', stars: 5 },
       score: 80,
       hasMeta: true,
       difficulty: ChapterDifficulty.HARD,
@@ -151,6 +172,44 @@ describe('CatalogService', () => {
       difficulty: null,
       studyMinutes: null,
     });
+  });
+
+  it('scores a practice-only student who has no adaptive learning state', async () => {
+    topicStates.find.mockResolvedValue([]);
+    dataSource.query.mockResolvedValue(
+      answerRows('Waves', 'Doppler Effect', 4, 1),
+    );
+    const result = await service.getSubjectChapters('u1', 'physics');
+    expect(result.chapters.find((c) => c.slug === 'waves')).toMatchObject({
+      score: 25,
+      status: 'NEEDS_WORK',
+      startedTopics: 1,
+      mastery: { label: 'Developing', stars: 2 },
+    });
+    const [subject] = await service.getSubjects('u1');
+    expect(subject).toMatchObject({ averageScore: 25, chaptersCompleted: 0 });
+    const detail = await service.getChapterDetail('u1', 'physics', 'waves');
+    expect(detail.topics[0]).toMatchObject({
+      status: 'ACTIVE',
+      score: 25,
+      answered: 4,
+    });
+  });
+
+  it('counts chapter answers even when no sub-topic matches them', async () => {
+    dataSource.query.mockResolvedValue(
+      answerRows('Optics', 'Untracked topic', 5, 5),
+    );
+    const result = await service.getSubjectChapters('u1', 'physics');
+    expect(result.chapters.find((c) => c.slug === 'optics')).toMatchObject({
+      score: 100,
+      status: 'MASTERED',
+    });
+  });
+
+  it('loads no answers for the admin review list', async () => {
+    await service.listChapterMetaForReview();
+    expect(dataSource.query).not.toHaveBeenCalled();
   });
 
   it('hides unpublished study guides from students', async () => {

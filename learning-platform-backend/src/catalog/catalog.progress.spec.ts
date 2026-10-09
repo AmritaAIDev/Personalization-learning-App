@@ -1,6 +1,8 @@
 import { LearningTopicStatus } from '../adaptive/adaptive.types';
 import {
   chapterProgress,
+  chapterStatusFromScore,
+  masteryLevel,
   mean,
   topicProgress,
   type TopicProgress,
@@ -11,74 +13,139 @@ const t = (
   score: number | null,
 ): TopicProgress => ({ status, score, answered: score === null ? 0 : 10 });
 
+const answers = (answered: number, correct: number) => ({
+  answered,
+  correct,
+  accuracy: answered > 0 ? Math.round((correct / answered) * 100) : null,
+});
+
 describe('topicProgress', () => {
-  it('is NOT_STARTED with no score when there is no learning state', () => {
-    expect(topicProgress(undefined)).toEqual({
+  it('is NOT_STARTED with no score when untracked and unanswered', () => {
+    expect(topicProgress(undefined, answers(0, 0))).toEqual({
       status: 'NOT_STARTED',
       score: null,
       answered: 0,
     });
   });
 
-  it('maps learning statuses and rounds accuracy', () => {
+  it('is ACTIVE once answered, even if the adaptive engine never tracked it', () => {
+    expect(topicProgress(undefined, answers(3, 2))).toEqual({
+      status: 'ACTIVE',
+      score: 67,
+      answered: 3,
+    });
+  });
+
+  it('takes mastered / paused status from the adaptive engine', () => {
     expect(
-      topicProgress({
-        status: LearningTopicStatus.MASTERED,
-        totalAnswered: 3,
-        totalCorrect: 2,
-      }),
+      topicProgress({ status: LearningTopicStatus.MASTERED }, answers(3, 2)),
     ).toEqual({ status: 'MASTERED', score: 67, answered: 3 });
     expect(
-      topicProgress({
-        status: LearningTopicStatus.PAUSED_FOR_PREREQUISITE,
-        totalAnswered: 4,
-        totalCorrect: 1,
-      }).status,
+      topicProgress(
+        { status: LearningTopicStatus.PAUSED_FOR_PREREQUISITE },
+        answers(4, 1),
+      ).status,
     ).toBe('PAUSED');
   });
 
   it('leaves the score null when nothing was answered yet', () => {
     expect(
-      topicProgress({
-        status: LearningTopicStatus.ACTIVE,
-        totalAnswered: 0,
-        totalCorrect: 0,
-      }),
+      topicProgress({ status: LearningTopicStatus.ACTIVE }, answers(0, 0)),
     ).toEqual({ status: 'ACTIVE', score: null, answered: 0 });
+  });
+});
+
+describe('masteryLevel (JEE Compass bands)', () => {
+  it.each([
+    [0, 'Beginner', 1],
+    [19, 'Beginner', 1],
+    [20, 'Developing', 2],
+    [39, 'Developing', 2],
+    [40, 'Proficient', 3],
+    [59, 'Proficient', 3],
+    [60, 'Advanced', 4],
+    [79, 'Advanced', 4],
+    [80, 'Master', 5],
+    [100, 'Master', 5],
+  ])('score %i is %s with %i stars', (score, label, stars) => {
+    expect(masteryLevel(score)).toMatchObject({ label, stars });
+  });
+
+  it('has no level without a score, instead of calling it Beginner', () => {
+    expect(masteryLevel(null)).toBeNull();
+  });
+
+  it('reports how far the next band is, and none at the top', () => {
+    expect(masteryLevel(55)?.next).toEqual({
+      label: 'Advanced',
+      pointsNeeded: 5,
+    });
+    expect(masteryLevel(95)?.next).toBeNull();
+  });
+
+  it('clamps out-of-range scores', () => {
+    expect(masteryLevel(-5)?.label).toBe('Beginner');
+    expect(masteryLevel(140)?.label).toBe('Master');
+  });
+});
+
+describe('chapterStatusFromScore (Compass: <40 needs work, <70 in progress)', () => {
+  it.each([
+    [null, false, 'NOT_STARTED'],
+    [null, true, 'IN_PROGRESS'],
+    [0, true, 'NEEDS_WORK'],
+    [39, true, 'NEEDS_WORK'],
+    [40, true, 'IN_PROGRESS'],
+    [69, true, 'IN_PROGRESS'],
+    [70, true, 'MASTERED'],
+    [100, true, 'MASTERED'],
+  ] as const)('score %s (started %s) -> %s', (score, started, expected) => {
+    expect(chapterStatusFromScore(score, started)).toBe(expected);
   });
 });
 
 describe('chapterProgress', () => {
   it('is NOT_STARTED for an untouched or empty chapter', () => {
-    expect(chapterProgress([]).status).toBe('NOT_STARTED');
+    expect(chapterProgress([], null).status).toBe('NOT_STARTED');
     expect(
-      chapterProgress([t('NOT_STARTED', null), t('NOT_STARTED', null)]).status,
+      chapterProgress([t('NOT_STARTED', null), t('NOT_STARTED', null)], null)
+        .status,
     ).toBe('NOT_STARTED');
   });
 
-  it('is MASTERED only when every topic is mastered', () => {
-    expect(chapterProgress([t('MASTERED', 90), t('MASTERED', 80)]).status).toBe(
-      'MASTERED',
+  it('derives status and mastery from the pooled chapter score', () => {
+    const result = chapterProgress(
+      [t('MASTERED', 90), t('ACTIVE', 60), t('NOT_STARTED', null)],
+      75,
     );
-    expect(
-      chapterProgress([t('MASTERED', 90), t('NOT_STARTED', null)]).status,
-    ).toBe('IN_PROGRESS');
+    expect(result).toMatchObject({
+      status: 'MASTERED',
+      score: 75,
+      masteredTopics: 1,
+      startedTopics: 2,
+    });
+    expect(result.mastery?.label).toBe('Advanced');
   });
 
-  it('flags NEEDS_WORK when started with low accuracy', () => {
-    expect(chapterProgress([t('ACTIVE', 30), t('NOT_STARTED', null)])).toEqual({
-      status: 'NEEDS_WORK',
-      score: 30,
-      masteredTopics: 0,
-      startedTopics: 1,
+  it('flags NEEDS_WORK when started with a low score', () => {
+    expect(
+      chapterProgress([t('ACTIVE', 30), t('NOT_STARTED', null)], 30),
+    ).toMatchObject({ status: 'NEEDS_WORK', score: 30, startedTopics: 1 });
+  });
+
+  it('is IN_PROGRESS when started but nothing has been scored yet', () => {
+    expect(chapterProgress([t('ACTIVE', null)], null)).toMatchObject({
+      status: 'IN_PROGRESS',
+      score: null,
+      mastery: null,
     });
   });
 
-  it('averages only topics that have a score', () => {
-    expect(
-      chapterProgress([t('ACTIVE', 60), t('ACTIVE', 80), t('ACTIVE', null)])
-        .score,
-    ).toBe(70);
+  it('scores a chapter that has answers but no tracked sub-topics', () => {
+    expect(chapterProgress([], 55)).toMatchObject({
+      status: 'IN_PROGRESS',
+      score: 55,
+    });
   });
 
   it('mean of nothing is null', () => {

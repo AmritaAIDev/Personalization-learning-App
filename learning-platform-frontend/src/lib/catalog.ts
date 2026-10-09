@@ -4,6 +4,7 @@ import type {
   CatalogTopicDetail,
   ChapterDifficulty,
   ChapterProgressStatus,
+  SkillBand,
   TopicProgressStatus,
 } from "./catalog-types";
 
@@ -149,4 +150,45 @@ export function pickFocusTopic(
 
 export function pluralize(count: number, singular: string): string {
   return `${count} ${singular}${count === 1 ? "" : "s"}`;
+}
+
+export function analyticsHref(subjectSlug: string): string {
+  return `${subjectHref(subjectSlug)}/analytics`;
+}
+
+/** Compass bands: 70%+ Strong, 40-69% Average, below 40% Weak. */
+export const BAND_TONE: Record<SkillBand, string> = {
+  Strong: "bg-success-tint text-success",
+  Average: "bg-warning-tint text-warning",
+  Weak: "bg-danger-tint text-danger",
+};
+
+/**
+ * Fill colour for a score bar, using the Compass cut-offs
+ * (70+ green, 40+ amber, above 0 red, otherwise neutral).
+ */
+export function barTone(score: number | null): string {
+  if (score === null || score <= 0) return "bg-hairline";
+  if (score >= 70) return "bg-success";
+  if (score >= 40) return "bg-warning";
+  return "bg-danger";
+}
+
+/** "5 Oct" from an ISO date (YYYY-MM-DD), without timezone drift. */
+export function formatWeekLabel(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  if (!year || !month || !day) return isoDate;
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
+/** Same 70 / 40 cut-offs the backend uses for Strong / Average / Weak. */
+export function skillBandFor(accuracy: number | null): SkillBand | null {
+  if (accuracy === null) return null;
+  if (accuracy >= 70) return "Strong";
+  if (accuracy >= 40) return "Average";
+  return "Weak";
 }

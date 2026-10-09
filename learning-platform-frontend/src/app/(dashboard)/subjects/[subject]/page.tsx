@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { BookOpen, Map as MapIcon } from "lucide-react";
+import { BarChart3, BookOpen, Map as MapIcon } from "lucide-react";
 import Breadcrumb from "@/components/catalog/Breadcrumb";
 import { CatalogError, CatalogSkeleton } from "@/components/catalog/CatalogState";
 import ChapterCard from "@/components/catalog/ChapterCard";
@@ -12,6 +12,7 @@ import UnitFilterTabs from "@/components/catalog/UnitFilterTabs";
 import EmptyState from "@/components/EmptyState";
 import {
   ALL_UNITS,
+  analyticsHref,
   filterChaptersByUnit,
   resolveUnit,
   subjectStats,
@@ -50,6 +51,14 @@ function SubjectContent({ subjectSlug }: { subjectSlug: string }) {
               { label: data?.subject.name ?? "Subject" },
             ]}
           />
+          <div className="flex flex-wrap gap-2">
+          <Link
+            href={analyticsHref(subjectSlug)}
+            className="inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary-strong"
+          >
+            <BarChart3 className="h-4 w-4" aria-hidden="true" />
+            Analytics
+          </Link>
           <Link
             href="/journey"
             className="inline-flex min-h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-4 text-sm font-semibold text-ink-soft transition hover:border-primary/30 hover:text-primary"
@@ -57,6 +66,7 @@ function SubjectContent({ subjectSlug }: { subjectSlug: string }) {
             <MapIcon className="h-4 w-4" aria-hidden="true" />
             Guided journey
           </Link>
+          </div>
         </div>
 
         {loading ? <CatalogSkeleton label="Loading chapters" /> : null}

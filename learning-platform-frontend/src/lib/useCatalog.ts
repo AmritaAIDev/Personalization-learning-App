@@ -6,6 +6,8 @@ import type {
   CatalogChapterDetail,
   CatalogSubjectChapters,
   CatalogSubjectSummary,
+  ChapterAnalytics,
+  SubjectAnalytics,
 } from "./catalog-types";
 import { useApiResource } from "./useApiResource";
 
@@ -53,4 +55,29 @@ export function useChapterDetail(subject: string, chapter: string) {
   const resource = useApiResource(fetcher, "This chapter could not be loaded.");
   useRefreshOnLearning(resource.reload);
   return resource;
+}
+
+export function useSubjectAnalytics(subject: string) {
+  const fetcher = useCallback(
+    () =>
+      apiFetch<SubjectAnalytics>(
+        `/api/catalog/subjects/${encodeURIComponent(subject)}/analytics`,
+      ),
+    [subject],
+  );
+  const resource = useApiResource(fetcher, "Analytics could not be loaded.");
+  useRefreshOnLearning(resource.reload);
+  return resource;
+}
+
+/** Mount the consumer only when the data is needed: loading starts on mount. */
+export function useChapterAnalytics(subject: string, chapter: string) {
+  const fetcher = useCallback(
+    () =>
+      apiFetch<ChapterAnalytics>(
+        `/api/catalog/subjects/${encodeURIComponent(subject)}/chapters/${encodeURIComponent(chapter)}/analytics`,
+      ),
+    [subject, chapter],
+  );
+  return useApiResource(fetcher, "Bloom analytics could not be loaded.");
 }

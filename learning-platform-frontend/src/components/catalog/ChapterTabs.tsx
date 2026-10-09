@@ -1,19 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { ArrowRight, Info, Sigma, Target } from "lucide-react";
 import { TOPIC_STATUS, pluralize, scoreTone } from "@/lib/catalog";
 import type { CatalogChapterDetail } from "@/lib/catalog-types";
 import { learningUrl } from "@/lib/learning";
+import { useChapterAnalytics } from "@/lib/useCatalog";
+import BloomPanel from "./BloomPanel";
+import Tabs from "./Tabs";
 
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "objectives", label: "Objectives" },
   { id: "topics", label: "Topics" },
   { id: "formulas", label: "Key formulas" },
+  { id: "bloom", label: "Bloom's taxonomy" },
 ] as const;
-type TabId = (typeof TABS)[number]["id"];
 
 function Empty({ icon: Icon, children }: { icon: typeof Info; children: ReactNode }) {
   return (
@@ -151,73 +154,66 @@ function FormulasPanel({ detail }: { detail: CatalogChapterDetail }) {
   );
 }
 
-/** Chapter study-guide tabs (roving tabindex, arrow-key navigation). */
+function BloomTab({ detail }: { detail: CatalogChapterDetail }) {
+  // Mounted only while this tab is open, so the request happens on first view.
+  const { data, loading, error, reload } = useChapterAnalytics(
+    detail.chapter.subjectSlug,
+    detail.chapter.slug,
+  );
+  if (loading) {
+    return (
+      <div
+        className="h-48 rounded-2xl skeleton"
+        role="status"
+        aria-label="Loading Bloom analytics"
+      />
+    );
+  }
+  if (error || !data) {
+    return (
+      <div
+        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-danger/20 bg-danger-tint p-4 text-sm text-danger"
+        role="alert"
+      >
+        <span>{error ?? "Bloom analytics could not be loaded."}</span>
+        <button
+          type="button"
+          onClick={() => void reload()}
+          className="inline-flex min-h-9 items-center rounded-full bg-danger px-4 text-xs font-semibold text-white"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+  return (
+    <BloomPanel
+      bloom={data.bloom}
+      insights={data.insights}
+      hasData={data.hasData}
+      scopeLabel="this chapter"
+    />
+  );
+}
+
+/** Chapter study-guide tabs (shared keyboard-accessible tablist). */
 export default function ChapterTabs({
   detail,
 }: {
   detail: CatalogChapterDetail;
 }) {
-  const [active, setActive] = useState<TabId>("overview");
-  const refs = useRef<Array<HTMLButtonElement | null>>([]);
-
-  const onKeyDown = (event: KeyboardEvent, index: number) => {
-    let next = index;
-    if (event.key === "ArrowRight") next = (index + 1) % TABS.length;
-    else if (event.key === "ArrowLeft") {
-      next = (index - 1 + TABS.length) % TABS.length;
-    } else if (event.key === "Home") next = 0;
-    else if (event.key === "End") next = TABS.length - 1;
-    else return;
-    event.preventDefault();
-    setActive(TABS[next].id);
-    refs.current[next]?.focus();
-  };
-
   return (
-    <section className="rounded-2xl border border-hairline bg-surface shadow-[0_8px_22px_rgba(20,20,30,0.04)]">
-      <div
-        role="tablist"
-        aria-label="Chapter study guide"
-        className="flex gap-1 overflow-x-auto border-b border-hairline px-2 pt-2 [scrollbar-width:thin]"
-      >
-        {TABS.map((tab, index) => {
-          const selected = tab.id === active;
-          return (
-            <button
-              key={tab.id}
-              ref={(node) => {
-                refs.current[index] = node;
-              }}
-              id={`chapter-tab-${tab.id}`}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              aria-controls={`chapter-panel-${tab.id}`}
-              tabIndex={selected ? 0 : -1}
-              onClick={() => setActive(tab.id)}
-              onKeyDown={(event) => onKeyDown(event, index)}
-              className={`min-h-11 shrink-0 whitespace-nowrap rounded-t-xl border-b-2 px-4 text-sm font-semibold transition motion-reduce:transition-none ${
-                selected
-                  ? "border-primary text-primary"
-                  : "border-transparent text-ink-mute hover:text-ink"
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-      <div
-        role="tabpanel"
-        id={`chapter-panel-${active}`}
-        aria-labelledby={`chapter-tab-${active}`}
-        className="min-w-0 p-4 sm:p-6"
-      >
-        {active === "overview" ? <OverviewPanel detail={detail} /> : null}
-        {active === "objectives" ? <ObjectivesPanel detail={detail} /> : null}
-        {active === "topics" ? <TopicsPanel detail={detail} /> : null}
-        {active === "formulas" ? <FormulasPanel detail={detail} /> : null}
-      </div>
-    </section>
+    <Tabs
+      tabs={TABS}
+      label="Chapter study guide"
+      idPrefix="chapter"
+      render={(active) => {
+        if (active === "overview") return <OverviewPanel detail={detail} />;
+        if (active === "objectives") return <ObjectivesPanel detail={detail} />;
+        if (active === "topics") return <TopicsPanel detail={detail} />;
+        if (active === "formulas") return <FormulasPanel detail={detail} />;
+        return <BloomTab detail={detail} />;
+      }}
+    />
   );
 }

@@ -47,9 +47,27 @@ find that" state with a way back, not a blank page.
   44px-class touch targets, `motion-reduce` respected, proper `tablist`/`tab`/
   `tabpanel` roles, `progressbar` roles with values, light and dark via tokens.
 
+## Analytics (Phase 4)
+
+`/subjects/[subject]/analytics` renders `SubjectAnalyticsView`: a banner with the
+Compass mastery level (stars and "x% more to reach the next level"), four
+headline numbers, and four tabs (Overview, Bloom's taxonomy, Chapters, Topics).
+The chapter page gains a **Bloom's taxonomy** tab and an **Analytics** action.
+
+| Component | Role |
+|---|---|
+| `Tabs` | Shared accessible tablist; only the active panel mounts, so the chapter Bloom tab fetches on first open. |
+| `BloomPanel` | Four level cards (accuracy, band, mastery stars), skill radar and insight cards. |
+| `SkillCards`, `InsightCards` | Compass's skill cards with tips and its four insight cards. |
+| `RadarChart`, `TrendChart` | Dependency-free SVG charts in the app tokens; missing data is a dash or an empty slot, never a fake 0%. |
+| `MasteryStars` | Compass mastery level; renders nothing for a student with no answers. |
+
+All scoring rules (status bands, mastery levels, Bloom bands, tips) live in the
+backend and are documented in `learning-platform-backend/src/catalog/README.md`;
+the frontend only displays what the API returns.
+
 ## Not here yet
 
-- **Bloom tab and per-subject analytics link**: arrive with Phase 4.
 - **Cross-links** from the dashboard subject cards, search results and the
   command palette: Phase 5.
 

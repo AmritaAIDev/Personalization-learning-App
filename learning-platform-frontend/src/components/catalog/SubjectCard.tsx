@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { pluralize, scoreTone, subjectHref } from "@/lib/catalog";
 import type { CatalogSubjectSummary } from "@/lib/catalog-types";
 import { getSubjectTheme } from "@/lib/subject-theme";
+import MasteryStars from "./MasteryStars";
 
 export default function SubjectCard({
   subject,
@@ -90,6 +91,12 @@ export default function SubjectCard({
             </dd>
           </div>
         </dl>
+
+        {subject.mastery ? (
+          <div className="mt-4">
+            <MasteryStars mastery={subject.mastery} />
+          </div>
+        ) : null}
 
         <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">
           Browse chapters

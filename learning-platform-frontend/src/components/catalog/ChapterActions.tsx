@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpenCheck, Layers, PencilLine } from "lucide-react";
-import { pickFocusTopic } from "@/lib/catalog";
+import {
+  ArrowRight,
+  BarChart3,
+  BookOpenCheck,
+  Layers,
+  PencilLine,
+} from "lucide-react";
+import { analyticsHref, pickFocusTopic } from "@/lib/catalog";
 import type { CatalogChapterDetail } from "@/lib/catalog-types";
 import { learningUrl } from "@/lib/learning";
 
@@ -56,10 +62,18 @@ export default function ChapterActions({
       href: learningUrl(scope, { tab: "flashcards" }),
       primary: false,
     },
+    {
+      key: "analytics",
+      icon: BarChart3,
+      label: "Analytics",
+      description: `How you're doing in ${detail.chapter.subject}`,
+      href: analyticsHref(detail.chapter.subjectSlug),
+      primary: false,
+    },
   ];
 
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {actions.map(({ key, icon: Icon, label, description, href, primary }) => (
         <Link
           key={key}

@@ -13,6 +13,7 @@ import {
 import type { CatalogChapterSummary } from "@/lib/catalog-types";
 import { getSubjectTheme } from "@/lib/subject-theme";
 import ChapterStatusPill from "./ChapterStatusPill";
+import MasteryStars from "./MasteryStars";
 import ProgressRing from "./ProgressRing";
 
 const MAX_CHIPS = 4;
@@ -100,6 +101,11 @@ export default function ChapterCard({
           <p className="truncate text-xs font-semibold text-ink-soft">
             {masteredLabel}
           </p>
+          {chapter.mastery ? (
+            <div className="mt-1">
+              <MasteryStars mastery={chapter.mastery} />
+            </div>
+          ) : null}
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-mute">
             <span>{pluralize(chapter.questionCount, "question")}</span>
             {studyTime ? (

@@ -58,6 +58,7 @@ function detail(overrides: Partial<CatalogChapterDetail> = {}): CatalogChapterDe
       hasMeta: true,
       status: "IN_PROGRESS",
       score: 80,
+      mastery: { label: "Master", stars: 5, next: null },
       masteredTopics: 0,
       startedTopics: 1,
     },

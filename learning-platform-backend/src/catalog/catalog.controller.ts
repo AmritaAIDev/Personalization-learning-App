@@ -13,6 +13,7 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { UpdateChapterMetaDto } from './catalog.dto';
+import { CatalogAnalyticsService } from './catalog-analytics.service';
 import { CatalogService } from './catalog.service';
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,99}$/i;
@@ -29,7 +30,10 @@ function assertSlug(value: string): string {
 @Controller('api/catalog')
 @Throttle({ default: { limit: 60, ttl: 60_000 } })
 export class CatalogController {
-  constructor(private readonly catalogService: CatalogService) {}
+  constructor(
+    private readonly catalogService: CatalogService,
+    private readonly analyticsService: CatalogAnalyticsService,
+  ) {}
 
   @Get('subjects')
   async getSubjects(@CurrentUser() user: AuthenticatedUser) {
@@ -57,6 +61,34 @@ export class CatalogController {
   ) {
     return {
       data: await this.catalogService.getChapterDetail(
+        user.id,
+        assertSlug(subject),
+        assertSlug(chapter),
+      ),
+    };
+  }
+
+  @Get('subjects/:subject/analytics')
+  async getSubjectAnalytics(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('subject') subject: string,
+  ) {
+    return {
+      data: await this.analyticsService.getSubjectAnalytics(
+        user.id,
+        assertSlug(subject),
+      ),
+    };
+  }
+
+  @Get('subjects/:subject/chapters/:chapter/analytics')
+  async getChapterAnalytics(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('subject') subject: string,
+    @Param('chapter') chapter: string,
+  ) {
+    return {
+      data: await this.analyticsService.getChapterAnalytics(
         user.id,
         assertSlug(subject),
         assertSlug(chapter),

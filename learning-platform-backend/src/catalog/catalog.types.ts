@@ -10,10 +10,21 @@ export type TopicProgressStatus =
 export type ChapterProgressStatus =
   'NOT_STARTED' | 'IN_PROGRESS' | 'NEEDS_WORK' | 'MASTERED';
 
+/** JEE Compass mastery level: Beginner..Master with a 1-5 star rating. */
+export interface MasteryLevel {
+  label: string;
+  stars: number;
+  /** The next band and how many points away it is; null at the top. */
+  next: { label: string; pointsNeeded: number } | null;
+}
+
 export interface CatalogSubjectSummary {
   slug: string;
   name: string;
   chapterCount: number;
+  /** Chapters whose score has reached the "completed" band (40%+). */
+  chaptersCompleted: number;
+  mastery: MasteryLevel | null;
   chaptersStarted: number;
   chaptersMastered: number;
   topicCount: number;
@@ -38,6 +49,7 @@ export interface CatalogChapterSummary {
   hasMeta: boolean;
   status: ChapterProgressStatus;
   score: number | null;
+  mastery: MasteryLevel | null;
   masteredTopics: number;
   startedTopics: number;
 }

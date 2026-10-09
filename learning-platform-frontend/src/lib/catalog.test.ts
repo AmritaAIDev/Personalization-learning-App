@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   ALL_UNITS,
+  analyticsHref,
+  barTone,
+  formatWeekLabel,
+  skillBandFor,
   chapterHref,
   filterChaptersByUnit,
   formatStudyTime,
@@ -33,6 +37,7 @@ function chapter(
     hasMeta: false,
     status: "NOT_STARTED",
     score: null,
+    mastery: null,
     masteredTopics: 0,
     startedTopics: 0,
     ...overrides,
@@ -175,5 +180,33 @@ describe("small helpers", () => {
     expect(scoreTone(80)).toBe("text-success");
     expect(scoreTone(50)).toBe("text-warning");
     expect(scoreTone(10)).toBe("text-danger");
+  });
+});
+
+describe("analytics helpers (Compass bands)", () => {
+  it("skillBandFor uses the 70 / 40 cut-offs and null for no data", () => {
+    expect(skillBandFor(null)).toBeNull();
+    expect(skillBandFor(70)).toBe("Strong");
+    expect(skillBandFor(69)).toBe("Average");
+    expect(skillBandFor(40)).toBe("Average");
+    expect(skillBandFor(39)).toBe("Weak");
+  });
+
+  it("barTone colours bars like Compass: 70+ green, 40+ amber, >0 red, else neutral", () => {
+    expect(barTone(null)).toBe("bg-hairline");
+    expect(barTone(0)).toBe("bg-hairline");
+    expect(barTone(10)).toBe("bg-danger");
+    expect(barTone(40)).toBe("bg-warning");
+    expect(barTone(70)).toBe("bg-success");
+  });
+
+  it("formats week labels without timezone drift", () => {
+    expect(formatWeekLabel("2026-10-05")).toBe("5 Oct");
+    expect(formatWeekLabel("2026-01-01")).toBe("1 Jan");
+    expect(formatWeekLabel("garbage")).toBe("garbage");
+  });
+
+  it("builds the analytics href", () => {
+    expect(analyticsHref("physics")).toBe("/subjects/physics/analytics");
   });
 });

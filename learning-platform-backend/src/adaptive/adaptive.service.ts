@@ -14,6 +14,7 @@ import { User } from '../users/user.entity';
 import { XP_PER_PROFILE_LEVEL } from '../users/user-progress';
 import { AgentService } from '../agent/agent.service';
 import { MisconceptionsService } from '../misconceptions/misconceptions.service';
+import { KnowledgeTracingService } from '../knowledge-tracing/knowledge-tracing.service';
 import {
   AskTutorDto,
   CreateLearningSessionDto,
@@ -231,6 +232,7 @@ export class AdaptiveService {
     private readonly questionsRepository: Repository<Question>,
     @InjectRepository(Topic)
     private readonly topicsRepository: Repository<Topic>,
+    private readonly knowledgeTracing: KnowledgeTracingService,
   ) {}
 
   /**
@@ -820,9 +822,27 @@ export class AdaptiveService {
         } else if (
           completion.transition === LearningSessionTransition.MASTERED
         ) {
-          state.status = LearningTopicStatus.MASTERED;
-          state.masteredAt = new Date();
-          kind = 'MASTERED';
+          // BKT confirmation: the accuracy gate proves this round; only
+          // cross-surface evidence (practice, diagnostics, mock tests and
+          // prior sessions) may claim the topic is mastered. The final
+          // correct answer is not yet committed, so it is passed as the
+          // pending observation to avoid double-counting.
+          const confirmed = await this.knowledgeTracing.isConfirmedMastery(
+            state.userId,
+            session.subject,
+            session.chapter,
+            session.topic,
+            [true],
+          );
+          if (confirmed) {
+            state.status = LearningTopicStatus.MASTERED;
+            state.masteredAt = new Date();
+            kind = 'MASTERED';
+          } else {
+            session.transition = LearningSessionTransition.REINFORCE;
+            kind = 'REINFORCE';
+            prefetchLevel = state.currentLevel;
+          }
         } else {
           kind = 'REINFORCE';
           prefetchLevel = completion.nextLevel;

@@ -99,6 +99,55 @@ describe('KnowledgeTracingService', () => {
     });
   });
 
+  it('confirms mastery only when cross-surface evidence supports it', async () => {
+    const strong = makeService(
+      Array.from({ length: 6 }, (_, m) => eventRow('Gauss Law', true, m)),
+    );
+    await expect(
+      strong.service.isConfirmedMastery(
+        'user-1',
+        'Physics',
+        'Electrostatics',
+        'Gauss Law',
+        [true],
+      ),
+    ).resolves.toBe(true);
+
+    // A single prior correct answer plus this round is thin evidence.
+    const thin = makeService([eventRow('Gauss Law', true, 0)]);
+    await expect(
+      thin.service.isConfirmedMastery(
+        'user-1',
+        'Physics',
+        'Electrostatics',
+        'Gauss Law',
+        [true],
+      ),
+    ).resolves.toBe(false);
+  });
+
+  it('folds pending observations after committed ones, in order', async () => {
+    const { service } = makeService([
+      eventRow('Gauss Law', true, 1),
+      eventRow('Gauss Law', true, 2),
+    ]);
+    const withPending = await service.projectedPKnow(
+      'user-1',
+      'Physics',
+      'Electrostatics',
+      'Gauss Law',
+      [true, true],
+    );
+    const withoutPending = await service.projectedPKnow(
+      'user-1',
+      'Physics',
+      'Electrostatics',
+      'Gauss Law',
+    );
+    expect(withPending).toBeGreaterThan(withoutPending);
+    expect(withPending).toBeLessThanOrEqual(1);
+  });
+
   it('passes the subject filter through to the events query', async () => {
     const { service, dataSource } = makeService([]);
     await service.masteryFor('user-1', 'Physics');

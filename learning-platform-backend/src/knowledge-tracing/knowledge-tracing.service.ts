@@ -3,7 +3,13 @@ import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import type { AnswerEvent } from '../catalog/catalog.analytics';
 import { loadAnswerEvents } from '../catalog/answer-events.query';
-import { bktTrace, LOW_DATA_ATTEMPTS, masteryBand, MasteryBand } from './bkt';
+import {
+  bktTrace,
+  LOW_DATA_ATTEMPTS,
+  MASTERY_BANDS,
+  masteryBand,
+  MasteryBand,
+} from './bkt';
 import { SkillMastery } from './skill-mastery.entity';
 
 export interface SkillMasteryView {
@@ -102,6 +108,55 @@ export class KnowledgeTracingService {
       },
       { mastered: 0, developing: 0, weak: 0, tracked: 0 },
     );
+  }
+
+  /**
+   * Contract for the adaptive engine: may a round at the top coordinate be
+   * confirmed as MASTERED? Answers the question the per-round accuracy gate
+   * cannot — "does the learner's evidence *across* practice, diagnostics,
+   * mock tests and prior sessions actually support mastery?"
+   *
+   * `pendingObservations` carries graded results from the caller's still
+   * uncommitted transaction (typically the final correct answer of the
+   * round being decided), so the projection never double-counts them.
+   */
+  async isConfirmedMastery(
+    userId: string,
+    subject: string,
+    chapter: string,
+    topic: string,
+    pendingObservations: readonly boolean[] = [],
+  ): Promise<boolean> {
+    const pKnow = await this.projectedPKnow(
+      userId,
+      subject,
+      chapter,
+      topic,
+      pendingObservations,
+    );
+    return pKnow >= MASTERY_BANDS.MASTERED_AT;
+  }
+
+  /** BKT probability after all committed events plus pending observations. */
+  async projectedPKnow(
+    userId: string,
+    subject: string,
+    chapter: string,
+    topic: string,
+    pendingObservations: readonly boolean[] = [],
+  ): Promise<number> {
+    const events = await loadAnswerEvents(
+      this.dataSource,
+      userId,
+      subject,
+      chapter,
+    );
+    const committed = events
+      .filter((event) => event.topic === topic)
+      .sort((a, b) => a.answeredAt.getTime() - b.answeredAt.getTime())
+      .slice(-MAX_OBSERVATIONS_PER_SKILL)
+      .map((event) => event.isCorrect);
+    return bktTrace([...committed, ...pendingObservations]);
   }
 
   /**

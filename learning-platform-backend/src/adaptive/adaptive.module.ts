@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AgentModule } from '../agent/agent.module';
 import { MisconceptionsModule } from '../misconceptions/misconceptions.module';
+import { KnowledgeTracingModule } from '../knowledge-tracing/knowledge-tracing.module';
 import { Question } from '../question.entity';
 import { Topic } from '../topics/topic.entity';
 import { User } from '../users/user.entity';
@@ -26,6 +27,7 @@ import { TutorService } from './tutor.service';
   imports: [
     AgentModule,
     MisconceptionsModule,
+    KnowledgeTracingModule,
     TypeOrmModule.forFeature([
       User,
       Topic,

@@ -59,6 +59,24 @@ weakness detection.
 list with mastery bars, band + low-data chips and a Learn deep link, and
 refreshes on the app-wide learning-data-updated event.
 
+## Adaptive engine integration (v1, 2026-10-10)
+
+`AdaptiveService` consults one contract from this module:
+`isConfirmedMastery(userId, subject, chapter, topic, pendingObservations)`.
+
+- **Where:** only at the top coordinate, where a passed accuracy round would
+  set `LearningTopicStatus.MASTERED`. If BKT's projected P(L) is below 0.85
+  the transition degrades to REINFORCE — the learner stays at the top
+  coordinate and rounds again.
+- **Why pending observations:** the deciding answer is inside the caller's
+  open transaction, so it is passed in explicitly; committed history is
+  folded first. No double-counting, no reading uncommitted rows.
+- **Deliberately not wired (future reviewed slices):** skip-ahead
+  placement, weak-signal demotion, and replacing the per-round 80% gate.
+  Each changes learner behaviour and needs its own evaluation + UI story.
+- Dependency direction: `adaptive → knowledge-tracing` (never the reverse);
+  the threshold and model live here, callers only ask yes/no.
+
 ## RBAC
 
 Read-only and self-scoped: every query is keyed by `@CurrentUser().id`.

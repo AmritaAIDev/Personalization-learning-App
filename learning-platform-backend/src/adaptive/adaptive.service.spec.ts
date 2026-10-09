@@ -25,7 +25,13 @@ import { Question } from '../question.entity';
 import { Topic } from '../topics/topic.entity';
 import { AgentService } from '../agent/agent.service';
 import { MisconceptionsService } from '../misconceptions/misconceptions.service';
+import type { KnowledgeTracingService } from '../knowledge-tracing/knowledge-tracing.service';
 import { User } from '../users/user.entity';
+
+/** BKT always confirms in unit tests unless a case overrides it. */
+const tracingStub = {
+  isConfirmedMastery: jest.fn().mockResolvedValue(true),
+} as unknown as KnowledgeTracingService;
 
 describe('AdaptiveService flashcard reviews', () => {
   const card: Flashcard = {
@@ -76,6 +82,7 @@ describe('AdaptiveService flashcard reviews', () => {
       reviews,
       {} as Repository<Question>,
       {} as Repository<Topic>,
+      tracingStub,
     );
     return { service, save };
   }
@@ -240,6 +247,7 @@ describe('AdaptiveService flashcard reviews', () => {
       {} as Repository<FlashcardReview>,
       questions,
       {} as Repository<Topic>,
+      tracingStub,
     );
     return { service, generateFlashcards, saveFlashcards, countFlashcards };
   }
@@ -385,6 +393,7 @@ describe('AdaptiveService second-attempt tutor routing', () => {
       {} as Repository<FlashcardReview>,
       {} as Repository<Question>,
       {} as Repository<Topic>,
+      tracingStub,
     );
     const question: LearningQuestionReference = {
       source: LearningQuestionSource.CURATED,
@@ -475,6 +484,7 @@ describe('AdaptiveService learning state projections', () => {
       {} as Repository<FlashcardReview>,
       questionsRepository as Repository<Question>,
       topicsRepository as Repository<Topic>,
+      tracingStub,
     );
     return { service, statesRepository, sessionsRepository };
   }
@@ -872,6 +882,7 @@ describe('AdaptiveService row-level answer mutations', () => {
       {} as Repository<FlashcardReview>,
       {} as Repository<Question>,
       {} as Repository<Topic>,
+      tracingStub,
     );
     return {
       service: service as unknown as {

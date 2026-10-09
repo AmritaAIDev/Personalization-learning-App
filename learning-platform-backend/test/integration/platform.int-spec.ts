@@ -107,7 +107,10 @@ describe('Platform integration (real database)', () => {
     it('reports a healthy database through the readiness probe', async () => {
       const response = await httpRequest().get('/health').expect(200);
 
-      expect(response.body).toMatchObject({ status: 'ok', database: 'ok' });
+      // Overall status is "degraded" when optional services (LLM key, vector
+      // store) are absent, as in CI; this test is about the database.
+      expect(response.body).toMatchObject({ database: 'ok' });
+      expect(['ok', 'degraded']).toContain(response.body.status);
     });
 
     it('has every migration applied, leaving nothing pending', async () => {

@@ -32,8 +32,11 @@ jobs:
       - name: Lint
         run: npm run lint:check
 
+      # React's production build has no `act`, so tests need a non-production env.
       - name: Unit tests
         run: npm test
+        env:
+          NODE_ENV: test
 
       - name: Build
         run: npm run build

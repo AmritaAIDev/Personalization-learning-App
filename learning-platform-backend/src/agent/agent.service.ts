@@ -694,7 +694,7 @@ export class AgentService {
 
     const guidance = context.questionText
       ? 'The learner raised this doubt about the specific question shown below. Anchor your answer to it: address the option they chose if given, explain the correct reasoning and why the tempting wrong choices fail, and finish with a one-line takeaway. Explain fully — the answer key is already available to them.'
-      : 'Answer the doubt directly and completely. Teach the idea: state the concept, give the key relationship or formula, add one short worked example or intuition, and finish with a one-line takeaway. There is no hidden answer to withhold — do not stall with only a question back.';
+      : 'Answer exactly what the learner’s message asks, within the topic scope. A greeting or short remark gets a one-or-two-sentence friendly reply asking what they want to clear up — never lecture at a greeting. A request for a practice question gets exactly one well-formed question (with options if it is an MCQ) and no answer until they try. A conceptual doubt gets a full explanation: the concept, the key relationship or formula, one short worked example or intuition, and a one-line takeaway. Never stall a genuine doubt with only a question back.';
 
     const prompt = [
       'You are a clear, encouraging JEE tutor answering a learner’s conceptual doubt.',
@@ -702,7 +702,7 @@ export class AgentService {
       `Topic scope: ${context.subject} / ${context.chapter} / ${topicName}.`,
       guidance,
       this.depthDirective(context.depth),
-      'Format as safe Markdown only: use ### headings when useful, - bullets, 1. numbered steps, **bold** sparingly, `inline code` for symbols, and $inline$ / $$display$$ LaTeX for mathematics. Do not use HTML, tables, images, or links.',
+      'Format as safe Markdown only: use ### headings when useful, - bullets, 1. numbered steps, **bold** sparingly, `inline code` for symbols, and $inline$ / $$display$$ LaTeX for mathematics. Put every $$display$$ expression on its own line with blank lines around it, never inside a sentence. Do not use HTML, tables, images, or links.',
       questionBlock,
       grounding
         ? `<trusted-study-material>\n${grounding}\n</trusted-study-material>`
@@ -711,7 +711,7 @@ export class AgentService {
         ? `<recent-conversation>\n${history}\n</recent-conversation>`
         : '',
       `<learner-doubt>\n${context.learnerMessage}\n</learner-doubt>`,
-      'Keep the answer under 180 words across at most four short sections. Skip pleasantries and do not restate the question.',
+      'Length: conceptual answers under 180 words in at most four short sections; greetings and practice-question requests under 60 words. Do not restate the question.',
     ]
       .filter(Boolean)
       .join('\n');

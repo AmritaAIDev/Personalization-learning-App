@@ -184,6 +184,55 @@ describe('DoubtsService', () => {
     );
   });
 
+  it('passes the earlier turns of the chat to the tutor as history', async () => {
+    const created = makeDoubt({ message: 'Now give me one question?' });
+    const earlierTurn = makeDoubt({
+      id: 'doubt-0',
+      message: 'Explain Gauss law simply',
+      assistantResponse: '### Gauss\nFlux through a closed surface…',
+      status: DoubtStatus.ANSWERED,
+      createdAt: new Date('2026-07-20T09:00:00.000Z'),
+    });
+    const repository = {
+      create: jest.fn(() => created),
+      save: jest.fn().mockResolvedValue(created),
+      find: jest.fn().mockResolvedValue([created, earlierTurn]),
+      findOne: jest.fn().mockResolvedValue(created),
+    };
+    const agentService = {
+      generateTutorResponse: jest.fn().mockResolvedValue('### Try this…'),
+      retrieveSupplementalSources: jest.fn().mockResolvedValue([]),
+    };
+    const service = new DoubtsService(
+      makeThreadRepo() as never,
+      repository as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      makeLookupRepo() as never,
+      agentService as never,
+    );
+
+    await service.create('user-1', {
+      subject: 'Physics',
+      chapter: 'Electrostatics',
+      topic: 'Gauss Law',
+      message: 'Now give me one question?',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(agentService.generateTutorResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recentMessages: [
+          { role: 'USER', content: 'Explain Gauss law simply' },
+          {
+            role: 'ASSISTANT',
+            content: '### Gauss\nFlux through a closed surface…',
+          },
+        ],
+      }),
+    );
+  });
+
   it('answers with a deterministic fallback when tutor generation is unavailable', async () => {
     const created = makeDoubt();
     const saved: Doubt[] = [];

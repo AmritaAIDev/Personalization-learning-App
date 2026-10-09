@@ -192,6 +192,7 @@ export class DoubtsService {
     doubt: Doubt,
   ): Promise<{ content: string; usedFallback: boolean }> {
     const question = await this.resolveQuestionContext(doubt);
+    const recentMessages = await this.loadThreadHistory(doubt);
     try {
       // When the doubt was raised from a specific question, fold that question
       // in so the answer addresses the learner's actual attempt. Resolution is
@@ -202,6 +203,9 @@ export class DoubtsService {
         topic: doubt.topic,
         learnerMessage: doubt.message,
         mode: TutorMessageType.GENERAL,
+        // Earlier turns of this chat so follow-ups ("now give me one
+        // question") are answered in context, not as fresh standalone doubts.
+        recentMessages,
         // A doubt is a genuine question to teach, not a practice item whose
         // answer must be hidden — ask for a complete, grounded explanation.
         explanatory: true,
@@ -225,6 +229,36 @@ export class DoubtsService {
         content: this.buildFallbackTutorResponse(doubt, question),
         usedFallback: true,
       };
+    }
+  }
+
+  /**
+   * The last three answered turns of this chat, oldest first, as tutor prompt
+   * history. Best-effort: a thread-less doubt or a lookup failure simply
+   * means the tutor answers without conversation context.
+   */
+  private async loadThreadHistory(
+    doubt: Doubt,
+  ): Promise<Array<{ role: 'USER' | 'ASSISTANT'; content: string }>> {
+    if (!doubt.threadId) return [];
+    try {
+      const earlier = await this.doubtsRepository.find({
+        where: { threadId: doubt.threadId },
+        order: { createdAt: 'DESC' },
+        take: 7,
+      });
+      return earlier
+        .filter((d) => d.id !== doubt.id && d.assistantResponse)
+        .reverse()
+        .flatMap((d) => [
+          { role: 'USER' as const, content: d.message },
+          {
+            role: 'ASSISTANT' as const,
+            content: d.assistantResponse as string,
+          },
+        ]);
+    } catch {
+      return [];
     }
   }
 

@@ -145,6 +145,29 @@ export class KnowledgeTracingService {
     topic: string,
     pendingObservations: readonly boolean[] = [],
   ): Promise<number> {
+    const { pKnow } = await this.skillEvidence(
+      userId,
+      subject,
+      chapter,
+      topic,
+      pendingObservations,
+    );
+    return pKnow;
+  }
+
+  /**
+   * Cross-surface evidence for one skill — the input for placement
+   * decisions like skip-ahead starts. `attempts` is the number of graded
+   * observations actually folded (after the recency cap), so callers can
+   * tell "confidently weak" from "no data yet".
+   */
+  async skillEvidence(
+    userId: string,
+    subject: string,
+    chapter: string,
+    topic: string,
+    pendingObservations: readonly boolean[] = [],
+  ): Promise<{ pKnow: number; attempts: number }> {
     const events = await loadAnswerEvents(
       this.dataSource,
       userId,
@@ -156,7 +179,8 @@ export class KnowledgeTracingService {
       .sort((a, b) => a.answeredAt.getTime() - b.answeredAt.getTime())
       .slice(-MAX_OBSERVATIONS_PER_SKILL)
       .map((event) => event.isCorrect);
-    return bktTrace([...committed, ...pendingObservations]);
+    const folded = [...committed, ...pendingObservations];
+    return { pKnow: bktTrace(folded), attempts: folded.length };
   }
 
   /**

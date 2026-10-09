@@ -31,6 +31,7 @@ import { User } from '../users/user.entity';
 /** BKT always confirms in unit tests unless a case overrides it. */
 const tracingStub = {
   isConfirmedMastery: jest.fn().mockResolvedValue(true),
+  skillEvidence: jest.fn().mockResolvedValue({ pKnow: 0.1, attempts: 0 }),
 } as unknown as KnowledgeTracingService;
 
 describe('AdaptiveService flashcard reviews', () => {

@@ -61,3 +61,26 @@ export function resolveSecondFailure(
     ? { transition: LearningSessionTransition.PREREQUISITE, nextLevel: null }
     : { transition: LearningSessionTransition.REINFORCE, nextLevel: 1 };
 }
+
+/**
+ * Placement skip-ahead: when a learner opens a topic for the FIRST time in
+ * the learning engine but has already answered that topic's questions
+ * elsewhere (diagnostics, practice, mock tests), BKT's cross-surface
+ * evidence can place them above level 1 instead of making them grind
+ * through known ground.
+ *
+ * Deliberately conservative:
+ * - fewer than 5 graded observations is treated as no evidence at all;
+ * - even strong evidence lands on level 8, not near the top — the ladder's
+ *   own advance/demote machinery finishes the calibration from there;
+ * - returning null means "use the normal initial placement".
+ */
+export function skipAheadLevelFromEvidence(
+  pKnow: number,
+  attempts: number,
+): number | null {
+  if (attempts < 5) return null;
+  if (pKnow >= 0.85) return 8;
+  if (pKnow >= 0.55) return 4;
+  return null;
+}

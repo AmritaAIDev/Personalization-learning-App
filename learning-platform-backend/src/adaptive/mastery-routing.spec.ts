@@ -2,6 +2,7 @@ import { LearningSessionTransition } from './adaptive.types';
 import {
   resolveCoordinateCompletion,
   resolveSecondFailure,
+  skipAheadLevelFromEvidence,
 } from './mastery-routing';
 
 describe('mastery routing', () => {
@@ -45,5 +46,23 @@ describe('mastery routing', () => {
       transition: LearningSessionTransition.REINFORCE,
       nextLevel: 1,
     });
+  });
+});
+
+describe('skipAheadLevelFromEvidence', () => {
+  it('ignores thin evidence', () => {
+    expect(skipAheadLevelFromEvidence(0.99, 4)).toBeNull();
+    expect(skipAheadLevelFromEvidence(0.99, 0)).toBeNull();
+  });
+
+  it('lands strong evidence on level 8, moderate on level 4', () => {
+    expect(skipAheadLevelFromEvidence(0.9, 12)).toBe(8);
+    expect(skipAheadLevelFromEvidence(0.85, 5)).toBe(8);
+    expect(skipAheadLevelFromEvidence(0.6, 5)).toBe(4);
+    expect(skipAheadLevelFromEvidence(0.55, 9)).toBe(4);
+  });
+
+  it('leaves weak learners at normal placement', () => {
+    expect(skipAheadLevelFromEvidence(0.3, 20)).toBeNull();
   });
 });

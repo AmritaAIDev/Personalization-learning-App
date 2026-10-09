@@ -59,6 +59,7 @@ import { TutorService } from './tutor.service';
 import {
   resolveCoordinateCompletion,
   resolveSecondFailure,
+  skipAheadLevelFromEvidence,
 } from './mastery-routing';
 import {
   describeLearningStage,
@@ -950,11 +951,35 @@ export class AdaptiveService {
       averagePeerLevel: 0,
     });
     try {
+      // Placement skip-ahead: a learner who has already answered this
+      // topic's questions elsewhere (diagnostics, practice, mock tests)
+      // starts above level 1 when BKT's cross-surface evidence justifies
+      // it. Best-effort: any failure falls back to normal placement.
+      let initialLevel = placement.level;
+      let initialPlacement = placement;
+      try {
+        const evidence = await this.knowledgeTracing.skillEvidence(
+          userId,
+          scope.subject,
+          scope.chapter,
+          scope.topic,
+        );
+        const skip = skipAheadLevelFromEvidence(
+          evidence.pKnow,
+          evidence.attempts,
+        );
+        if (skip !== null && skip > initialLevel) {
+          initialLevel = skip;
+          initialPlacement = describeSavedPlacement(skip, scope.topic);
+        }
+      } catch {
+        // Evidence unavailable — normal initial placement stands.
+      }
       const state = await this.statesRepository.save(
         this.statesRepository.create({
           userId,
           ...scope,
-          currentLevel: placement.level,
+          currentLevel: initialLevel,
           status: LearningTopicStatus.ACTIVE,
           streakCounter: 0,
           totalAnswered: 0,
@@ -963,7 +988,7 @@ export class AdaptiveService {
           masteredAt: null,
         }),
       );
-      return { state, placement };
+      return { state, placement: initialPlacement };
     } catch {
       const raced = await this.statesRepository.findOne({
         where: { userId, ...scope },

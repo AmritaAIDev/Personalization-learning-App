@@ -47,6 +47,10 @@ export interface CatalogChapterSummary {
   studyMinutes: number | null;
   /** False when no PUBLISHED study-guide metadata exists yet. */
   hasMeta: boolean;
+  /** Topics with at least one published question (the percent's denominator). */
+  teachableTopics: number;
+  completedTopics: number;
+  learningStatus: LearningStatus;
   status: ChapterProgressStatus;
   score: number | null;
   mastery: MasteryLevel | null;
@@ -60,8 +64,35 @@ export interface CatalogSubjectChapters {
   chapters: CatalogChapterSummary[];
 }
 
+/** Completed / In Progress / Pending: see catalog.progress.ts `topicLearningStatus`. */
+export type LearningStatus = 'COMPLETED' | 'IN_PROGRESS' | 'PENDING';
+
+/** Counts over teachable topics (topics with at least one published question). */
+export interface SyllabusCounts {
+  total: number;
+  completed: number;
+  inProgress: number;
+  pending: number;
+  /** completed / total, rounded; 0 when there is nothing teachable yet. */
+  percent: number;
+}
+
+export interface SyllabusSubjectProgress extends SyllabusCounts {
+  slug: string;
+  name: string;
+  chapters: number;
+  /** Chapters with no teachable topic yet; excluded from the percent. */
+  comingSoonChapters: number;
+}
+
+export interface SyllabusProgress {
+  overall: SyllabusCounts;
+  subjects: SyllabusSubjectProgress[];
+}
+
 export interface CatalogTopicDetail {
   name: string;
+  learningStatus: LearningStatus;
   /**
    * The chapter name this topic's questions are tagged with. Usually the
    * chapter's own name; for aliased chapters it is the content-side name, and

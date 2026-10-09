@@ -61,6 +61,9 @@ function detail(overrides: Partial<CatalogChapterDetail> = {}): CatalogChapterDe
       status: "IN_PROGRESS",
       score: 80,
       mastery: { label: "Master", stars: 5, next: null },
+      teachableTopics: 1,
+      completedTopics: 0,
+      learningStatus: "IN_PROGRESS",
       masteredTopics: 0,
       startedTopics: 1,
     },
@@ -76,6 +79,7 @@ function detail(overrides: Partial<CatalogChapterDetail> = {}): CatalogChapterDe
       {
         name: "Lenses",
         scopeChapter: "Optics",
+        learningStatus: "IN_PROGRESS",
         status: "ACTIVE",
         score: 80,
         answered: 10,
@@ -149,6 +153,7 @@ describe("learning links for aliased chapters", () => {
       {
         name: "Gauss's Law",
         scopeChapter: "Electric Charges and Fields",
+        learningStatus: "IN_PROGRESS",
         status: "ACTIVE",
         score: 90,
         answered: 10,

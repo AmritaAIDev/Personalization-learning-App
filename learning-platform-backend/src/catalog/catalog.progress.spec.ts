@@ -2,7 +2,11 @@ import { LearningTopicStatus } from '../adaptive/adaptive.types';
 import {
   chapterProgress,
   chapterStatusFromScore,
+  countStatuses,
   masteryLevel,
+  rollUpLearningStatus,
+  sumCounts,
+  topicLearningStatus,
   mean,
   topicProgress,
   type TopicProgress,
@@ -150,5 +154,80 @@ describe('chapterProgress', () => {
 
   it('mean of nothing is null', () => {
     expect(mean([])).toBeNull();
+  });
+});
+
+describe('topicLearningStatus (Completed / In Progress / Pending)', () => {
+  const topic = (
+    status: TopicProgress['status'],
+    score: number | null,
+    answered: number,
+  ) => ({ status, score, answered });
+
+  it('is Pending with no answers and no tracked state', () => {
+    expect(topicLearningStatus(topic('NOT_STARTED', null, 0))).toBe('PENDING');
+  });
+
+  it('is Completed when the adaptive engine says MASTERED, whatever the score', () => {
+    expect(topicLearningStatus(topic('MASTERED', null, 0))).toBe('COMPLETED');
+    expect(topicLearningStatus(topic('MASTERED', 30, 3))).toBe('COMPLETED');
+  });
+
+  it('needs at least 5 answers for a 40%+ score to count as Completed', () => {
+    expect(topicLearningStatus(topic('ACTIVE', 100, 1))).toBe('IN_PROGRESS');
+    expect(topicLearningStatus(topic('ACTIVE', 100, 4))).toBe('IN_PROGRESS');
+    expect(topicLearningStatus(topic('ACTIVE', 100, 5))).toBe('COMPLETED');
+    expect(topicLearningStatus(topic('ACTIVE', 40, 5))).toBe('COMPLETED');
+    expect(topicLearningStatus(topic('ACTIVE', 39, 50))).toBe('IN_PROGRESS');
+  });
+
+  it('is In Progress for any answered topic below the completion bar, and for tracked-but-unanswered ones', () => {
+    expect(topicLearningStatus(topic('ACTIVE', 20, 2))).toBe('IN_PROGRESS');
+    expect(topicLearningStatus(topic('ACTIVE', null, 0))).toBe('IN_PROGRESS');
+    expect(topicLearningStatus(topic('PAUSED', 10, 6))).toBe('IN_PROGRESS');
+  });
+});
+
+describe('rollUpLearningStatus and counts', () => {
+  it('rolls a group of statuses up', () => {
+    expect(rollUpLearningStatus([])).toBe('PENDING');
+    expect(rollUpLearningStatus(['COMPLETED', 'COMPLETED'])).toBe('COMPLETED');
+    expect(rollUpLearningStatus(['PENDING', 'PENDING'])).toBe('PENDING');
+    expect(rollUpLearningStatus(['COMPLETED', 'PENDING'])).toBe('IN_PROGRESS');
+    expect(rollUpLearningStatus(['IN_PROGRESS', 'PENDING'])).toBe(
+      'IN_PROGRESS',
+    );
+  });
+
+  it('counts statuses and the completed percent, never dividing by zero', () => {
+    expect(countStatuses([])).toEqual({
+      total: 0,
+      completed: 0,
+      inProgress: 0,
+      pending: 0,
+      percent: 0,
+    });
+    expect(
+      countStatuses(['COMPLETED', 'IN_PROGRESS', 'PENDING', 'PENDING']),
+    ).toEqual({
+      total: 4,
+      completed: 1,
+      inProgress: 1,
+      pending: 2,
+      percent: 25,
+    });
+  });
+
+  it('adds counts together and recomputes the percent from the totals', () => {
+    const a = countStatuses(['COMPLETED', 'PENDING']); // 50%
+    const b = countStatuses(['COMPLETED', 'COMPLETED', 'COMPLETED', 'PENDING']); // 75%
+    expect(sumCounts([a, b])).toEqual({
+      total: 6,
+      completed: 4,
+      inProgress: 0,
+      pending: 2,
+      percent: 67, // 4 of 6, not the average of 50 and 75
+    });
+    expect(sumCounts([]).percent).toBe(0);
   });
 });

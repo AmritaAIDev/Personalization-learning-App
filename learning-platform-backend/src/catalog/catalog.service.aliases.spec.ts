@@ -255,3 +255,110 @@ describe('CatalogService: content tagged with the NCERT chapter names', () => {
     expect(byName['Electrostatics'].questionCount).toBe(5);
   });
 });
+
+describe('CatalogService: getSyllabusProgress', () => {
+  const optics = topic('c2', 'Optics', TopicLevel.CHAPTER, physicsNode);
+  const waves = topic('c3', 'Waves', TopicLevel.CHAPTER, physicsNode);
+  const tree = [
+    physicsNode,
+    electrostatics, // no sub-topics: topics come from its questions
+    optics,
+    topic('t1', 'Lenses', TopicLevel.SUB_TOPIC, optics),
+    topic('t2', 'Refraction', TopicLevel.SUB_TOPIC, optics),
+    waves,
+    topic('t3', 'Doppler', TopicLevel.SUB_TOPIC, waves), // no questions yet
+  ];
+  const metaRows = [
+    meta({ topicId: 'c1' }),
+    meta({ topicId: 'c2', unit: 'Optics' }),
+    meta({ topicId: 'c3', unit: 'Waves' }),
+  ];
+  const questionRows = [
+    questionRow('Electric Charges and Fields', 'Gauss Law', 7),
+    questionRow('Electric Charges and Fields', 'Coulomb Law', 3),
+    questionRow('Optics', 'Lenses', 5),
+    questionRow('Optics', 'Refraction', 5),
+  ];
+  const answers = [
+    // Gauss Law: 5 answers, all correct -> Completed
+    ...Array.from({ length: 5 }, () =>
+      answer('Electric Charges and Fields', 'Gauss Law', true),
+    ),
+    // Lenses: 2 answers -> In Progress (too little evidence to complete)
+    answer('Optics', 'Lenses', true),
+    answer('Optics', 'Lenses', true),
+  ];
+
+  it('counts only teachable topics and classifies each from the answers', async () => {
+    const { service } = build({ tree, meta: metaRows, questionRows, answers });
+    const progress = await service.getSyllabusProgress('u1');
+    expect(progress.overall).toEqual({
+      total: 4, // Gauss, Coulomb, Lenses, Refraction (Doppler has no questions)
+      completed: 1,
+      inProgress: 1,
+      pending: 2,
+      percent: 25,
+    });
+    expect(progress.subjects).toHaveLength(1);
+    expect(progress.subjects[0]).toMatchObject({
+      slug: 'physics',
+      chapters: 3,
+      comingSoonChapters: 1, // Waves
+      total: 4,
+      completed: 1,
+      percent: 25,
+    });
+  });
+
+  it('scores a practice-only student with no learning state (never Pending)', async () => {
+    const { service } = build({ tree, meta: metaRows, questionRows, answers });
+    const detail = await service.getChapterDetail('u1', 'physics', 'optics');
+    expect(detail.chapter).toMatchObject({
+      teachableTopics: 2,
+      completedTopics: 0,
+      learningStatus: 'IN_PROGRESS',
+    });
+    expect(
+      Object.fromEntries(detail.topics.map((t) => [t.name, t.learningStatus])),
+    ).toEqual({ Lenses: 'IN_PROGRESS', Refraction: 'PENDING' });
+  });
+
+  it('rolls an Electrostatics chapter built from aliased questions up correctly', async () => {
+    const { service } = build({ tree, meta: metaRows, questionRows, answers });
+    const detail = await service.getChapterDetail(
+      'u1',
+      'physics',
+      'electrostatics',
+    );
+    expect(detail.chapter).toMatchObject({
+      teachableTopics: 2,
+      completedTopics: 1,
+      learningStatus: 'IN_PROGRESS',
+    });
+  });
+
+  it('is zero everywhere for a brand-new student, without dividing by zero', async () => {
+    const { service } = build({ tree, meta: metaRows, questionRows });
+    const progress = await service.getSyllabusProgress('u1');
+    expect(progress.overall).toMatchObject({
+      total: 4,
+      completed: 0,
+      inProgress: 0,
+      pending: 4,
+      percent: 0,
+    });
+  });
+
+  it('reports 0 of 0 when nothing is teachable yet', async () => {
+    const { service } = build({ tree, meta: metaRows });
+    const progress = await service.getSyllabusProgress('u1');
+    expect(progress.overall).toEqual({
+      total: 0,
+      completed: 0,
+      inProgress: 0,
+      pending: 0,
+      percent: 0,
+    });
+    expect(progress.subjects[0].comingSoonChapters).toBe(3);
+  });
+});

@@ -40,6 +40,10 @@ export interface CatalogChapterSummary {
   difficulty: ChapterDifficulty | null;
   studyMinutes: number | null;
   hasMeta: boolean;
+  /** Topics with at least one published question (the percent's denominator). */
+  teachableTopics: number;
+  completedTopics: number;
+  learningStatus: LearningStatus;
   status: ChapterProgressStatus;
   score: number | null;
   mastery: MasteryLevel | null;
@@ -53,8 +57,35 @@ export interface CatalogSubjectChapters {
   chapters: CatalogChapterSummary[];
 }
 
+/** Completed / In Progress / Pending: the three words used for syllabus progress. */
+export type LearningStatus = "COMPLETED" | "IN_PROGRESS" | "PENDING";
+
+/** Counts over teachable topics (those with at least one published question). */
+export interface SyllabusCounts {
+  total: number;
+  completed: number;
+  inProgress: number;
+  pending: number;
+  /** completed / total, rounded; 0 when nothing is teachable yet. */
+  percent: number;
+}
+
+export interface SyllabusSubjectProgress extends SyllabusCounts {
+  slug: string;
+  name: string;
+  chapters: number;
+  /** Chapters with no teachable topic yet; excluded from the percent. */
+  comingSoonChapters: number;
+}
+
+export interface SyllabusProgress {
+  overall: SyllabusCounts;
+  subjects: SyllabusSubjectProgress[];
+}
+
 export interface CatalogTopicDetail {
   name: string;
+  learningStatus: LearningStatus;
   /**
    * Chapter name this topic's questions are tagged with. Usually the chapter's
    * own name; for aliased chapters it is the content-side name, which is what

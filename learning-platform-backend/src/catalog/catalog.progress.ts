@@ -2,7 +2,9 @@ import { LearningTopicStatus } from '../adaptive/adaptive.types';
 import type { AccuracyStat } from './catalog.analytics.types';
 import type {
   ChapterProgressStatus,
+  LearningStatus,
   MasteryLevel,
+  SyllabusCounts,
   TopicProgressStatus,
 } from './catalog.types';
 
@@ -118,5 +120,79 @@ export function chapterProgress(
     mastery: masteryLevel(score),
     masteredTopics,
     startedTopics,
+  };
+}
+
+/**
+ * The three words students see in the syllabus overview and the Subject >
+ * Chapter > Topic drill-down (`LearningStatus`). Derived from the same answers
+ * as everything else (see STUDY-PLAN-UI-PLAN.md section 3); the adaptive engine
+ * contributes only its MASTERED status.
+ */
+
+/**
+ * A topic needs this many graded answers before a score of COMPLETED_AT counts
+ * as completion: one lucky answer must not complete a topic.
+ */
+export const MIN_COMPLETED_ANSWERS = 5;
+
+export function topicLearningStatus(topic: {
+  status: TopicProgressStatus;
+  score: number | null;
+  answered: number;
+}): LearningStatus {
+  if (topic.status === 'MASTERED') return 'COMPLETED';
+  if (
+    topic.answered >= MIN_COMPLETED_ANSWERS &&
+    topic.score !== null &&
+    topic.score >= COMPLETED_AT
+  ) {
+    return 'COMPLETED';
+  }
+  if (topic.answered > 0 || topic.status !== 'NOT_STARTED') {
+    return 'IN_PROGRESS';
+  }
+  return 'PENDING';
+}
+
+/** A chapter or subject is COMPLETED when all its parts are, PENDING when none has started. */
+export function rollUpLearningStatus(
+  statuses: readonly LearningStatus[],
+): LearningStatus {
+  if (statuses.length === 0) return 'PENDING';
+  if (statuses.every((status) => status === 'COMPLETED')) return 'COMPLETED';
+  if (statuses.every((status) => status === 'PENDING')) return 'PENDING';
+  return 'IN_PROGRESS';
+}
+
+export function percentOf(part: number, whole: number): number {
+  return whole === 0 ? 0 : Math.round((part / whole) * 100);
+}
+
+/** Counts of Completed / In Progress / Pending, with the completed percent. */
+export function countStatuses(
+  statuses: readonly LearningStatus[],
+): SyllabusCounts {
+  const completed = statuses.filter((s) => s === 'COMPLETED').length;
+  const inProgress = statuses.filter((s) => s === 'IN_PROGRESS').length;
+  return {
+    total: statuses.length,
+    completed,
+    inProgress,
+    pending: statuses.length - completed - inProgress,
+    percent: percentOf(completed, statuses.length),
+  };
+}
+
+/** Adds up several counts (e.g. subjects into an overall figure). */
+export function sumCounts(parts: readonly SyllabusCounts[]): SyllabusCounts {
+  const total = parts.reduce((sum, part) => sum + part.total, 0);
+  const completed = parts.reduce((sum, part) => sum + part.completed, 0);
+  return {
+    total,
+    completed,
+    inProgress: parts.reduce((sum, part) => sum + part.inProgress, 0),
+    pending: parts.reduce((sum, part) => sum + part.pending, 0),
+    percent: percentOf(completed, total),
   };
 }

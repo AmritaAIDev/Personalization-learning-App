@@ -8,6 +8,7 @@ import type {
   CatalogSubjectSummary,
   ChapterAnalytics,
   SubjectAnalytics,
+  SyllabusProgress,
 } from "./catalog-types";
 import { useApiResource } from "./useApiResource";
 
@@ -27,6 +28,17 @@ export function useCatalogSubjects() {
     [],
   );
   const resource = useApiResource(fetcher, "Subjects could not be loaded.");
+  useRefreshOnLearning(resource.reload);
+  return resource;
+}
+
+/** Overall and per-subject syllabus completion: the one shared definition. */
+export function useSyllabusProgress() {
+  const fetcher = useCallback(
+    () => apiFetch<SyllabusProgress>("/api/catalog/progress"),
+    [],
+  );
+  const resource = useApiResource(fetcher, "Progress could not be loaded.");
   useRefreshOnLearning(resource.reload);
   return resource;
 }

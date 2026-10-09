@@ -17,6 +17,10 @@ import {
   COMPLETED_AT,
   chapterProgress,
   masteryLevel,
+  countStatuses,
+  rollUpLearningStatus,
+  sumCounts,
+  topicLearningStatus,
   topicProgress,
   type TopicProgress,
 } from './catalog.progress';
@@ -33,6 +37,8 @@ import type {
   CatalogSubjectChapters,
   CatalogSubjectSummary,
   CatalogTopicDetail,
+  SyllabusProgress,
+  SyllabusSubjectProgress,
 } from './catalog.types';
 
 const TOPIC_PREVIEW_COUNT = 4;
@@ -133,6 +139,34 @@ export class CatalogService {
         averageScore,
       };
     });
+  }
+
+  /**
+   * The one definition of "how much of the syllabus is done". Counts teachable
+   * topics (those with a published question) and classifies each as Completed /
+   * In Progress / Pending from the student's graded answers. The dashboard, the
+   * Progress screen and the study plan all read this, so they cannot disagree.
+   */
+  async getSyllabusProgress(userId: string): Promise<SyllabusProgress> {
+    const ctx = await this.loadContext(userId);
+    const subjects = ctx.tree.map((subject): SyllabusSubjectProgress => {
+      const chapters = subject.chapters.map((chapter) =>
+        this.buildChapter(ctx, subject, chapter),
+      );
+      const teachable = chapters.flatMap((chapter) =>
+        chapter.topics.filter((topic) => topic.questionCount > 0),
+      );
+      return {
+        slug: slugify(subject.topic.name),
+        name: subject.topic.name,
+        chapters: chapters.length,
+        comingSoonChapters: chapters.filter(
+          (chapter) => chapter.summary.teachableTopics === 0,
+        ).length,
+        ...countStatuses(teachable.map((topic) => topic.learningStatus)),
+      };
+    });
+    return { overall: sumCounts(subjects), subjects };
   }
 
   async getSubjectChapters(
@@ -370,6 +404,7 @@ export class CatalogService {
       );
       return {
         name: topicName,
+        learningStatus: topicLearningStatus(progress),
         scopeChapter: ctx.scopeChapters.get(key) ?? chapter.topic.name,
         status: progress.status,
         score: progress.score,
@@ -387,10 +422,19 @@ export class CatalogService {
     const meta = ctx.meta.get(chapter.topic.id);
     const published =
       meta?.status === ChapterMetaStatus.PUBLISHED && Boolean(meta.overview);
+    // Only topics with published questions can be studied, so only they count.
+    const teachable = topics.filter((topic) => topic.questionCount > 0);
 
     return {
       topics,
       summary: {
+        teachableTopics: teachable.length,
+        completedTopics: teachable.filter(
+          (topic) => topic.learningStatus === 'COMPLETED',
+        ).length,
+        learningStatus: rollUpLearningStatus(
+          teachable.map((topic) => topic.learningStatus),
+        ),
         slug: slugify(chapter.topic.name),
         name: chapter.topic.name,
         subject: subjectName,

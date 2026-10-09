@@ -40,6 +40,12 @@ export class CatalogController {
     return { data: await this.catalogService.getSubjects(user.id) };
   }
 
+  /** Overall and per-subject syllabus completion (the one shared definition). */
+  @Get('progress')
+  async getSyllabusProgress(@CurrentUser() user: AuthenticatedUser) {
+    return { data: await this.catalogService.getSyllabusProgress(user.id) };
+  }
+
   @Get('subjects/:subject/chapters')
   async getSubjectChapters(
     @CurrentUser() user: AuthenticatedUser,

@@ -41,6 +41,9 @@ function chapter(
     status: "NOT_STARTED",
     score: null,
     mastery: null,
+    teachableTopics: 4,
+    completedTopics: 0,
+    learningStatus: "PENDING",
     masteredTopics: 0,
     startedTopics: 0,
     ...overrides,
@@ -55,6 +58,7 @@ function topic(
   return {
     name,
     scopeChapter: "Optics",
+    learningStatus: "IN_PROGRESS",
     status,
     score,
     answered: score === null ? 0 : 5,

@@ -58,6 +58,7 @@ unknown or malformed slug returns 404.
 | Method | Path | Who | Returns |
 |---|---|---|---|
 | GET | `/api/catalog/subjects` | student | per-subject counts, chapters started/mastered, average score |
+| GET | `/api/catalog/progress` | student | overall and per-subject syllabus completion (Completed / In Progress / Pending counts and percent) |
 | GET | `/api/catalog/subjects/:subject/chapters` | student | unit tabs + chapter cards (status, score, topic preview, question count) |
 | GET | `/api/catalog/subjects/:subject/chapters/:chapter` | student | chapter summary, **published** study guide or `null`, per-topic progress, bookmark count |
 | GET | `/api/catalog/subjects/:subject/analytics` | student | per-subject analytics (see below) |
@@ -77,6 +78,33 @@ adaptive learning counts only the first attempt at each question; AI-generated
 questions are scoped by their learning session. Question counts are PUBLISHED
 questions grouped by subject/chapter/topic names, which match the `topics`
 tree exactly (verified on the seeded DB).
+
+## Syllabus progress: Completed / In Progress / Pending
+
+`GET /api/catalog/progress` (`getSyllabusProgress`) is the single definition of
+"how much of the syllabus is done"; the dashboard, the Progress screen and the
+study plan must read it rather than compute their own percentage. (The older
+`courseProgress.percent` on the dashboard is mastered topics divided by topics the
+student has *started*, which is not syllabus completion.)
+
+- **Denominator:** teachable topics, i.e. topics with at least one published
+  question, using the same topic list the chapter pages use (tree sub-topics, or
+  topics found in the questions for aliased chapters). Chapters with none are
+  counted as `comingSoonChapters` and left out of the percent.
+- **Per topic** (`topicLearningStatus`): **Completed** if the adaptive engine has it
+  MASTERED, or its score is at least 40 with at least 5 graded answers
+  (`MIN_COMPLETED_ANSWERS`; one lucky answer must not complete a topic).
+  **In Progress** for any other answered or tracked topic. **Pending** otherwise.
+  Scores come from graded answers in all four sources, so a practice-only student
+  is never "Pending".
+- **Roll-up** (`rollUpLearningStatus`): a chapter or subject is Completed when all
+  its teachable topics are, Pending when none has started, else In Progress.
+  Percent = completed / total, recomputed from totals when subjects are added up
+  (so it is not an average of percentages).
+- The chapter and topic payloads carry `learningStatus`, `teachableTopics` and
+  `completedTopics` for the drill-down. The chapter cards keep their Compass
+  score bands (Needs work / In progress / Mastered); the three-word set is for the
+  syllabus overview and drill-down.
 
 ## Criteria ported from JEE Compass
 
@@ -164,6 +192,8 @@ lives. They never reach a student until an admin publishes them in Content.
 
 ## RBAC
 
+- All student endpoints, including `/progress`, require a session and only ever
+  return the caller's own data.
 - Students read `PUBLISHED` study guides only; `DRAFT` rows are never serialised.
 - Meta list/edit/publish are `@Roles('admin')`. Editing any content field marks
   the row `source = ADMIN` so the seed never overwrites it; publishing needs a

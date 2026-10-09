@@ -186,7 +186,8 @@ describe("ProfileSetupDialog", () => {
     render(<ProfileSetupDialog />);
     await screen.findByRole("dialog", { name: dialogName });
     fireEvent.click(screen.getByRole("button", { name: "Skip for now" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
+    // The dialog plays its exit before unmounting.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(window.sessionStorage.getItem(SKIP_KEY)).toBe("1");
     expect(mocks.save).not.toHaveBeenCalled();
   });

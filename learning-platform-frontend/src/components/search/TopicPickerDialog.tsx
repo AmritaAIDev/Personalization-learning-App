@@ -168,7 +168,7 @@ export default function TopicPickerDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-end justify-center overflow-hidden bg-ink-solid/45 p-0 backdrop-blur-md sm:items-center sm:p-8"
+      className="dialog-backdrop fixed inset-0 z-[80] flex items-end justify-center overflow-hidden bg-ink-solid/45 p-0 backdrop-blur-md sm:items-center sm:p-8"
       role="dialog"
       aria-modal="true"
       aria-label="Find a learning topic"

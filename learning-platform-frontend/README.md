@@ -22,6 +22,15 @@ Correct answers, solutions, session tokens, timing authority, scoring, generated
 - Type: Poppins carries body copy and descriptions (warmer read); Urbanist remains the heading voice. The root font-size is 15px so rem-based content sits in proportion with the px-sized sidebar.
 - The test-taking surface (/diagnostic/[id]) is a focused assessment: compact header with a live countdown, keyboard answering (1-N, arrows), autosave, and a submit-confirmation modal. The notebook (/notebook) is a concept-level list (mistakes clubbed by topic with an AI recurring-gap summary and an expandable per-question drill-down). Doubts (/doubts) poll for the background tutor response instead of blocking on the model.
 
+## Motion
+
+One rhythm across the app. Everything animates with the shared `--ease-out-soft` curve (`EASE_OUT_SOFT` in `components/motion/MotionPrimitives.tsx`); nothing pops or hard-swaps.
+
+- **Routes:** `components/motion/PageTransition.tsx` fades the outgoing page out before the incoming one settles (opacity only — transforms would trap `position: fixed` dialogs).
+- **Overlays:** `components/ui/Modal.tsx` (dialog/sheet spring), `catalog` filters and the sidebar's More sheet mount and unmount through `AnimatePresence` with paired enter/exit variants. Static overlays use the shared `dialog-backdrop` / `dialog-panel` CSS classes from `globals.css`.
+- **Tab and nav indicators** glide between items with framer `layoutId` instead of jumping (`catalog/Tabs`, `UnitFilterTabs`, `Sidebar` rails).
+- **Reduced motion:** `<MotionConfig reducedMotion="user">` in the root layout disables all transform/layout animation; CSS equivalents sit under `prefers-reduced-motion` in `globals.css`.
+
 ## Data fetching
 
 apiFetch (src/lib/api.ts) is the only HTTP client. It unwraps the { data } envelope, normalises the API URL from NEXT_PUBLIC_API_URL, deduplicates in-flight GETs, and supports an optional in-memory read cache (memoryCacheTtlMs) for slowly-changing data. Learning-data writes broadcast a jee-ai:learning-data-updated event so dependent views can refresh. No static mock data is shipped in components.

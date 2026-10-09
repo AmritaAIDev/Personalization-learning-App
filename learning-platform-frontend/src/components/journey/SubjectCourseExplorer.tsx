@@ -79,7 +79,7 @@ export default function SubjectCourseExplorer({
   if (chapters.length === 0) {
     return createPortal(
       <section
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-solid/35 p-4 backdrop-blur-sm"
+        className="dialog-backdrop fixed inset-0 z-[100] flex items-center justify-center bg-ink-solid/35 p-4 backdrop-blur-sm"
         role="dialog"
         aria-modal="true"
         aria-labelledby="course-explorer-heading"
@@ -90,7 +90,7 @@ export default function SubjectCourseExplorer({
           className="absolute inset-0 cursor-default"
           onClick={onClose}
         />
-        <div className="relative z-10 w-full max-w-xl rounded-[1.5rem] bg-surface p-6 shadow-[0_24px_80px_rgba(20,20,30,0.2)]">
+        <div className="dialog-panel relative z-10 w-full max-w-xl rounded-[1.5rem] bg-surface p-6 shadow-[0_24px_80px_rgba(20,20,30,0.2)]">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
@@ -122,7 +122,7 @@ export default function SubjectCourseExplorer({
 
   return createPortal(
     <section
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-solid/35 p-3 backdrop-blur-sm sm:p-5"
+      className="dialog-backdrop fixed inset-0 z-[100] flex items-center justify-center bg-ink-solid/35 p-3 backdrop-blur-sm sm:p-5"
       role="dialog"
       aria-modal="true"
       aria-labelledby="course-explorer-heading"

@@ -358,6 +358,40 @@ textarea:focus-visible {
   animation: fade 0.4s var(--ease-out-soft) both;
 }
 
+/* Dialog chrome — every modal in the app shares these two classes, so one
+   rule gives them all the same soft arrival: backdrop dims, panel rises and
+   settles. (Framer-driven dialogs replicate these values as variants.) */
+@keyframes dialog-pop {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dialog-backdrop {
+  animation: fade 0.22s var(--ease-out-soft) both;
+}
+
+.dialog-panel {
+  animation: dialog-pop 0.34s var(--ease-out-soft) both;
+}
+
+/* Route scrolling glides rather than jumps. */
+html {
+  scroll-behavior: smooth;
+}
+
+/* The theme crossfade is calm, not a blink. */
+body {
+  transition:
+    background-color 0.35s var(--ease-out-soft),
+    color 0.35s var(--ease-out-soft);
+}
+
 /* Connector path draw-in — premium, once, on arrival. */
 @keyframes draw-path {
   to {
@@ -532,6 +566,16 @@ textarea:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .dialog-backdrop,
+  .dialog-panel {
+    animation: none;
+  }
+  body {
+    transition: none;
+  }
   .animate-rise,
   .animate-fade,
   .skeleton::after,

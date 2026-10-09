@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
 
@@ -94,27 +95,39 @@ export default function Modal({
     [dismissible, onClose],
   );
 
-  if (!open || typeof document === "undefined") return null;
+  if (typeof document === "undefined") return null;
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[90] flex items-end justify-center bg-ink-solid/45 backdrop-blur-sm sm:items-center sm:p-6"
-      onKeyDown={onKeyDown}
-    >
-      <div
-        className="absolute inset-0"
-        aria-hidden="true"
-        onClick={dismissible ? onClose : undefined}
-      />
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={description ? descriptionId : undefined}
-        tabIndex={-1}
-        className={`relative z-10 flex max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-[1.75rem] border border-hairline bg-surface shadow-[0_28px_90px_rgba(20,20,30,0.28)] outline-none sm:max-h-[calc(100dvh-3rem)] sm:rounded-[1.75rem] ${maxWidth}`}
-      >
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          key="modal"
+          className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-6"
+          style={{ backgroundColor: "color-mix(in srgb, var(--color-ink-solid) 45%, transparent)" }}
+          initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+          animate={{ opacity: 1, backdropFilter: "blur(4px)" }}
+          exit={{ opacity: 0, backdropFilter: "blur(0px)", transition: { duration: 0.18 } }}
+          transition={{ duration: 0.24 }}
+          onKeyDown={onKeyDown}
+        >
+          <div
+            className="absolute inset-0"
+            aria-hidden="true"
+            onClick={dismissible ? onClose : undefined}
+          />
+          <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={description ? descriptionId : undefined}
+            tabIndex={-1}
+            initial={{ opacity: 0, y: 26, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 14, scale: 0.985, transition: { duration: 0.18 } }}
+            transition={{ type: "spring", stiffness: 340, damping: 30 }}
+            className={`relative z-10 flex max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-[1.75rem] border border-hairline bg-surface shadow-[0_28px_90px_rgba(20,20,30,0.28)] outline-none sm:max-h-[calc(100dvh-3rem)] sm:rounded-[1.75rem] ${maxWidth}`}
+          >
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-hairline px-5 py-4 sm:px-6">
           <div className="min-w-0">
             <h2
@@ -151,8 +164,10 @@ export default function Modal({
             {footer}
           </footer>
         ) : null}
-      </div>
-    </div>,
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>,
     document.body,
   );
 }

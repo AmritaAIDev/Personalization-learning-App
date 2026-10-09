@@ -4,6 +4,7 @@ import "./globals.css";
 import "katex/dist/katex.min.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import MotionSettings from "@/components/motion/MotionSettings";
 
 const noFlashThemeScript = `
 (function () {
@@ -102,9 +103,11 @@ export default function RootLayout({
         </a>
         <ThemeProvider>
           <AuthProvider>
-            <div id="main-content" className="flex min-h-full flex-col">
-              {children}
-            </div>
+            <MotionSettings>
+              <div id="main-content" className="flex min-h-full flex-col">
+                {children}
+              </div>
+            </MotionSettings>
           </AuthProvider>
         </ThemeProvider>
       </body>

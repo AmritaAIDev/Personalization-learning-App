@@ -112,7 +112,8 @@ describe("StudyPlanSettings", () => {
     fireEvent.click(save());
     fireEvent.click(screen.getByRole("button", { name: "Rebuild My Plan" }));
     expect(await screen.findByText("Target month cannot be in the past.")).toBeTruthy();
-    expect(screen.queryByRole("dialog")).toBeNull();
+    // The confirmation dialog plays its exit animation before unmounting.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(mocks.generate).not.toHaveBeenCalled();
   });
 });

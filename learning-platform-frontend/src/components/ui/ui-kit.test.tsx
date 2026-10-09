@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Modal from "./Modal";
@@ -62,7 +62,7 @@ describe("Modal", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("moves focus inside on open and puts it back on close", () => {
+  it("moves focus inside on open and puts it back on close", async () => {
     function Harness() {
       const [open, setOpen] = useState(false);
       return (
@@ -80,8 +80,9 @@ describe("Modal", () => {
     fireEvent.click(opener);
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "inside" }));
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
-    expect(screen.queryByRole("dialog")).toBeNull();
+    // Focus returns immediately; the panel then plays its exit before unmounting.
     expect(document.activeElement).toBe(opener);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("keeps Tab inside the dialog by wrapping from last to first and back", () => {

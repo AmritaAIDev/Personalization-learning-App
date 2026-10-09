@@ -733,7 +733,7 @@ function SubmitConfirmation({
 
   return (
     <div
-      className="fixed inset-0 z-[80] grid place-items-end bg-ink-solid/45 p-0 backdrop-blur-sm sm:place-items-center sm:p-6"
+      className="dialog-backdrop fixed inset-0 z-[80] grid place-items-end bg-ink-solid/45 p-0 backdrop-blur-sm sm:place-items-center sm:p-6"
       role="presentation"
       onClick={onCancel}
     >
@@ -742,7 +742,7 @@ function SubmitConfirmation({
         aria-modal="true"
         aria-label="Confirm submission"
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-lg rounded-t-[1.75rem] bg-surface p-5 shadow-[0_-10px_40px_rgba(20,20,30,0.2)] sm:rounded-[1.75rem] sm:p-7"
+        className="dialog-panel w-full max-w-lg rounded-t-[1.75rem] bg-surface p-5 shadow-[0_-10px_40px_rgba(20,20,30,0.2)] sm:rounded-[1.75rem] sm:p-7"
       >
         <h2 className="font-heading text-2xl font-bold tracking-tight text-ink">
           Submit this practice set?

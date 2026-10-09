@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type KeyboardEvent } from "react";
+import { motion } from "framer-motion";
 import { ALL_UNITS } from "@/lib/catalog";
 
 export interface UnitOption {
@@ -61,19 +62,28 @@ export default function UnitFilterTabs({
             tabIndex={active ? 0 : -1}
             onClick={() => onSelect(option.name)}
             onKeyDown={(event) => move(event, index)}
-            className={`inline-flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition motion-reduce:transition-none ${
+            className={`relative inline-flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-colors duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
               active
-                ? "border-transparent bg-primary text-white shadow-[0_8px_20px_rgba(63,111,87,0.22)]"
+                ? "border-transparent text-white"
                 : "border-hairline bg-surface text-ink-soft hover:border-primary/30 hover:text-primary"
             }`}
           >
-            {option.label}
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                active ? "bg-white/20 text-white" : "bg-canvas text-ink-mute"
-              }`}
-            >
-              {option.count}
+            {active && (
+              <motion.span
+                layoutId="unit-filter-active"
+                transition={{ type: "spring", stiffness: 480, damping: 38 }}
+                className="absolute inset-0 rounded-full bg-primary shadow-[0_8px_20px_rgba(63,111,87,0.22)]"
+              />
+            )}
+            <span className="relative z-10 inline-flex items-center gap-2">
+              {option.label}
+              <span
+                className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                  active ? "bg-white/20 text-white" : "bg-canvas text-ink-mute"
+                }`}
+              >
+                {option.count}
+              </span>
             </span>
           </button>
         );

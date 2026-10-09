@@ -321,7 +321,7 @@ export default function FlashcardDeck({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[90] flex items-stretch bg-[#102017]/55 p-0 backdrop-blur-md sm:items-center sm:justify-center sm:p-6"
+      className="dialog-backdrop fixed inset-0 z-[90] flex items-stretch bg-[#102017]/55 p-0 backdrop-blur-md sm:items-center sm:justify-center sm:p-6"
       role="presentation"
     >
       <section

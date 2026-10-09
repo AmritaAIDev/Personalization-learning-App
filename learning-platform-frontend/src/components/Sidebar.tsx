@@ -28,6 +28,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import type { UserRole } from "@/lib/diagnostic-types";
@@ -203,21 +204,32 @@ export default function Sidebar() {
         </button>
       </nav>
 
-      {moreOpen ? (
-        <>
-          <button
-            type="button"
-            aria-label="Close menu"
-            onClick={() => setMoreOpen(false)}
-            className="fixed inset-0 z-40 cursor-default bg-ink-solid/25 backdrop-blur-[2px] lg:hidden"
-          />
-          <div
-            ref={morePanelRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label="More pages and account"
-            className="absolute inset-x-2 bottom-full z-50 mb-2 overflow-hidden rounded-2xl border border-hairline bg-surface shadow-[0_24px_60px_rgba(20,20,30,0.22)] md:inset-x-auto md:bottom-auto md:left-full md:top-14 md:ml-2 md:w-64 animate-rise"
-          >
+      <AnimatePresence>
+        {moreOpen ? (
+          <>
+            <motion.button
+              key="more-backdrop"
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setMoreOpen(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.16 } }}
+              transition={{ duration: 0.22 }}
+              className="fixed inset-0 z-40 cursor-default bg-ink-solid/25 backdrop-blur-[2px] lg:hidden"
+            />
+            <motion.div
+              key="more-panel"
+              ref={morePanelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="More pages and account"
+              initial={{ opacity: 0, y: 26, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.985, transition: { duration: 0.16 } }}
+              transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              className="absolute inset-x-2 bottom-full z-50 mb-2 overflow-hidden rounded-2xl border border-hairline bg-surface shadow-[0_24px_60px_rgba(20,20,30,0.22)] md:inset-x-auto md:bottom-auto md:left-full md:top-14 md:ml-2 md:w-64"
+            >
             {error && (
               <p className="border-b border-hairline px-3 py-2 text-xs font-semibold text-danger" role="alert">
                 {error}
@@ -280,9 +292,10 @@ export default function Sidebar() {
                 Sign out
               </button>
             </div>
-          </div>
-        </>
-      ) : null}
+            </motion.div>
+          </>
+        ) : null}
+      </AnimatePresence>
 
       <div className="hidden w-full lg:block">
         {visibleItems.some((item) => overviewLabels.has(item.label)) ? (
@@ -356,12 +369,19 @@ function BarLink({
       href={href}
       title={label}
       aria-current={active ? "page" : undefined}
-      className={`group flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 text-[10px] font-semibold transition duration-200 md:h-10 md:w-full md:flex-none md:flex-row md:justify-center md:gap-3 md:px-2 md:text-[13.5px] ${
+      className={`group relative flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 text-[10px] font-semibold transition-colors duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] md:h-10 md:w-full md:flex-none md:flex-row md:justify-center md:gap-3 md:px-2 md:text-[13.5px] ${
         active
           ? "text-primary md:bg-primary-tint"
           : "text-ink-mute hover:text-ink md:hover:bg-canvas"
       }`}
     >
+      {active && (
+        <motion.span
+          layoutId="bottom-bar-active-rail"
+          transition={{ type: "spring", stiffness: 500, damping: 40 }}
+          className="absolute inset-x-3 top-0.5 h-[3px] rounded-full bg-primary"
+        />
+      )}
       <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
       <span className="truncate md:hidden lg:hidden">{label}</span>
     </Link>
@@ -482,12 +502,19 @@ function SidebarSection({
               href={href}
               title={collapsed ? label : undefined}
               aria-current={active ? "page" : undefined}
-              className={`flex h-9 items-center gap-3 rounded-xl text-[13px] font-semibold transition duration-200 ${collapsed ? "justify-center px-0" : "px-3"} ${
+              className={`relative flex h-9 items-center gap-3 rounded-xl text-[13px] font-semibold transition duration-200 ${collapsed ? "justify-center px-0" : "px-3"} ${
                 active
                   ? "bg-primary-tint text-primary shadow-[0_6px_16px_rgba(20,20,30,0.035)]"
                   : "text-ink-soft hover:bg-canvas hover:text-ink"
               }`}
             >
+              {active && (
+                <motion.span
+                  layoutId="sidebar-active-rail"
+                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                  className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-primary"
+                />
+              )}
               <Icon className="h-[17px] w-[17px] shrink-0" aria-hidden="true" />
               <span className={collapsed ? "sr-only" : ""}>{label}</span>
             </Link>

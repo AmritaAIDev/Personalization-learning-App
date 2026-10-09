@@ -64,7 +64,14 @@ export function validateEnv(
 
   const qdrantUrl = asString(config.QDRANT_URL);
   if (qdrantUrl && !qdrantUrl.startsWith('https://')) {
-    errors.push('QDRANT_URL must use https:// (Qdrant Cloud requires TLS).');
+    // The local Docker Compose Qdrant serves plain http on loopback; every
+    // other deployment (cloud, staging, production) must use TLS.
+    const isLoopback = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(
+      qdrantUrl,
+    );
+    if (!isLoopback || isProduction(config)) {
+      errors.push('QDRANT_URL must use https:// (Qdrant Cloud requires TLS).');
+    }
   }
 
   const deepseekKey = asString(config.DEEPSEEK_API_KEY);

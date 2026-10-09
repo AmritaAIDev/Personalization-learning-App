@@ -8,7 +8,7 @@ const QDRANT_URL = process.env.QDRANT_URL;
 const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
 const COLLECTION_NAME = 'learning_concepts';
 
-if (!QDRANT_URL || !QDRANT_API_KEY) {
+if (!QDRANT_URL) {
   console.error('Missing Qdrant credentials in .env');
   process.exit(1);
 }

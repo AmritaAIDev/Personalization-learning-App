@@ -43,14 +43,19 @@ async function ensureCollection(client: QdrantClient): Promise<void> {
 }
 
 async function main() {
-  if (!QDRANT_URL || !QDRANT_API_KEY) {
+  // The API key is only required by Qdrant Cloud; the local compose instance
+  // runs without auth, so an empty key must not block seeding.
+  if (!QDRANT_URL) {
     console.error(
-      'Missing QDRANT_URL or QDRANT_API_KEY in environment. Set them in .env or learning-platform-backend/.env',
+      'Missing QDRANT_URL in environment. Set it in .env or learning-platform-backend/.env',
     );
     process.exit(1);
   }
 
-  const client = new QdrantClient({ url: QDRANT_URL, apiKey: QDRANT_API_KEY });
+  const client = new QdrantClient({
+    url: QDRANT_URL,
+    apiKey: QDRANT_API_KEY || undefined,
+  });
   await ensureCollection(client);
 
   console.log(

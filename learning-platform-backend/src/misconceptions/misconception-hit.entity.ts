@@ -50,10 +50,18 @@ export class MisconceptionHit {
   @Column({ name: 'last_question_id', type: 'uuid', nullable: true })
   lastQuestionId: string | null;
 
-  @Column({ name: 'first_occurred_at', type: 'timestamp' })
+  @Column({
+    name: 'first_occurred_at',
+    type: 'timestamp',
+    default: () => 'now()',
+  })
   firstOccurredAt: Date;
 
-  @Column({ name: 'last_occurred_at', type: 'timestamp' })
+  @Column({
+    name: 'last_occurred_at',
+    type: 'timestamp',
+    default: () => 'now()',
+  })
   lastOccurredAt: Date;
 
   @CreateDateColumn({ name: 'created_at' })

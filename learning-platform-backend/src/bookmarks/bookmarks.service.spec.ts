@@ -66,9 +66,9 @@ describe('BookmarksService', () => {
       bookmarks.findOne.mockResolvedValue(null);
       questions.findOne.mockResolvedValue(null);
 
-      await expect(service.toggle('user-1', 'missing-question')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.toggle('user-1', 'missing-question'),
+      ).rejects.toThrow(NotFoundException);
       expect(bookmarks.save).not.toHaveBeenCalled();
     });
   });

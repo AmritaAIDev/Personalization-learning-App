@@ -49,9 +49,7 @@ export class BookmarksService {
       throw new NotFoundException('Question not found.');
     }
 
-    await this.bookmarks.save(
-      this.bookmarks.create({ userId, questionId }),
-    );
+    await this.bookmarks.save(this.bookmarks.create({ userId, questionId }));
     return { bookmarked: true };
   }
 

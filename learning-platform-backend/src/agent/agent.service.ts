@@ -49,7 +49,6 @@ export interface GeneratedQuestion {
   explanation: string;
 }
 
-
 export interface GeneratedLearningQuestionPayload extends GeneratedQuestion {
   hint: string;
   concept_tags: string[];
@@ -267,19 +266,15 @@ export class AgentService {
         throw new ServiceUnavailableException('Qdrant is not configured.');
       }
       const queryVector = await this.embeddingService.embed(topicName);
-      const searchResult = await this.qdrantClient.search(
-        this.collectionName,
-        {
-          vector: queryVector,
-          limit: 3,
-          with_payload: true,
-        },
-      );
+      const searchResult = await this.qdrantClient.search(this.collectionName, {
+        vector: queryVector,
+        limit: 3,
+        with_payload: true,
+      });
       return searchResult
         .map((result) => {
           const payload = result.payload ?? {};
-          const snippet =
-            typeof payload.text === 'string' ? payload.text : '';
+          const snippet = typeof payload.text === 'string' ? payload.text : '';
           const title =
             (typeof payload.title === 'string' && payload.title) ||
             (typeof payload.concept === 'string' && payload.concept) ||
@@ -287,8 +282,7 @@ export class AgentService {
           return {
             title,
             topic: typeof payload.topic === 'string' ? payload.topic : '',
-            chapter:
-              typeof payload.chapter === 'string' ? payload.chapter : '',
+            chapter: typeof payload.chapter === 'string' ? payload.chapter : '',
             snippet,
           };
         })

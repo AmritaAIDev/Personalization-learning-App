@@ -4,7 +4,9 @@ import { PracticeAttemptStatus } from '../practice/practice.types';
 import { MockTestAttemptStatus } from '../mock-tests/mock-test.types';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
-function makeUser(overrides: Partial<AuthenticatedUser> = {}): AuthenticatedUser {
+function makeUser(
+  overrides: Partial<AuthenticatedUser> = {},
+): AuthenticatedUser {
   return {
     id: 'user-1',
     name: 'Test Student',
@@ -60,7 +62,10 @@ describe('AchievementsService', () => {
     expect(firstTest?.earnedAt).not.toBeNull();
     expect(studentAchievements.save).toHaveBeenCalledWith(
       expect.arrayContaining([
-        expect.objectContaining({ userId: 'user-1', achievementKey: 'FIRST_TEST' }),
+        expect.objectContaining({
+          userId: 'user-1',
+          achievementKey: 'FIRST_TEST',
+        }),
       ]),
     );
   });

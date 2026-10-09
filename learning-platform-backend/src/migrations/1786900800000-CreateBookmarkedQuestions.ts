@@ -7,9 +7,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * table — see bookmarked-question.entity.ts for why no source column is
  * needed here.
  */
-export class CreateBookmarkedQuestions1786900800000
-  implements MigrationInterface
-{
+export class CreateBookmarkedQuestions1786900800000 implements MigrationInterface {
   name = 'CreateBookmarkedQuestions1786900800000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

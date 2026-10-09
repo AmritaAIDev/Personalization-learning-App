@@ -20,10 +20,8 @@ export class EmbeddingService {
     this.embedCache.set(text, vector);
     // Keep cache bounded: evict oldest when over 200 entries.
     if (this.embedCache.size > 200) {
-      const firstKey = this.embedCache.keys().next().value;
-      if (firstKey !== undefined) {
-        this.embedCache.delete(firstKey);
-      }
+      const [firstKey] = this.embedCache.keys();
+      this.embedCache.delete(firstKey);
     }
     this.logger.debug(`Embedded "${text}" into a ${vector.length}-dim vector.`);
     return vector;

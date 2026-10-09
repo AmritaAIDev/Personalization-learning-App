@@ -29,7 +29,11 @@ describe('RevisionService', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
-    notebookService.getMistakes.mockResolvedValue({ cards: [], total: 0, summary: {} });
+    notebookService.getMistakes.mockResolvedValue({
+      cards: [],
+      total: 0,
+      summary: {},
+    });
     bookmarksService.getBookmarks.mockResolvedValue([]);
     competencyService.getGrowth.mockResolvedValue({
       overall: {},
@@ -70,7 +74,12 @@ describe('RevisionService', () => {
         makeTopic({ topic: 'Weak A', score: 20, band: 'Beginner' }),
         makeTopic({ topic: 'Strong', score: 90, band: 'Advanced' }),
         makeTopic({ topic: 'Weak B', score: 50, band: 'Developing' }),
-        makeTopic({ topic: 'Untracked', score: 0, band: 'Beginner', answered: 0 }),
+        makeTopic({
+          topic: 'Untracked',
+          score: 0,
+          band: 'Beginner',
+          answered: 0,
+        }),
       ],
     });
     const hub = await service.getHub('user-1');
@@ -103,7 +112,13 @@ describe('RevisionService', () => {
       overall: {},
       timeline: [],
       topics: [
-        makeTopic({ subject: 'Physics', chapter: 'Electrostatics', topic: "Coulomb's Law", score: 65, band: 'Developing' }),
+        makeTopic({
+          subject: 'Physics',
+          chapter: 'Electrostatics',
+          topic: "Coulomb's Law",
+          score: 65,
+          band: 'Developing',
+        }),
       ],
     });
     const hub = await service.getHub('user-1');
@@ -128,7 +143,7 @@ describe('RevisionService', () => {
     });
   });
 
-  it('splits formula content out of a weak topic\'s resource list, and separates general resources', async () => {
+  it("splits formula content out of a weak topic's resource list, and separates general resources", async () => {
     competencyService.getGrowth.mockResolvedValue({
       overall: {},
       timeline: [],

@@ -47,6 +47,9 @@ describe('QuestionsService', () => {
     find: jest.fn(),
     findOne: jest.fn(),
   };
+  const topicsService = {
+    getTopicTree: jest.fn(),
+  };
   let service: QuestionsService;
 
   beforeEach(() => {
@@ -55,6 +58,7 @@ describe('QuestionsService', () => {
       questionsRepository as never,
       generatedQuestionsRepository as never,
       questionReportsRepository as never,
+      topicsService as never,
     );
   });
 

@@ -7,9 +7,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * (see achievements/achievement-definition.ts) and, once met, persisted here
  * so a badge stays earned even if the underlying stat later dips.
  */
-export class CreateStudentAchievements1786900700000
-  implements MigrationInterface
-{
+export class CreateStudentAchievements1786900700000 implements MigrationInterface {
   name = 'CreateStudentAchievements1786900700000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

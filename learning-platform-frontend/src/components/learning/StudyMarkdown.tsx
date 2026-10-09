@@ -25,8 +25,15 @@ import remarkMath from "remark-math";
  * markdown pipeline runs. Code spans and fenced code blocks are protected so
  * the rewrite never touches source listings. It also repairs the common
  * `\text(enc)` mistake (KaTeX needs braces: `\text{enc}`).
+ *
+ * Critically, models often emit `$$...$$` *inside* a sentence with no line
+ * breaks. CommonMark then parses it as an inline math span in display mode,
+ * and KaTeX drops a full-height stacked fraction into a normal text line —
+ * the collapsed, dangling-subscript layout learners see in chat. Every
+ * display expression is therefore moved onto its own block here, which is
+ * also what the tutor prompt now asks for.
  */
-function normalizeMathDelimiters(input: string): string {
+export function normalizeMathDelimiters(input: string): string {
   const stash: string[] = [];
   const protect = (match: string) => {
     stash.push(match);
@@ -48,6 +55,17 @@ function normalizeMathDelimiters(input: string): string {
     /\\text\(([^(){}]+?)\)/g,
     (_, body: string) => `\\text{${body}}`,
   );
+  // Display fractions render at full stack height inline; \frac is sized for
+  // surrounding text and KaTeX still scales it in real display blocks.
+  out = out.replace(/\\[dt]frac/g, '\\frac');
+  // Every $$ ... $$ becomes its own paragraph-level block, even when the
+  // model wrote it mid-sentence.
+  out = out.replace(
+    /\$\$([\s\S]+?)\$\$/g,
+    (_, body: string) => `\n\n$$\n${body.trim()}\n$$\n\n`,
+  );
+  // Tidy the blank lines those moves leave behind.
+  out = out.replace(/\n{3,}/g, '\n\n');
 
   // Restore protected code segments.
   out = out.replace(

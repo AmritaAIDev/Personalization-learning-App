@@ -13,16 +13,21 @@ import {
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   ArrowRight,
+  BookOpenCheck,
   Camera,
   CheckCircle2,
   HelpCircle,
+  Lightbulb,
   Loader2,
   MessageSquareText,
+  PenLine,
   Plus,
   Send,
   Sparkles,
+  X,
 } from "lucide-react";
 import { AiUnavailableNote } from "@/components/AiUnavailableBlock";
 import SourceCitations from "@/components/learning/SourceCitations";
@@ -50,6 +55,22 @@ const emptyForm: CreateDoubtPayload = {
   message: "",
 };
 
+/** Starter prompts shown in an empty chat; clicking one fills the composer. */
+const STARTER_PROMPTS = [
+  {
+    icon: BookOpenCheck,
+    text: "Explain this concept in simple words with an example",
+  },
+  {
+    icon: PenLine,
+    text: "Give me one typical JEE question on this topic",
+  },
+  {
+    icon: Lightbulb,
+    text: "Where do students usually go wrong here?",
+  },
+];
+
 function formatTime(value: string) {
   return new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
@@ -57,6 +78,18 @@ function formatTime(value: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function formatRelative(value: string) {
+  const minutes = Math.max(
+    0,
+    Math.round((Date.now() - new Date(value).getTime()) / 60_000),
+  );
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
 }
 
 function sameScope(
@@ -93,71 +126,110 @@ function DoubtsSkeleton() {
   );
 }
 
-function DoubtTurn({ doubt }: { doubt: DoubtCard }) {
+function TutorAvatar() {
+  return (
+    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-tint text-primary ring-1 ring-primary/15">
+      <Sparkles className="h-4 w-4" aria-hidden="true" />
+    </span>
+  );
+}
+
+/** Three calm dots while the tutor writes — never a spinner in the bubble. */
+function ThinkingDots() {
+  return (
+    <span className="inline-flex items-center gap-1.5" aria-hidden="true">
+      <span className="tutor-dot" />
+      <span className="tutor-dot tutor-dot--2" />
+      <span className="tutor-dot tutor-dot--3" />
+    </span>
+  );
+}
+
+function DoubtTurn({
+  doubt,
+  isPending,
+  elapsedSeconds,
+}: {
+  doubt: DoubtCard;
+  isPending: boolean;
+  elapsedSeconds: number;
+}) {
   const answered = doubt.status === "ANSWERED";
   const isFallback = answered && doubt.answeredWithFallback;
   return (
-    <article className="space-y-3">
-      <div className="ml-auto max-w-[88%] rounded-[1.35rem] rounded-br-md bg-primary px-4 py-3 text-white shadow-[0_12px_26px_rgba(63,111,87,0.18)]">
-        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/65">
-          <span>{formatTime(doubt.createdAt)}</span>
-          <span>{doubt.topic}</span>
+    <div className="space-y-3">
+      {/* Learner turn */}
+      <div className="flex flex-col items-end">
+        <div className="max-w-[88%] rounded-[1.35rem] rounded-br-md bg-primary px-4 py-3 text-white shadow-[0_12px_26px_rgba(63,111,87,0.18)]">
+          <p className="whitespace-pre-wrap text-sm font-medium leading-6">
+            {doubt.message}
+          </p>
         </div>
-        <p className="mt-1 text-sm font-medium leading-6">{doubt.message}</p>
+        <p className="mt-1 pe-1 text-[11px] font-medium text-ink-mute">
+          You · {formatTime(doubt.createdAt)}
+        </p>
       </div>
 
-      <div className="max-w-[92%] rounded-[1.35rem] rounded-bl-md border border-hairline bg-surface p-4 shadow-[0_10px_24px_rgba(20,20,30,0.045)]">
-        <div className="mb-2 flex items-center gap-2">
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] ${
-              isFallback
-                ? "bg-warning-tint text-warning"
-                : answered
-                  ? "bg-success-tint text-success"
-                  : "bg-warning-tint text-warning"
-            }`}
-          >
-            {answered ? (
-              isFallback ? (
+      {/* Tutor turn */}
+      <div className="flex items-start gap-2.5">
+        <TutorAvatar />
+        <div className="min-w-0 max-w-[92%] flex-1 rounded-[1.35rem] rounded-tl-md border border-hairline bg-surface p-4 shadow-[0_10px_24px_rgba(20,20,30,0.045)]">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold text-ink">AI Tutor</span>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] ${
+                isFallback
+                  ? "bg-warning-tint text-warning"
+                  : answered
+                    ? "bg-success-tint text-success"
+                    : "bg-canvas text-ink-mute"
+              }`}
+            >
+              {isFallback ? (
                 <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />
-              ) : (
+              ) : answered ? (
                 <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-              )
-            ) : (
-              <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />
-            )}
-            {isFallback ? "Offline answer" : answered ? "Tutor answer" : "Writing"}
-          </span>
-          {isFallback ? (
-            <span className="text-[11px] font-semibold text-ink-mute">
-              tutor was unreachable — ask a follow-up once it is back
+              ) : null}
+              {isFallback
+                ? "Offline answer"
+                : answered
+                  ? "Answered"
+                  : "Writing"}
             </span>
-          ) : null}
-          {doubt.sources.length > 0 ? (
-            <span className="text-[11px] font-semibold text-ink-mute">
-              grounded with {doubt.sources.length} source
-              {doubt.sources.length === 1 ? "" : "s"}
-            </span>
-          ) : null}
+            {doubt.sources.length > 0 ? (
+              <span className="text-[11px] font-semibold text-ink-mute">
+                grounded in {doubt.sources.length} source
+                {doubt.sources.length === 1 ? "" : "s"}
+              </span>
+            ) : null}
+          </div>
+
+          {answered ? (
+            <>
+              <StudyMarkdown className="text-sm leading-7 text-ink-soft">
+                {doubt.assistantResponse ?? ""}
+              </StudyMarkdown>
+              <SourceCitations sources={doubt.sources} />
+              {isFallback ? (
+                <p className="mt-3 rounded-xl border border-warning/25 bg-warning-tint px-3 py-2 text-xs leading-5 font-medium text-warning">
+                  The tutor was unreachable when this was answered. Send a
+                  follow-up now to get a full explanation.
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <div className="flex items-center gap-3 py-1">
+              <ThinkingDots />
+              <p className="text-sm text-ink-mute" role="status" aria-live="polite">
+                {isPending && elapsedSeconds > 8
+                  ? `Thinking for ${elapsedSeconds}s — long questions take a moment…`
+                  : "The tutor is writing your answer…"}
+              </p>
+            </div>
+          )}
         </div>
-        {doubt.assistantResponse ? (
-          <>
-            <StudyMarkdown className="text-sm leading-6 text-ink-soft">
-              {doubt.assistantResponse}
-            </StudyMarkdown>
-            <SourceCitations sources={doubt.sources} />
-          </>
-        ) : (
-          <p className="flex items-center gap-2 text-sm leading-6 text-ink-mute">
-            <Loader2
-              className="h-4 w-4 animate-spin text-primary"
-              aria-hidden="true"
-            />
-            Tutor is thinking.
-          </p>
-        )}
       </div>
-    </article>
+    </div>
   );
 }
 
@@ -183,6 +255,7 @@ export default function DoubtsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pendingDoubtId, setPendingDoubtId] = useState<string | null>(null);
+  const [pendingElapsed, setPendingElapsed] = useState(0);
   const [scanning, setScanning] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewFileName, setPreviewFileName] = useState<string | null>(null);
@@ -264,17 +337,29 @@ export default function DoubtsPage() {
     return fromSelected ?? visibleThreads[0] ?? null;
   }, [activeThreadId, visibleThreads]);
 
+  // Keep the newest turn in view; smooth unless the OS asks for less motion.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "end" });
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")
+      .matches;
+    bottomRef.current?.scrollIntoView({
+      block: "end",
+      behavior: reduce ? "auto" : "smooth",
+    });
   }, [activeThread?.id, activeThread?.turns, pendingDoubtId]);
 
+  // Poll for the background tutor answer, and tick the "thinking" seconds.
   useEffect(() => {
     if (!pendingDoubtId) return;
     const targetId = pendingDoubtId;
     let attempts = 0;
+    const secondsTimer = window.setInterval(
+      () => setPendingElapsed((n) => n + 1),
+      1000,
+    );
     const stop = () => {
       if (pollRef.current) window.clearTimeout(pollRef.current);
       pollRef.current = null;
+      window.clearInterval(secondsTimer);
     };
     const tick = async () => {
       attempts += 1;
@@ -283,7 +368,6 @@ export default function DoubtsPage() {
         const resolved = data.doubts.find((d) => d.id === targetId);
         if (resolved && resolved.status === "ANSWERED") {
           setPendingDoubtId(null);
-          setSuccess("Tutor answered your doubt.");
           return;
         }
       } catch {
@@ -291,7 +375,7 @@ export default function DoubtsPage() {
       }
       if (attempts >= 40) {
         setPendingDoubtId(null);
-        setSuccess("Still thinking — refresh later to see the answer.");
+        setSuccess("Still thinking — open this chat again to see the answer.");
         return;
       }
       pollRef.current = window.setTimeout(tick, 3000);
@@ -299,6 +383,13 @@ export default function DoubtsPage() {
     pollRef.current = window.setTimeout(tick, 1200);
     return stop;
   }, [loadDoubts, pendingDoubtId]);
+
+  // Success notes fade away on their own; errors stay until the next action.
+  useEffect(() => {
+    if (!success) return;
+    const timer = window.setTimeout(() => setSuccess(null), 4500);
+    return () => window.clearTimeout(timer);
+  }, [success]);
 
   async function createThread() {
     setCreatingThread(true);
@@ -319,6 +410,7 @@ export default function DoubtsPage() {
       setActiveThreadId(created.id);
       await loadDoubts();
       setSuccess("New doubt chat created.");
+      messageInputRef.current?.focus();
     } catch (caught) {
       setError(
         caught instanceof ApiError
@@ -356,8 +448,9 @@ export default function DoubtsPage() {
         body: JSON.stringify(payload),
       });
       setForm((current) => ({ ...current, message: "" }));
+      growComposer();
       setActiveThreadId(created.threadId ?? activeThreadId);
-      setSuccess("Sent.");
+      setPendingElapsed(0);
       setPendingDoubtId(created.id);
       await loadDoubts();
     } catch (caught) {
@@ -417,6 +510,7 @@ export default function DoubtsPage() {
           ? `${current.message.trim()}\n${extracted}`
           : extracted,
       }));
+      growComposer();
       setSuccess("Text extracted — review and edit before sending.");
       messageInputRef.current?.focus();
     } catch (caught) {
@@ -444,43 +538,57 @@ export default function DoubtsPage() {
     setError(null);
   }
 
+  /** Let the composer grow with the message, up to a scrollable cap. */
+  function growComposer() {
+    const el = messageInputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }
+
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== "Enter" || event.shiftKey) return;
     event.preventDefault();
     event.currentTarget.form?.requestSubmit();
   }
 
-  const canCreateThread =
+  function applyStarter(text: string) {
+    setForm((current) => ({ ...current, message: text }));
+    growComposer();
+    messageInputRef.current?.focus();
+  }
+
+  const scopeKnownForNewThread =
     (routeScope?.subject ?? form.subject).trim().length >= 2 &&
     (routeScope?.chapter ?? form.chapter).trim().length >= 2 &&
-    (routeScope?.topic ?? form.topic).trim().length >= 2 &&
-    !creatingThread;
+    (routeScope?.topic ?? form.topic).trim().length >= 2;
+  const canCreateThread = scopeKnownForNewThread && !creatingThread;
 
+  const messageTooShort = form.message.trim().length > 0 && form.message.trim().length < 5;
   const canSubmit =
-    (routeScope?.subject ?? activeThread?.subject ?? form.subject).trim()
-      .length >= 2 &&
-    (routeScope?.chapter ?? activeThread?.chapter ?? form.chapter).trim()
-      .length >= 2 &&
-    (routeScope?.topic ?? activeThread?.topic ?? form.topic).trim().length >=
-      2 &&
+    scopeKnownForNewThread &&
     form.message.trim().length >= 5 &&
     !submitting;
 
   return (
     <div className="min-h-screen bg-canvas pb-20">
       <main className="mx-auto w-full max-w-6xl px-5 pt-8 sm:px-8 lg:px-10">
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="animate-rise min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
               Doubts
             </p>
             <h1 className="mt-2 font-heading page-title text-ink">
               Topic doubt chats.
             </h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-ink-soft">
+              Ask anything about the topic — the AI tutor answers with grounded
+              explanations, and every chat keeps its history.
+            </p>
           </div>
           <Link
             href={workspaceScope ? scopeHref("/learn", workspaceScope) : "/learn"}
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-ink-solid px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink-solid/90"
+            className="animate-rise inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full bg-ink-solid px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-ink-solid/90 [animation-delay:70ms]"
           >
             Continue learning
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -498,39 +606,82 @@ export default function DoubtsPage() {
                     <MessageSquareText className="h-5 w-5" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <h2 className="font-heading text-lg font-bold text-ink">
+                    <h2 className="truncate font-heading text-lg font-bold text-ink">
                       {activeThread?.title ??
                         workspaceScope?.topic ??
                         "Start a doubt chat"}
                     </h2>
-                    <p className="truncate text-xs font-medium text-ink-mute">
-                      {activeThread
-                        ? `${activeThread.subject} / ${activeThread.chapter} / ${activeThread.topic}`
-                        : "Create a chat, then send your first doubt."}
+                    <p className="flex items-center gap-1.5 truncate text-xs font-medium text-ink-mute">
+                      {activeThread ? (
+                        <>
+                          {activeThread.subject}
+                          <span aria-hidden="true">/</span>
+                          {activeThread.chapter}
+                          <span aria-hidden="true">/</span>
+                          <span className="font-semibold text-ink-soft">
+                            {activeThread.topic}
+                          </span>
+                        </>
+                      ) : (
+                        "Create a chat, then send your first doubt."
+                      )}
                     </p>
                   </div>
-                  <span className="ml-auto rounded-full bg-canvas px-3 py-1 text-xs font-bold text-ink-soft">
+                  <span
+                    className={`ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+                      pendingDoubtId
+                        ? "bg-warning-tint text-warning"
+                        : "bg-canvas text-ink-soft"
+                    }`}
+                  >
+                    {pendingDoubtId ? <ThinkingDots /> : null}
                     {activeThread?.turns ?? 0} turn
                     {activeThread?.turns === 1 ? "" : "s"}
                   </span>
                 </div>
               </div>
 
-              <div className="flex-1 space-y-5 overflow-y-auto bg-canvas/45 px-4 py-5 custom-scrollbar sm:px-5">
+              <div className="flex-1 space-y-6 overflow-y-auto bg-canvas/45 px-4 py-5 custom-scrollbar sm:px-5">
                 {activeThread && activeThread.doubts.length > 0 ? (
                   activeThread.doubts.map((doubt) => (
-                    <DoubtTurn key={doubt.id} doubt={doubt} />
+                    <DoubtTurn
+                      key={doubt.id}
+                      doubt={doubt}
+                      isPending={doubt.id === pendingDoubtId}
+                      elapsedSeconds={pendingElapsed}
+                    />
                   ))
                 ) : (
-                  <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-hairline bg-surface p-8 text-center">
+                  <div className="mx-auto grid min-h-64 max-w-md place-items-center rounded-2xl border border-dashed border-hairline bg-surface p-8 text-center">
                     <div>
-                      <Sparkles
-                        className="mx-auto h-8 w-8 text-primary"
-                        aria-hidden="true"
-                      />
+                      <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-primary-tint text-primary">
+                        <Sparkles className="h-6 w-6" aria-hidden="true" />
+                      </span>
                       <h2 className="mt-3 font-heading text-xl font-semibold text-ink">
-                        No messages in this chat yet
+                        {activeThread
+                          ? "Ask your first doubt"
+                          : "No chat selected"}
                       </h2>
+                      <p className="mt-1 text-sm leading-6 text-ink-soft">
+                        {activeThread
+                          ? "Type a question below, or start with one of these:"
+                          : "Create a chat from the side panel, then ask away."}
+                      </p>
+                      {activeThread ? (
+                        <div className="mt-4 flex flex-col gap-2">
+                          {STARTER_PROMPTS.map(({ icon: Icon, text }) => (
+                            <button
+                              key={text}
+                              type="button"
+                              onClick={() => applyStarter(text)}
+                              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-hairline bg-canvas px-4 text-left text-[13px] font-semibold text-ink-soft transition hover:border-primary/30 hover:bg-primary-tint hover:text-primary"
+                            >
+                              <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                              {text}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 )}
@@ -541,33 +692,6 @@ export default function DoubtsPage() {
                 onSubmit={handleSubmit}
                 className="border-t border-hairline bg-surface p-4"
               >
-                {!workspaceScope && !activeThread ? (
-                  <div className="mb-3 grid gap-2 sm:grid-cols-3">
-                    {(["subject", "chapter", "topic"] as const).map((field) => (
-                      <label key={field} className="block">
-                        <span className="sr-only">{field}</span>
-                        <input
-                          value={form[field]}
-                          onChange={(event) =>
-                            setForm((current) => ({
-                              ...current,
-                              [field]: event.target.value,
-                            }))
-                          }
-                          placeholder={
-                            field === "subject"
-                              ? "Subject"
-                              : field === "chapter"
-                                ? "Chapter"
-                                : "Topic"
-                          }
-                          className="min-h-10 w-full rounded-xl border border-hairline bg-canvas px-3 text-sm font-semibold text-ink outline-none transition focus:border-primary/45 focus:bg-surface"
-                        />
-                      </label>
-                    ))}
-                  </div>
-                ) : null}
-
                 <div className="flex items-end gap-2 rounded-[1.35rem] border border-hairline bg-canvas p-2 transition focus-within:border-primary/45 focus-within:bg-surface focus-within:shadow-[0_10px_28px_rgba(63,111,87,0.08)]">
                   <input
                     ref={photoInputRef}
@@ -597,17 +721,19 @@ export default function DoubtsPage() {
                     <textarea
                       ref={messageInputRef}
                       value={form.message}
-                      onChange={(event) =>
+                      onChange={(event) => {
                         setForm((current) => ({
                           ...current,
                           message: event.target.value,
-                        }))
-                      }
+                        }));
+                        growComposer();
+                      }}
                       onKeyDown={handleComposerKeyDown}
-                      placeholder="Ask a focused doubt, or scan a photo of the question..."
+                      placeholder="Ask a focused doubt, or scan a photo of the question…"
                       disabled={submitting}
+                      rows={1}
                       aria-label="Your doubt message"
-                      className="custom-scrollbar max-h-28 min-h-10 w-full resize-none bg-transparent px-2 py-2 text-[13px] leading-5 text-ink outline-none placeholder:text-ink-mute disabled:cursor-wait disabled:opacity-70"
+                      className="custom-scrollbar max-h-40 min-h-10 w-full resize-none bg-transparent px-2 py-2 text-sm leading-6 text-ink outline-none placeholder:text-ink-mute disabled:cursor-wait disabled:opacity-70"
                     />
                   </label>
                   <button
@@ -629,8 +755,13 @@ export default function DoubtsPage() {
                     </span>
                   </button>
                 </div>
+                <p className="mt-1.5 px-1 text-[11px] font-medium text-ink-mute">
+                  Enter to send · Shift + Enter for a new line
+                  {messageTooShort ? " · write a little more" : ""}
+                </p>
+
                 {previewUrl ? (
-                  <div className="mt-3 overflow-hidden rounded-2xl border border-hairline bg-surface shadow-sm animate-rise">
+                  <div className="mt-3 animate-rise overflow-hidden rounded-2xl border border-hairline bg-surface shadow-sm">
                     <div className="flex gap-3 p-3">
                       <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-canvas">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -643,40 +774,30 @@ export default function DoubtsPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-ink">{previewFileName}</p>
-                        <p className="text-xs text-ink-mute">{previewFileSize} {scanning ? "· Reading..." : "· Ready"}</p>
+                        <p className="text-xs text-ink-mute">{previewFileSize} {scanning ? "· Reading…" : "· Ready"}</p>
                         {scanning ? (
                           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-canvas">
-                            <div className="h-full w-full animate-pulse bg-primary/40" style={{ animation: "shimmer 1.2s ease-in-out infinite" }} />
+                            <div className="h-full w-full animate-pulse bg-primary/40" />
                           </div>
                         ) : (
                           <p className="mt-1 text-xs leading-5 text-ink-soft">Text will be added to your message — review and edit before sending.</p>
                         )}
                       </div>
                       <div className="flex shrink-0 flex-col gap-1.5">
-                        {scanning ? (
-                          <button
-                            type="button"
-                            onClick={handleCancelScan}
-                            className="rounded-full border border-hairline bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-canvas"
-                          >
-                            Cancel
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={handleRemovePreview}
-                            className="rounded-full border border-hairline bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-canvas"
-                          >
-                            Remove
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={scanning ? handleCancelScan : handleRemovePreview}
+                          className="inline-flex items-center gap-1 rounded-full border border-hairline bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-canvas"
+                        >
+                          {scanning ? "Cancel" : (<><X className="h-3 w-3" aria-hidden="true" />Remove</>)}
+                        </button>
                       </div>
                     </div>
                   </div>
                 ) : scanning ? (
                   <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-ink-mute" role="status" aria-live="polite">
                     <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                    Reading the photo — this can take a few seconds...
+                    Reading the photo — this can take a few seconds…
                   </p>
                 ) : null}
 
@@ -684,13 +805,17 @@ export default function DoubtsPage() {
                   <AiUnavailableNote className="mt-3" description={error} />
                 ) : null}
                 {success ? (
-                  <div className="mt-3 flex items-start gap-2 rounded-2xl border border-success/25 bg-success-tint p-3 text-sm text-success">
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-3 flex items-start gap-2 rounded-2xl border border-success/25 bg-success-tint p-3 text-sm text-success"
+                  >
                     <CheckCircle2
                       className="mt-0.5 h-4 w-4 shrink-0"
                       aria-hidden="true"
                     />
                     {success}
-                  </div>
+                  </motion.div>
                 ) : null}
               </form>
             </section>
@@ -730,7 +855,8 @@ export default function DoubtsPage() {
                               ? "Chapter"
                               : "Topic"
                         }
-                        className="min-h-10 rounded-xl border border-white/10 bg-white/8 px-3 text-sm font-semibold text-white outline-none placeholder:text-white/40 focus:border-white/30"
+                        aria-label={field}
+                        className="min-h-10 rounded-xl border border-white/15 bg-white/10 px-3 text-sm font-semibold text-white outline-none transition placeholder:text-white/45 focus:border-white/40 focus:bg-white/15"
                       />
                     ))}
                   </div>
@@ -740,13 +866,14 @@ export default function DoubtsPage() {
                   value={threadTitle}
                   onChange={(event) => setThreadTitle(event.target.value)}
                   placeholder="Optional chat title"
-                  className="mt-4 min-h-10 w-full rounded-xl border border-white/10 bg-white/8 px-3 text-sm font-semibold text-white outline-none placeholder:text-white/40 focus:border-white/30"
+                  aria-label="Optional chat title"
+                  className="mt-4 min-h-10 w-full rounded-xl border border-white/15 bg-white/10 px-3 text-sm font-semibold text-white outline-none transition placeholder:text-white/45 focus:border-white/40 focus:bg-white/15"
                 />
                 <button
                   type="button"
                   onClick={() => void createThread()}
                   disabled={!canCreateThread}
-                  className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-bold text-ink transition hover:bg-primary-tint disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-bold text-ink transition hover:bg-primary-tint disabled:cursor-not-allowed disabled:bg-white/25 disabled:text-white/60"
                 >
                   {creatingThread ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -755,38 +882,66 @@ export default function DoubtsPage() {
                   )}
                   New chat
                 </button>
+                {!scopeKnownForNewThread ? (
+                  <p className="mt-2 text-[11px] leading-5 font-medium text-white/50">
+                    {workspaceScope
+                      ? "Something went wrong reading the topic — go back to the chapter and open the doubt chat from there."
+                      : "Fill in subject, chapter and topic to start a new chat."}
+                  </p>
+                ) : null}
               </section>
 
               <section className="rounded-[1.65rem] border border-hairline bg-surface p-3 shadow-[0_14px_34px_rgba(20,20,30,0.05)]">
-                <div className="max-h-[25rem] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                <div className="max-h-[25rem] space-y-1.5 overflow-y-auto pr-1 custom-scrollbar">
                   {visibleThreads.length > 0 ? (
                     visibleThreads.map((thread) => {
                       const active = thread.id === activeThread?.id;
+                      const lastTurn = thread.doubts[thread.doubts.length - 1];
                       return (
                         <button
                           key={thread.id}
                           type="button"
                           onClick={() => setActiveThreadId(thread.id)}
-                          className={`w-full rounded-2xl p-3 text-left transition ${
+                          className={`relative w-full overflow-hidden rounded-2xl p-3 text-left transition ${
                             active
-                              ? "bg-primary-tint text-primary ring-1 ring-primary/15"
+                              ? "bg-primary-tint ring-1 ring-primary/15"
                               : "hover:bg-canvas"
                           }`}
                         >
-                          <span className="block truncate text-sm font-bold text-ink">
-                            {thread.title}
+                          {active && (
+                            <motion.span
+                              layoutId="doubt-thread-active"
+                              transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                              className="absolute inset-y-2 start-0 w-[3px] rounded-full bg-primary"
+                            />
+                          )}
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="min-w-0 truncate text-sm font-bold text-ink">
+                              {thread.title}
+                            </span>
+                            {lastTurn ? (
+                              <span className="shrink-0 text-[10px] font-semibold text-ink-mute">
+                                {formatRelative(lastTurn.createdAt)}
+                              </span>
+                            ) : null}
                           </span>
-                          <span className="mt-1 block truncate text-[11px] font-medium text-ink-mute">
+                          <span className="mt-0.5 block truncate text-[11px] font-medium text-ink-mute">
                             {thread.topic} · {thread.turns} turn
                             {thread.turns === 1 ? "" : "s"}
                           </span>
                           <span
-                            className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.11em] ${
+                            className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.11em] ${
                               thread.status === "OPEN"
                                 ? "bg-warning-tint text-warning"
                                 : "bg-success-tint text-success"
                             }`}
                           >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                thread.status === "OPEN" ? "bg-warning" : "bg-success"
+                              }`}
+                              aria-hidden="true"
+                            />
                             {thread.status === "OPEN" ? "Tutor writing" : "Answered"}
                           </span>
                         </button>

@@ -9,6 +9,13 @@
   margin: 0;
 }
 
+/* Inline KaTeX (stacked fractions, big operators) is taller than the chat's
+   tight leading and clips against the next line. Only paragraphs that
+   actually contain math breathe; normal prose keeps its density. */
+.study-markdown p:has(.katex) {
+  line-height: 1.9;
+}
+
 .study-markdown h1,
 .study-markdown h2,
 .study-markdown h3,

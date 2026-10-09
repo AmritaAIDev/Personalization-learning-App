@@ -393,7 +393,7 @@ export default function StudyAssistant({
                         : "Full explanation"}
                     </p>
                   ) : null}
-                  <StudyMarkdown className="text-[12.5px] leading-5 text-ink-soft">
+                  <StudyMarkdown className="text-[12.5px] leading-6 text-ink-soft">
                     {item.content}
                   </StudyMarkdown>
                 </>
@@ -412,7 +412,7 @@ export default function StudyAssistant({
               className="mr-3 rounded-2xl rounded-bl-md border border-hairline bg-surface px-3 py-2.5 shadow-[0_6px_16px_rgba(20,20,30,0.04)]"
               aria-live="polite"
             >
-              <StudyMarkdown className="text-[12.5px] leading-5 text-ink-soft">
+              <StudyMarkdown className="text-[12.5px] leading-6 text-ink-soft">
                 {streamingReply ?? ""}
               </StudyMarkdown>
             </article>

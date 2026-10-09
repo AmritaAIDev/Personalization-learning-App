@@ -34,7 +34,9 @@ export default function ChapterActions({
 
   const scope = {
     subject: detail.chapter.subject,
-    chapter: detail.chapter.name,
+    // The name the topic's questions are tagged with, which for aliased
+    // chapters (e.g. Electrostatics) differs from the chapter's display name.
+    chapter: focus.scopeChapter,
     topic: focus.name,
   };
   const actions = [

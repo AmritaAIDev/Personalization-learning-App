@@ -62,6 +62,12 @@ export interface CatalogSubjectChapters {
 
 export interface CatalogTopicDetail {
   name: string;
+  /**
+   * The chapter name this topic's questions are tagged with. Usually the
+   * chapter's own name; for aliased chapters it is the content-side name, and
+   * is what /learn links must use.
+   */
+  scopeChapter: string;
   status: TopicProgressStatus;
   score: number | null;
   answered: number;

@@ -146,6 +146,23 @@ checking that `/health` is still 200 and that non-AI routes respond.
   edit or publish with `PATCH /api/catalog/admin/chapters/:topicId/meta`
   (`{"status":"PUBLISHED"}`; needs an overview and at least one objective).
   Editing a guide marks it `source=ADMIN`, so re-seeding can't overwrite it.
+- **Releasing the Subjects screens to a database for the first time** (the
+  `chapter_meta` table arrives with migration `1787000000000`; a database that
+  stopped at 26 migrations does not have it yet):
+  1. `npm run migrate:deploy` (the migrate workflow does this on merge when
+     `PRODUCTION_DATABASE_URL` is configured).
+  2. `npm run seed:syllabus`, then `npm run seed:chapter-meta:dry` and
+     `npm run seed:chapter-meta`.
+  3. `npm run audit:catalog` (read-only). Every question/learning-state chapter
+     mismatch should read "handled"; if one says NOT handled, add an alias in
+     `src/catalog/catalog-aliases.ts` or fix the tag.
+  4. Optional: `npm run seed:compass-questions:dry`, then
+     `npm run seed:compass-questions`. These land as **drafts**; nothing reaches
+     students until an admin publishes them in Content.
+- The backend `.env` can point at a shared cloud database. Scripts that write
+  (every `seed:*` except the `:dry` variants) use whatever `DATABASE_URL` is in
+  scope, so override it explicitly when testing, and never run an import "just to
+  see" against a database you have not chosen on purpose.
 - Scores shown on Subjects, chapter cards and analytics are computed live from
   graded answers (practice, diagnostics, mock tests, adaptive learning); there
   is no table to backfill or recompute.

@@ -108,6 +108,60 @@ band, mastery), `chaptersCompleted`, `units[]` (for the radar), `chapters[]`,
 `strongTopics[]`, `weakTopics[]`, `trend[]` (last 8 weeks, Monday-based UTC) and
 `hasData`. All of it is built by the pure `buildSubjectAnalytics`.
 
+## Chapter names: aliases and the syllabus-only rule
+
+The catalog joins questions and learning state to the `topics` tree by **exact
+chapter name**. `npm run audit:catalog` (read-only, safe on production) found
+that the older Electrostatics question bank is tagged with the NCERT names
+"Electric Charges and Fields" and "Electrostatic Potential and Capacitance"
+(and 3 Chemistry questions with "Thermodynamics"), while the syllabus tree has
+"Electrostatics" and "Chemical Thermodynamics". Without help, ~340 questions and
+~50 learning states would be invisible on Subjects and Electrostatics would look
+empty.
+
+- `catalog-aliases.ts` declares those three aliases. `buildAliasResolver` applies
+  an alias **only while the content-side name is not itself a tree chapter** (and
+  the target is), so the moment the tree gains a real chapter of that name the
+  alias turns itself off and nothing is double-counted.
+- Folding happens once, in `loadContext`: question counts, learning states and
+  answer events are mapped onto the tree chapter, so every later lookup is a plain
+  exact-name join.
+- A chapter whose tree node has no sub-topics lists the topics found in its
+  published questions instead, so it can still be studied. Each topic carries a
+  `scopeChapter`: the name its questions are tagged with, which is what `/learn`
+  links must use (the learning engine matches questions by that exact name).
+- Alias URL slugs resolve too (`/subjects/physics/electric-charges-and-fields`
+  opens Electrostatics), because the learning workspace breadcrumb links by the
+  content-side name.
+- **Syllabus-only:** students see a tree chapter only if it has a study-guide row
+  (all 55 syllabus chapters) or at least one published question. This hides
+  leftover non-syllabus nodes (the dev demo seed's "Units & Math", "Current
+  Elec." ...). The admin review list still shows every node.
+
+Add a new alias in `CHAPTER_ALIASES` only after `audit:catalog` reports a
+mismatch as NOT handled.
+
+## Importing the Compass question bank
+
+`npm run seed:compass-questions[:dry]` imports the 120 Physics Chapter 1
+questions from JEE Compass (the only Compass questions with explanations; its
+other files are generated placeholders or have no explanations) as **DRAFT**
+questions under Physics / Electric Charges and Fields, where the existing bank
+lives. They never reach a student until an admin publishes them in Content.
+
+- Pure, tested plan in `scripts/compass-questions.plan.ts`; data in
+  `scripts/content/compass-questions.ts` (extracted by text parsing, never by
+  executing the Compass code).
+- Two questions with duplicate options are skipped (reported, not repaired).
+- **The source always lists the correct answer first.** Importing as-is would let
+  a student score 100% by always picking option A, so options are re-ordered
+  deterministically to balance the answer position (30 / 30 / 29 / 29).
+- Idempotent by `question_id` (`CMP-PHY-CH1-...`): a re-run refreshes untouched
+  drafts and leaves alone anything an admin has reviewed, edited, published or
+  archived.
+- `--dry-run` works without a database and, when one is configured, reports
+  which topic names already exist (admins may want to retag the new ones).
+
 ## RBAC
 
 - Students read `PUBLISHED` study guides only; `DRAFT` rows are never serialised.
@@ -122,5 +176,8 @@ band, mastery), `chaptersCompleted`, `units[]` (for the radar), `chapters[]`,
 ```bash
 npm run seed:chapter-meta:dry   # print the review report, write nothing
 npm run seed:chapter-meta       # apply (idempotent; requires seed:syllabus topics)
+npm run audit:catalog           # read-only: where tree and content disagree on chapter names
+npm run seed:compass-questions:dry   # report what the Compass import would do
+npm run seed:compass-questions       # write the DRAFT questions (idempotent)
 ```
 

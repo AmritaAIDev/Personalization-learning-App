@@ -37,6 +37,8 @@ export interface AnalyticsInsights {
 export interface TopicStat extends AccuracyStat {
   chapter: string;
   chapterSlug: string;
+  /** Chapter name the topic's questions are tagged with (for /learn links). */
+  scopeChapter: string;
   topic: string;
 }
 

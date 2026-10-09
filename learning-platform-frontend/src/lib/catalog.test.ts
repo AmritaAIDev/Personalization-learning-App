@@ -52,7 +52,14 @@ function topic(
   status: CatalogTopicDetail["status"],
   score: number | null = null,
 ): CatalogTopicDetail {
-  return { name, status, score, answered: score === null ? 0 : 5, questionCount: 5 };
+  return {
+    name,
+    scopeChapter: "Optics",
+    status,
+    score,
+    answered: score === null ? 0 : 5,
+    questionCount: 5,
+  };
 }
 
 describe("catalog hrefs", () => {

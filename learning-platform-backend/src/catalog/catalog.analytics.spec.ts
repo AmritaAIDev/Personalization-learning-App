@@ -159,6 +159,7 @@ describe('buildSubjectAnalytics', () => {
       {
         chapter: 'Waves',
         chapterSlug: 'waves',
+        scopeChapter: 'Waves',
         topic: 'Doppler Effect',
         answered: 2,
         correct: 2,
@@ -221,6 +222,41 @@ describe('buildSubjectAnalytics', () => {
     });
     expect(single.insights.weakestBloom).toBeNull();
     expect(single.insights.focus).toBeNull();
+  });
+});
+
+describe('buildSubjectAnalytics with aliased chapters', () => {
+  it('links topics back to the chapter name the questions are tagged with', () => {
+    const aliased: AnswerEvent[] = [
+      {
+        ...ev('Electrostatics', "Gauss's Law", 'Apply', true),
+        sourceChapter: 'Electric Charges and Fields',
+      },
+      {
+        ...ev('Electrostatics', "Gauss's Law", 'Apply', true),
+        sourceChapter: 'Electric Charges and Fields',
+      },
+    ];
+    const result = buildSubjectAnalytics(
+      SUBJECT,
+      [
+        {
+          slug: 'electrostatics',
+          name: 'Electrostatics',
+          unit: 'Electrostatics',
+        },
+      ],
+      aliased,
+      NOW,
+    );
+    expect(result.strongTopics).toEqual([
+      expect.objectContaining({
+        chapter: 'Electrostatics',
+        chapterSlug: 'electrostatics',
+        scopeChapter: 'Electric Charges and Fields',
+        topic: "Gauss's Law",
+      }),
+    ]);
   });
 });
 

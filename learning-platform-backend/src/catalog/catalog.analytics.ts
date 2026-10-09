@@ -15,7 +15,10 @@ import type {
 /** One graded answer, from any of the four answer tables. */
 export interface AnswerEvent {
   subject: string;
+  /** Tree chapter name (after aliasing). */
   chapter: string;
+  /** Chapter name the question is actually tagged with, when it was aliased. */
+  sourceChapter?: string;
   topic: string;
   bloom: string | null;
   isCorrect: boolean;
@@ -257,6 +260,7 @@ function topicStats(
       chapter: group[0].chapter,
       chapterSlug:
         slugByName.get(group[0].chapter) ?? slugify(group[0].chapter),
+      scopeChapter: group[0].sourceChapter ?? group[0].chapter,
       topic: group[0].topic,
       ...tally(group),
     }));

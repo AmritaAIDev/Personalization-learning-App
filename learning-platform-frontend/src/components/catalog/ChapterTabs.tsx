@@ -91,7 +91,7 @@ function TopicsPanel({ detail }: { detail: CatalogChapterDetail }) {
         const status = TOPIC_STATUS[topic.status];
         const href = learningUrl({
           subject: detail.chapter.subject,
-          chapter: detail.chapter.name,
+          chapter: topic.scopeChapter,
           topic: topic.name,
         });
         return (

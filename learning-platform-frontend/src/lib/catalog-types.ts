@@ -55,6 +55,12 @@ export interface CatalogSubjectChapters {
 
 export interface CatalogTopicDetail {
   name: string;
+  /**
+   * Chapter name this topic's questions are tagged with. Usually the chapter's
+   * own name; for aliased chapters it is the content-side name, which is what
+   * the learning workspace links must use.
+   */
+  scopeChapter: string;
   status: TopicProgressStatus;
   score: number | null;
   answered: number;
@@ -116,6 +122,8 @@ export interface AnalyticsInsights {
 export interface TopicStat extends AccuracyStat {
   chapter: string;
   chapterSlug: string;
+  /** Chapter name the topic's questions are tagged with (for /learn links). */
+  scopeChapter: string;
   topic: string;
 }
 

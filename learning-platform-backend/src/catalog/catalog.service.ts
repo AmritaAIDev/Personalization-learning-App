@@ -10,6 +10,7 @@ import { BookmarkedQuestion } from '../bookmarks/bookmarked-question.entity';
 import { Question, QuestionPublicationStatus } from '../question.entity';
 import { Topic, TopicLevel } from '../topics/topic.entity';
 import { loadAnswerEvents } from './answer-events.query';
+import { buildAliasResolver, type AliasResolver } from './catalog-aliases';
 import { tally, type AnswerEvent } from './catalog.analytics';
 import { findBySlug, slugify } from './catalog.slug';
 import {
@@ -39,6 +40,8 @@ const TOPIC_PREVIEW_COUNT = 4;
 export interface SubjectOutline {
   subject: { slug: string; name: string };
   chapters: Array<{ slug: string; name: string; unit: string | null }>;
+  /** Maps content-side chapter names (and alias URL slugs) onto these chapters. */
+  aliases: AliasResolver;
 }
 
 interface ChapterNode {
@@ -56,6 +59,14 @@ interface CatalogContext {
   meta: Map<string, ChapterMeta>;
   questionCounts: Map<string, number>;
   states: Map<string, LearningTopicState>;
+  aliases: AliasResolver;
+  /**
+   * The chapter name a topic's questions are actually tagged with, for
+   * /learn links (the learning engine matches questions by that exact name).
+   */
+  scopeChapters: Map<string, string>;
+  /** Topics found in published questions, for chapters whose tree has none. */
+  derivedTopics: Map<string, string[]>;
   /** Graded answers from every source, indexed for chapter and topic lookups. */
   events: AnswerEvent[];
   chapterEvents: Map<string, AnswerEvent[]>;
@@ -156,9 +167,19 @@ export class CatalogService {
   ): Promise<CatalogChapterDetail> {
     const ctx = await this.loadContext(userId);
     const subject = this.requireSubject(ctx, subjectSlug);
-    const chapter = findBySlug(
-      subject.chapters.map((node) => ({ name: node.topic.name, node })),
+    const chapterNodes = subject.chapters.map((node) => ({
+      name: node.topic.name,
+      node,
+    }));
+    // A link built from the content-side name (e.g. the learning workspace
+    // breadcrumb for "Electric Charges and Fields") resolves to its tree chapter.
+    const aliasTarget = ctx.aliases.chapterForSlug(
+      subject.topic.name,
       chapterSlug,
+    );
+    const chapter = (
+      findBySlug(chapterNodes, chapterSlug) ??
+      (aliasTarget ? findBySlug(chapterNodes, aliasTarget) : undefined)
     )?.node;
     if (!chapter) throw new NotFoundException('Chapter not found.');
 
@@ -173,7 +194,9 @@ export class CatalogService {
       .andWhere('question.subject = :subject', {
         subject: subject.topic.name,
       })
-      .andWhere('question.chapter = :chapter', { chapter: chapter.topic.name })
+      .andWhere('question.chapter IN (:...chapters)', {
+        chapters: ctx.aliases.sources(subject.topic.name, chapter.topic.name),
+      })
       .getCount();
 
     return {
@@ -196,7 +219,7 @@ export class CatalogService {
 
   /** Admin review list: every chapter with its study-guide state. */
   async listChapterMetaForReview(): Promise<AdminChapterMetaRow[]> {
-    const ctx = await this.loadContext(null);
+    const ctx = await this.loadContext(null, true);
     return ctx.tree.flatMap((subject) =>
       subject.chapters.map((chapter) => {
         const meta = ctx.meta.get(chapter.topic.id);
@@ -313,6 +336,7 @@ export class CatalogService {
         name: chapter.topic.name,
         unit: ctx.meta.get(chapter.topic.id)?.unit ?? null,
       })),
+      aliases: ctx.aliases,
     };
   }
 
@@ -331,14 +355,22 @@ export class CatalogService {
     chapter: ChapterNode,
   ): BuiltChapter {
     const subjectName = subject.topic.name;
-    const topics: CatalogTopicDetail[] = chapter.subtopics.map((subtopic) => {
-      const key = scopeKey(subjectName, chapter.topic.name, subtopic.name);
+    // Topics normally come from the tree. A chapter whose tree node has no
+    // sub-topics (the older, name-aliased chapters) falls back to the topics its
+    // published questions use, so it can still be studied from here.
+    const topicNames =
+      chapter.subtopics.length > 0
+        ? chapter.subtopics.map((subtopic) => subtopic.name)
+        : (ctx.derivedTopics.get(`${subjectName}|${chapter.topic.name}`) ?? []);
+    const topics: CatalogTopicDetail[] = topicNames.map((topicName) => {
+      const key = scopeKey(subjectName, chapter.topic.name, topicName);
       const progress: TopicProgress = topicProgress(
         ctx.states.get(key),
         tally(ctx.topicEvents.get(key) ?? []),
       );
       return {
-        name: subtopic.name,
+        name: topicName,
+        scopeChapter: ctx.scopeChapters.get(key) ?? chapter.topic.name,
         status: progress.status,
         score: progress.score,
         answered: progress.answered,
@@ -375,46 +407,111 @@ export class CatalogService {
     };
   }
 
-  /** `userId` null loads no per-student state (admin review). */
-  private async loadContext(userId: string | null): Promise<CatalogContext> {
-    const [rows, metaRows, countRows, stateRows, events] = await Promise.all([
-      this.topics.find({
-        where: {
-          level: In([
-            TopicLevel.SUBJECT,
-            TopicLevel.CHAPTER,
-            TopicLevel.SUB_TOPIC,
-          ]),
-        },
-        relations: { parent: true },
-        order: { createdAt: 'ASC', name: 'ASC' },
-      }),
-      this.chapterMeta.find(),
-      this.questions
-        .createQueryBuilder('question')
-        .select('question.subject', 'subject')
-        .addSelect('question.chapter', 'chapter')
-        .addSelect('question.topic', 'topic')
-        .addSelect('COUNT(*)', 'count')
-        .where('question.status = :status', {
-          status: QuestionPublicationStatus.PUBLISHED,
-        })
-        .groupBy('question.subject')
-        .addGroupBy('question.chapter')
-        .addGroupBy('question.topic')
-        .getRawMany<{
-          subject: string;
-          chapter: string;
-          topic: string;
-          count: string;
-        }>(),
-      userId
-        ? this.topicStates.find({ where: { userId } })
-        : Promise.resolve([] as LearningTopicState[]),
-      userId
-        ? loadAnswerEvents(this.dataSource, userId, null, null)
-        : Promise.resolve([] as AnswerEvent[]),
-    ]);
+  /**
+   * `userId` null loads no per-student state. `includeAll` keeps non-syllabus
+   * tree nodes (only the admin review list wants those).
+   */
+  private async loadContext(
+    userId: string | null,
+    includeAll = false,
+  ): Promise<CatalogContext> {
+    const [rows, metaRows, countRows, stateRows, rawEvents] = await Promise.all(
+      [
+        this.topics.find({
+          where: {
+            level: In([
+              TopicLevel.SUBJECT,
+              TopicLevel.CHAPTER,
+              TopicLevel.SUB_TOPIC,
+            ]),
+          },
+          relations: { parent: true },
+          order: { createdAt: 'ASC', name: 'ASC' },
+        }),
+        this.chapterMeta.find(),
+        this.questions
+          .createQueryBuilder('question')
+          .select('question.subject', 'subject')
+          .addSelect('question.chapter', 'chapter')
+          .addSelect('question.topic', 'topic')
+          .addSelect('COUNT(*)', 'count')
+          .where('question.status = :status', {
+            status: QuestionPublicationStatus.PUBLISHED,
+          })
+          .groupBy('question.subject')
+          .addGroupBy('question.chapter')
+          .addGroupBy('question.topic')
+          .getRawMany<{
+            subject: string;
+            chapter: string;
+            topic: string;
+            count: string;
+          }>(),
+        userId
+          ? this.topicStates.find({ where: { userId } })
+          : Promise.resolve([] as LearningTopicState[]),
+        userId
+          ? loadAnswerEvents(this.dataSource, userId, null, null)
+          : Promise.resolve([] as AnswerEvent[]),
+      ],
+    );
+
+    const subjects = rows.filter((r) => r.level === TopicLevel.SUBJECT);
+    const subjectNameById = new Map(subjects.map((s) => [s.id, s.name]));
+    const aliases = buildAliasResolver(
+      rows
+        .filter((r) => r.level === TopicLevel.CHAPTER && r.parent)
+        .map((r) => ({
+          subject: subjectNameById.get(r.parent?.id ?? '') ?? '',
+          chapter: r.name,
+        })),
+    );
+
+    // Everything content-side is folded onto its tree chapter name once, here,
+    // so every later join is a plain exact-name lookup.
+    const questionCounts = new Map<string, number>();
+    const scopeChapters = new Map<string, string>();
+    const scopeCounts = new Map<string, number>();
+    const derived = new Map<string, Map<string, number>>();
+    for (const r of countRows) {
+      const chapter = aliases.canonical(r.subject, r.chapter);
+      const key = scopeKey(r.subject, chapter, r.topic);
+      const count = Number(r.count);
+      questionCounts.set(key, (questionCounts.get(key) ?? 0) + count);
+      // Remember the content-side chapter name holding most of this topic's
+      // questions: /learn matches questions by that exact name.
+      if (count > (scopeCounts.get(key) ?? 0)) {
+        scopeCounts.set(key, count);
+        scopeChapters.set(key, r.chapter);
+      }
+      const chapterKey = `${r.subject}|${chapter}`;
+      const topicMap = derived.get(chapterKey) ?? new Map<string, number>();
+      topicMap.set(r.topic, (topicMap.get(r.topic) ?? 0) + count);
+      derived.set(chapterKey, topicMap);
+    }
+    const derivedTopics = new Map(
+      [...derived].map(([chapterKey, topicMap]) => [
+        chapterKey,
+        [...topicMap]
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .map(([name]) => name),
+      ]),
+    );
+    const states = new Map<string, LearningTopicState>();
+    for (const s of stateRows) {
+      const key = scopeKey(
+        s.subject,
+        aliases.canonical(s.subject, s.chapter),
+        s.topic,
+      );
+      states.set(key, s);
+      if (!scopeChapters.has(key)) scopeChapters.set(key, s.chapter);
+    }
+    const events = rawEvents.map((event) => ({
+      ...event,
+      chapter: aliases.canonical(event.subject, event.chapter),
+      sourceChapter: event.chapter,
+    }));
 
     const chapterEvents = new Map<string, AnswerEvent[]>();
     const topicEvents = new Map<string, AnswerEvent[]>();
@@ -428,7 +525,6 @@ export class CatalogService {
       topicEvents.set(topicKey, [...(topicEvents.get(topicKey) ?? []), event]);
     }
 
-    const subjects = rows.filter((r) => r.level === TopicLevel.SUBJECT);
     const chaptersByParent = new Map<string, Topic[]>();
     const subtopicsByParent = new Map<string, Topic[]>();
     for (const row of rows) {
@@ -443,24 +539,32 @@ export class CatalogService {
       bucket?.set(parentId, [...(bucket.get(parentId) ?? []), row]);
     }
 
+    const meta = new Map(metaRows.map((m) => [m.topicId, m]));
+    // The tree can also hold leftover non-syllabus nodes (the dev demo seed's
+    // "Units & Math", "Current Elec." ...). Students only browse chapters that
+    // are part of the syllabus (have a study-guide row) or have real questions;
+    // the admin review list (userId null) still shows every node.
+    const isBrowsable = (subjectName: string, chapter: Topic) =>
+      includeAll ||
+      meta.has(chapter.id) ||
+      derivedTopics.has(`${subjectName}|${chapter.name}`);
+
     return {
       tree: subjects.map((subject) => ({
         topic: subject,
-        chapters: (chaptersByParent.get(subject.id) ?? []).map((chapter) => ({
-          topic: chapter,
-          subtopics: subtopicsByParent.get(chapter.id) ?? [],
-        })),
+        chapters: (chaptersByParent.get(subject.id) ?? [])
+          .filter((chapter) => isBrowsable(subject.name, chapter))
+          .map((chapter) => ({
+            topic: chapter,
+            subtopics: subtopicsByParent.get(chapter.id) ?? [],
+          })),
       })),
-      meta: new Map(metaRows.map((m) => [m.topicId, m])),
-      questionCounts: new Map(
-        countRows.map((r) => [
-          scopeKey(r.subject, r.chapter, r.topic),
-          Number(r.count),
-        ]),
-      ),
-      states: new Map(
-        stateRows.map((s) => [scopeKey(s.subject, s.chapter, s.topic), s]),
-      ),
+      meta,
+      questionCounts,
+      states,
+      aliases,
+      scopeChapters,
+      derivedTopics,
       events,
       chapterEvents,
       topicEvents,

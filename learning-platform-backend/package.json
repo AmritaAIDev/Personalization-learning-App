@@ -58,7 +58,10 @@
     "migrate:deploy": "typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts",
     "audit:coverage": "ts-node -r tsconfig-paths/register src/scripts/audit-question-coverage.ts",
     "seed:chapter-meta": "ts-node -r tsconfig-paths/register src/scripts/seed-chapter-meta.ts",
-    "seed:chapter-meta:dry": "ts-node -r tsconfig-paths/register src/scripts/seed-chapter-meta.ts --dry-run"
+    "seed:chapter-meta:dry": "ts-node -r tsconfig-paths/register src/scripts/seed-chapter-meta.ts --dry-run",
+    "seed:compass-questions": "ts-node -r tsconfig-paths/register src/scripts/seed-compass-questions.ts",
+    "seed:compass-questions:dry": "ts-node -r tsconfig-paths/register src/scripts/seed-compass-questions.ts --dry-run",
+    "audit:catalog": "ts-node -r tsconfig-paths/register src/scripts/audit-catalog-alignment.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",

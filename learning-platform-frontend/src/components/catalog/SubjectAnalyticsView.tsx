@@ -228,7 +228,7 @@ function TopicList({
               <Link
                 href={learningUrl({
                   subject: subjectName,
-                  chapter: topic.chapter,
+                  chapter: topic.scopeChapter,
                   topic: topic.topic,
                 })}
                 className="flex min-h-12 items-center gap-3 rounded-xl bg-canvas px-3 py-2 transition hover:bg-primary-tint motion-reduce:transition-none"

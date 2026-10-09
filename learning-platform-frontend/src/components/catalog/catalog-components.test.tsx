@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CatalogChapterDetail } from "@/lib/catalog-types";
+import ChapterActions from "./ChapterActions";
 import ChapterLink from "./ChapterLink";
 import ChapterTabs from "./ChapterTabs";
 import UnitFilterTabs from "./UnitFilterTabs";
@@ -72,7 +73,14 @@ function detail(overrides: Partial<CatalogChapterDetail> = {}): CatalogChapterDe
       jeeWeightageNote: null,
     },
     topics: [
-      { name: "Lenses", status: "ACTIVE", score: 80, answered: 10, questionCount: 12 },
+      {
+        name: "Lenses",
+        scopeChapter: "Optics",
+        status: "ACTIVE",
+        score: 80,
+        answered: 10,
+        questionCount: 12,
+      },
     ],
     bookmarkedCount: 0,
     ...overrides,
@@ -126,5 +134,47 @@ describe("ChapterLink", () => {
     ).toBe("/subjects/chemistry/d-and-f-block-elements");
     expect(screen.queryByRole("link", { name: "Lanthanoids" })).toBeNull();
     expect(screen.getByText(/Lanthanoids/)).toBeTruthy();
+  });
+});
+
+describe("learning links for aliased chapters", () => {
+  const aliased = detail({
+    chapter: {
+      ...detail().chapter,
+      name: "Electrostatics",
+      slug: "electrostatics",
+      subject: "Physics",
+    },
+    topics: [
+      {
+        name: "Gauss's Law",
+        scopeChapter: "Electric Charges and Fields",
+        status: "ACTIVE",
+        score: 90,
+        answered: 10,
+        questionCount: 234,
+      },
+    ],
+  });
+
+  it("opens a topic with the chapter name its questions are tagged with", () => {
+    render(<ChapterTabs detail={aliased} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Topics" }));
+    const href = screen
+      .getByRole("link", { name: /Gauss's Law/ })
+      .getAttribute("href");
+    const params = new URLSearchParams(href?.split("?")[1]);
+    expect(params.get("chapter")).toBe("Electric Charges and Fields");
+    expect(params.get("topic")).toBe("Gauss's Law");
+    expect(params.get("subject")).toBe("Physics");
+  });
+
+  it("starts the chapter-level actions on the same content-side chapter name", () => {
+    render(<ChapterActions detail={aliased} />);
+    for (const action of [/learning/i, /Practice/, /Flashcards/]) {
+      const link = screen.getByRole("link", { name: action });
+      const params = new URLSearchParams(link.getAttribute("href")?.split("?")[1]);
+      expect(params.get("chapter")).toBe("Electric Charges and Fields");
+    }
   });
 });

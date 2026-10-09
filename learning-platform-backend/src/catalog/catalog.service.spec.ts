@@ -104,7 +104,15 @@ describe('CatalogService', () => {
       Promise.resolve({ ...v, updatedAt: new Date() }),
     );
     topics.find.mockResolvedValue(rows);
-    chapterMeta.find.mockResolvedValue([meta()]);
+    chapterMeta.find.mockResolvedValue([
+      meta(),
+      // Waves has a study-guide row that is not published yet
+      meta({
+        topicId: 'c2',
+        unit: 'Oscillations & Waves',
+        status: ChapterMetaStatus.DRAFT,
+      }),
+    ]);
     topicStates.find.mockResolvedValue([
       {
         subject: 'Physics',
@@ -154,7 +162,10 @@ describe('CatalogService', () => {
 
   it('lists chapters with units and student progress', async () => {
     const result = await service.getSubjectChapters('u1', 'PHYSICS');
-    expect(result.units).toEqual([{ name: 'Optics', count: 1 }]);
+    expect(result.units).toEqual([
+      { name: 'Optics', count: 1 },
+      { name: 'Oscillations & Waves', count: 1 },
+    ]);
     const optic = result.chapters.find((c) => c.slug === 'optics');
     expect(optic).toMatchObject({
       status: 'MASTERED',
@@ -297,8 +308,8 @@ describe('CatalogService', () => {
       const list = await service.listChapterMetaForReview();
       expect(list).toHaveLength(2);
       expect(list.find((r) => r.chapter === 'Waves')).toMatchObject({
-        status: null,
-        hasOverview: false,
+        status: ChapterMetaStatus.DRAFT,
+        unit: 'Oscillations & Waves',
       });
       expect(topicStates.find).not.toHaveBeenCalled();
     });

@@ -5,6 +5,7 @@ import { loadAnswerEvents } from './answer-events.query';
 import {
   buildChapterAnalytics,
   buildSubjectAnalytics,
+  type AnswerEvent,
 } from './catalog.analytics';
 import type {
   ChapterAnalytics,
@@ -31,12 +32,7 @@ export class CatalogAnalyticsService {
     now: Date = new Date(),
   ): Promise<SubjectAnalytics> {
     const outline = await this.catalog.getSubjectOutline(subjectSlug);
-    const events = await loadAnswerEvents(
-      this.dataSource,
-      userId,
-      outline.subject.name,
-      null,
-    );
+    const events = await this.loadCanonicalEvents(userId, outline);
     return buildSubjectAnalytics(
       outline.subject,
       outline.chapters,
@@ -51,14 +47,40 @@ export class CatalogAnalyticsService {
     chapterSlug: string,
   ): Promise<ChapterAnalytics> {
     const outline = await this.catalog.getSubjectOutline(subjectSlug);
-    const chapter = findBySlug(outline.chapters, chapterSlug);
+    // Accept the content-side name too (e.g. a workspace breadcrumb link).
+    const aliasTarget = outline.aliases.chapterForSlug(
+      outline.subject.name,
+      chapterSlug,
+    );
+    const chapter =
+      findBySlug(outline.chapters, chapterSlug) ??
+      (aliasTarget ? findBySlug(outline.chapters, aliasTarget) : undefined);
     if (!chapter) throw new NotFoundException('Chapter not found.');
+    const events = await this.loadCanonicalEvents(userId, outline);
+    return buildChapterAnalytics(
+      events.filter((event) => event.chapter === chapter.name),
+    );
+  }
+
+  /**
+   * The student's graded answers for the subject, with content-side chapter
+   * names folded onto the tree chapters (the original name is kept as
+   * `sourceChapter` so topic links still point at where the questions live).
+   */
+  private async loadCanonicalEvents(
+    userId: string,
+    outline: Awaited<ReturnType<CatalogService['getSubjectOutline']>>,
+  ): Promise<AnswerEvent[]> {
     const events = await loadAnswerEvents(
       this.dataSource,
       userId,
       outline.subject.name,
-      chapter.name,
+      null,
     );
-    return buildChapterAnalytics(events);
+    return events.map((event) => ({
+      ...event,
+      chapter: outline.aliases.canonical(event.subject, event.chapter),
+      sourceChapter: event.chapter,
+    }));
   }
 }

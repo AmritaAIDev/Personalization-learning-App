@@ -66,6 +66,17 @@ All scoring rules (status bands, mastery levels, Bloom bands, tips) live in the
 backend and are documented in `learning-platform-backend/src/catalog/README.md`;
 the frontend only displays what the API returns.
 
+## Aliased chapters
+
+Some chapters (Electrostatics) hold questions tagged with another chapter name
+("Electric Charges and Fields"). The API folds them together; each topic carries
+a `scopeChapter`, the name its questions are tagged with. **Every link into
+`/learn` from the catalog must use `topic.scopeChapter`, not the chapter's
+display name**, because the learning engine matches questions by that exact
+name (`ChapterActions`, the Topics tab and the analytics topic lists do). Links
+by display name (`ChapterLink`, the workspace breadcrumb) still resolve, since
+the API also accepts the content-side slug.
+
 ## Not here yet
 
 - **Cross-links** from the dashboard subject cards, search results and the

@@ -16,6 +16,7 @@ import { apiFetch } from "@/lib/api";
 import { useApiResource } from "@/lib/useApiResource";
 import { friendlyBloomLabel, learningUrl } from "@/lib/learning";
 import { useBookmarkedQuestions } from "@/lib/useBookmarkedQuestions";
+import ChapterLink from "@/components/catalog/ChapterLink";
 import BookmarkButton from "@/components/learning/BookmarkButton";
 import ResourceCard from "@/components/learning/ResourceCard";
 import type { NotebookMistakeCard } from "@/lib/notebook-types";
@@ -99,7 +100,11 @@ function MistakeCard({
         {card.questionText}
       </p>
       <p className="mt-2 text-xs text-ink-mute">
-        {card.subject} · {card.chapter} · {card.topic}
+        <ChapterLink
+          subject={card.subject}
+          chapter={card.chapter}
+          topic={card.topic}
+        />
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         <Link
@@ -125,7 +130,7 @@ function TopicCard({ topic }: { topic: RevisionTopicView }) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-ink">{topic.topic}</p>
         <p className="mt-0.5 truncate text-xs text-ink-mute">
-          {topic.subject} · {topic.chapter}
+          <ChapterLink subject={topic.subject} chapter={topic.chapter} />
         </p>
       </div>
       <span className={`text-sm font-bold ${scoreTone(topic.score)}`}>
@@ -367,8 +372,11 @@ export default function RevisionHubPage() {
                         {bookmark.questionText}
                       </p>
                       <p className="mt-2 text-xs text-ink-mute">
-                        {bookmark.subject} · {bookmark.chapter} ·{" "}
-                        {bookmark.topic}
+                        <ChapterLink
+                          subject={bookmark.subject}
+                          chapter={bookmark.chapter}
+                          topic={bookmark.topic}
+                        />
                       </p>
                       <Link
                         href={learningUrl(bookmark, { tab: "practice" })}

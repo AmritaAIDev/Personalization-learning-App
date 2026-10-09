@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CatalogChapterDetail } from "@/lib/catalog-types";
+import ChapterLink from "./ChapterLink";
 import ChapterTabs from "./ChapterTabs";
 import UnitFilterTabs from "./UnitFilterTabs";
 
@@ -103,5 +104,27 @@ describe("ChapterTabs", () => {
     render(<ChapterTabs detail={detail({ topics: [] })} />);
     fireEvent.click(screen.getByRole("tab", { name: "Topics" }));
     expect(screen.getByText(/still being added/i)).toBeTruthy();
+  });
+});
+
+describe("ChapterLink", () => {
+  it("links the subject and the chapter to their catalog pages, topic as text", () => {
+    render(
+      <ChapterLink
+        subject="Chemistry"
+        chapter="d- and f-Block Elements"
+        topic="Lanthanoids"
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "Chemistry" }).getAttribute("href"),
+    ).toBe("/subjects/chemistry");
+    expect(
+      screen
+        .getByRole("link", { name: "d- and f-Block Elements" })
+        .getAttribute("href"),
+    ).toBe("/subjects/chemistry/d-and-f-block-elements");
+    expect(screen.queryByRole("link", { name: "Lanthanoids" })).toBeNull();
+    expect(screen.getByText(/Lanthanoids/)).toBeTruthy();
   });
 });

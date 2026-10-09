@@ -138,6 +138,17 @@ checking that `/health` is still 200 and that non-AI routes respond.
   overwrites `source=ADMIN` rows or the admin-owned `jee_weightage_note`.
   Review first with `npm run seed:chapter-meta:dry`. Order: migrate →
   `seed:syllabus` → `seed:chapter-meta`.
+- Chapter study guides (the Subjects / Chapter screens): 28 chapters are
+  seeded `PUBLISHED` from the reviewed JEE Compass data; the other 27 are
+  hand-written `DRAFT`s that students **never see** (their chapter page shows a
+  "study guide is being prepared" state) until an admin publishes them. Review
+  with `GET /api/catalog/admin/chapters` (lists every chapter's source/status);
+  edit or publish with `PATCH /api/catalog/admin/chapters/:topicId/meta`
+  (`{"status":"PUBLISHED"}`; needs an overview and at least one objective).
+  Editing a guide marks it `source=ADMIN`, so re-seeding can't overwrite it.
+- Scores shown on Subjects, chapter cards and analytics are computed live from
+  graded answers (practice, diagnostics, mock tests, adaptive learning); there
+  is no table to backfill or recompute.
 - The integration suite writes and deletes rows and refuses to run without an
   explicit `DATABASE_URL`. Point it only at a disposable database.
 - Session cookies are `HttpOnly`, and `Secure` + `SameSite=None` in production.

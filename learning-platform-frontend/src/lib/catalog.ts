@@ -192,3 +192,49 @@ export function skillBandFor(accuracy: number | null): SkillBand | null {
   if (accuracy >= 40) return "Average";
   return "Weak";
 }
+
+/**
+ * URL slug for a subject or chapter name. Must stay identical to the backend's
+ * `slugify` (learning-platform-backend/src/catalog/catalog.slug.ts), which is
+ * what resolves these slugs; both are covered by the same example table.
+ */
+export function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/['’`]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/** Catalog chapter page for a chapter known only by its display names. */
+export function chapterHrefByName(subject: string, chapter: string): string {
+  return chapterHref(slugify(subject), slugify(chapter));
+}
+
+const MAX_CHAPTER_HITS = 5;
+
+/**
+ * Chapters matching a search box value (name, subject or unit; case- and
+ * accent-insensitive). Empty queries match nothing so the palette stays
+ * uncluttered until someone types. Names that start with the query rank first.
+ */
+export function matchChapters(
+  chapters: readonly CatalogChapterSummary[],
+  query: string,
+  limit = MAX_CHAPTER_HITS,
+): CatalogChapterSummary[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return [];
+  const startsWith = (chapter: CatalogChapterSummary) =>
+    chapter.name.toLowerCase().startsWith(needle) ? 0 : 1;
+  return chapters
+    .filter((chapter) =>
+      [chapter.name, chapter.subject, chapter.unit ?? ""].some((value) =>
+        value.toLowerCase().includes(needle),
+      ),
+    )
+    .sort((a, b) => startsWith(a) - startsWith(b))
+    .slice(0, limit);
+}

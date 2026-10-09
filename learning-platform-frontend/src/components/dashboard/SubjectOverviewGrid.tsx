@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { subjectHref } from "@/lib/catalog";
 import { SUBJECT_THEMES } from "@/lib/subject-theme";
 import type { StudentDashboardPayload } from "@/lib/student-dashboard-types";
 
@@ -74,7 +75,7 @@ export default function SubjectOverviewGrid({
           return (
             <Link
               key={theme.id}
-              href="/journey"
+              href={subjectHref(theme.id)}
               className="group overflow-hidden rounded-2xl border border-hairline bg-surface shadow-[0_10px_28px_rgba(20,20,30,0.04)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(20,20,30,0.08)]"
             >
               <div

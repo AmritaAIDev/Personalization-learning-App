@@ -246,3 +246,17 @@ Order: stabilise → data → API → screens → analytics → polish. Each pha
 - **Deviations / notes:** Compass's "speed" skill is not ported (answer times are not recorded for every source); `MIN_TOPIC_ANSWERS` is 1 to match Compass exactly (one constant to raise if tiny samples prove noisy); not yet checked in a real browser (manual pass).
 
 **Next up — Phase 5** (cross-links and polish).
+
+### 2026-10-09 — Phase 5 complete (cross-links and polish) — all planned phases done
+
+- **Dashboard:** the three subject cards on `SubjectOverviewGrid` now open `/subjects/[subject]` (they previously went to Journey).
+- **Revision hub:** the "Subject · Chapter" text on wrong-answer cards, weak-topic cards and bookmarks is now a `ChapterLink` to the subject and chapter pages.
+- **Learning workspace:** the breadcrumb's subject and chapter are links back to the catalog pages, so a topic is never a dead end.
+- **Command palette (Ctrl/Cmd+K):** a "Browse Physics / Chemistry / Mathematics / All subjects" strip, and chapter results (name, subject and unit) when typing. Chapters come from the real catalog API (all 55, not the 80-topic suggestion list) via the pure, tested `matchChapters`; if that call fails the topic search still works.
+- **Frontend `slugify`** mirrors the backend one (same example table in both test suites) so links built from display names always resolve.
+- **Subject colours:** verified there is no duplicated subject→colour logic left outside `lib/subject-theme.ts` (consolidated in Phase 1).
+- **Runbook:** added how an admin reviews and publishes the 27 draft study guides, and a note that scores are live (nothing to backfill).
+- **Verification:** frontend `tsc`, eslint over all of `src`, `next build` clean; **11 files / 101 tests pass**. Backend untouched in this phase (290 tests from Phase 4).
+- **Deviation:** the plan said "`TopicSearch` results show chapter unit"; `TopicSearch` is only the trigger for the palette, so the unit is shown on the palette's chapter results instead.
+
+**Remaining (yours): the manual browser pass** — `/subjects`, a subject page with unit tabs, a chapter page (all five tabs, incl. Bloom), `/subjects/[subject]/analytics`, the palette, and the revision/dashboard links; at 360 / 768 / 1280 px, in light and dark, and keyboard-only. **Open product decisions:** the 27 draft study guides need an admin read-through before publishing; optional Phase 6 extras (timed chapter quiz shell, importing Compass questions as drafts, CBSE-only chapters) are still undecided.

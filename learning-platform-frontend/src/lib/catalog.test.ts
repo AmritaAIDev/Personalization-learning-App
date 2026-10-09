@@ -12,6 +12,9 @@ import {
   pluralize,
   resolveUnit,
   scoreTone,
+  slugify,
+  chapterHrefByName,
+  matchChapters,
   subjectHref,
   subjectStats,
 } from "./catalog";
@@ -208,5 +211,52 @@ describe("analytics helpers (Compass bands)", () => {
 
   it("builds the analytics href", () => {
     expect(analyticsHref("physics")).toBe("/subjects/physics/analytics");
+  });
+});
+
+describe("slugify (must match the backend)", () => {
+  it.each([
+    ["Physics", "physics"],
+    ["d- and f-Block Elements", "d-and-f-block-elements"],
+    ["p-Block Elements", "p-block-elements"],
+    ["Work, Energy and Power", "work-energy-and-power"],
+    ["Raoult’s Law & Ideal Solutions", "raoults-law-and-ideal-solutions"],
+    ["  Sets, Relations and Functions  ", "sets-relations-and-functions"],
+  ])("slugifies %s", (input, expected) => {
+    expect(slugify(input)).toBe(expected);
+  });
+
+  it("builds a chapter href from display names", () => {
+    expect(chapterHrefByName("Chemistry", "d- and f-Block Elements")).toBe(
+      "/subjects/chemistry/d-and-f-block-elements",
+    );
+  });
+});
+
+describe("matchChapters (command palette)", () => {
+  const chapters = [
+    chapter({ slug: "optics", name: "Optics", unit: "Optics" }),
+    chapter({ slug: "waves", name: "Waves", unit: "Oscillations & Waves" }),
+    chapter({ slug: "wave-optics", name: "Wave Optics Extras", unit: "Optics" }),
+    chapter({ slug: "solutions", name: "Solutions", subject: "Chemistry", unit: "Physical" }),
+  ];
+
+  it("matches nothing for an empty or blank query", () => {
+    expect(matchChapters(chapters, "")).toEqual([]);
+    expect(matchChapters(chapters, "   ")).toEqual([]);
+  });
+
+  it("matches by name, subject or unit, case-insensitively", () => {
+    expect(matchChapters(chapters, "SOLUT").map((c) => c.slug)).toEqual(["solutions"]);
+    expect(matchChapters(chapters, "chemistry").map((c) => c.slug)).toEqual(["solutions"]);
+    expect(matchChapters(chapters, "oscillations").map((c) => c.slug)).toEqual(["waves"]);
+  });
+
+  it("ranks names that start with the query first and honours the limit", () => {
+    expect(matchChapters(chapters, "wave").map((c) => c.slug)).toEqual([
+      "waves",
+      "wave-optics",
+    ]);
+    expect(matchChapters(chapters, "optics", 1)).toHaveLength(1);
   });
 });

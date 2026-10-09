@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ChevronRight, CircleAlert, Map } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { chapterHrefByName, slugify, subjectHref } from "@/lib/catalog";
 import { isMissTransition, learningUrl } from "@/lib/learning";
 import type {
   LearningAnswerPayload,
@@ -261,9 +262,20 @@ export default function AdaptiveStudySession({
             Journey
           </Link>
           <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span className="shrink-0 truncate">{scope.subject}</span>
+          <Link
+            href={subjectHref(slugify(scope.subject))}
+            className="shrink-0 truncate rounded-md px-0.5 transition hover:text-primary"
+          >
+            {scope.subject}
+          </Link>
           <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span className="min-w-0 truncate">{scope.chapter}</span>
+          <Link
+            href={chapterHrefByName(scope.subject, scope.chapter)}
+            className="min-w-0 truncate rounded-md px-0.5 transition hover:text-primary"
+            title="Open this chapter in Subjects"
+          >
+            {scope.chapter}
+          </Link>
         </nav>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <Link

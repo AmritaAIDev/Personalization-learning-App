@@ -1,10 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { ArrowRight, CircleAlert, LoaderCircle, Search, X } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  CircleAlert,
+  LoaderCircle,
+  Search,
+  X,
+} from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { chapterHref, matchChapters, subjectHref } from "@/lib/catalog";
+import type {
+  CatalogChapterSummary,
+  CatalogSubjectChapters,
+} from "@/lib/catalog-types";
+import { SUBJECT_THEMES } from "@/lib/subject-theme";
 import { friendlyBloomLabel, learningUrl } from "@/lib/learning";
 import { practiceHref } from "@/lib/practice";
 import type {
@@ -47,18 +61,32 @@ export default function TopicPickerDialog({
   const [dashboard, setDashboard] = useState<LearningDashboardPayload | null>(
     null,
   );
+  const [chapters, setChapters] = useState<CatalogChapterSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [catalogResult, dashboardResult] = await Promise.allSettled([
-      apiFetch<QuestionCatalogEntry[]>("/api/questions/catalog?limit=80", {
-        memoryCacheTtlMs: 45_000,
-      }),
-      apiFetch<LearningDashboardPayload>("/api/learning/dashboard"),
-    ]);
+    const [catalogResult, dashboardResult, ...chapterResults] =
+      await Promise.allSettled([
+        apiFetch<QuestionCatalogEntry[]>("/api/questions/catalog?limit=80", {
+          memoryCacheTtlMs: 45_000,
+        }),
+        apiFetch<LearningDashboardPayload>("/api/learning/dashboard"),
+        ...SUBJECT_THEMES.map((theme) =>
+          apiFetch<CatalogSubjectChapters>(
+            `/api/catalog/subjects/${theme.id}/chapters`,
+            { memoryCacheTtlMs: 45_000 },
+          ),
+        ),
+      ]);
+    // Chapter results are a bonus: if they fail the topic search still works.
+    setChapters(
+      chapterResults.flatMap((result) =>
+        result.status === "fulfilled" ? result.value.chapters : [],
+      ),
+    );
 
     if (catalogResult.status === "fulfilled") {
       setCatalog(catalogResult.value);
@@ -122,6 +150,11 @@ export default function TopicPickerDialog({
       })
       .slice(0, normalized ? 18 : 12);
   }, [catalog, query, states]);
+
+  const chapterHits = useMemo(
+    () => matchChapters(chapters, query),
+    [chapters, query],
+  );
 
   const openTopic = (entry: QuestionCatalogEntry) => {
     const scope = scopeFor(entry);
@@ -191,6 +224,35 @@ export default function TopicPickerDialog({
             />
           </label>
 
+          <nav
+            aria-label="Browse subjects"
+            className="mt-3 flex shrink-0 flex-wrap items-center gap-2"
+          >
+            <span className="text-xs font-semibold text-ink-mute">Browse</span>
+            {SUBJECT_THEMES.map((theme) => {
+              const Icon = theme.icon;
+              return (
+                <Link
+                  key={theme.id}
+                  href={subjectHref(theme.id)}
+                  onClick={onClose}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-hairline bg-surface px-3 text-xs font-semibold text-ink-soft transition hover:border-primary/30 hover:text-primary"
+                >
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                  {theme.label}
+                </Link>
+              );
+            })}
+            <Link
+              href="/subjects"
+              onClick={onClose}
+              className="inline-flex min-h-9 items-center gap-1 rounded-full px-2 text-xs font-semibold text-primary hover:underline"
+            >
+              All subjects
+              <ArrowRight className="h-3 w-3" aria-hidden="true" />
+            </Link>
+          </nav>
+
           <div
             className="mt-3 flex shrink-0 items-center justify-between gap-3 sm:mt-5 sm:gap-4"
             aria-live="polite"
@@ -233,10 +295,50 @@ export default function TopicPickerDialog({
               </div>
             ) : null}
 
-            {!loading && !error && results.length === 0 ? (
+            {!loading &&
+            !error &&
+            results.length === 0 &&
+            chapterHits.length === 0 ? (
               <p className="rounded-2xl bg-canvas px-4 py-5 text-sm text-ink-soft">
                 No reviewed topic matches that search.
               </p>
+            ) : null}
+
+            {chapterHits.length > 0 ? (
+              <section aria-label="Matching chapters" className="mb-3">
+                <p className="px-1 pb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-mute">
+                  Chapters
+                </p>
+                <ul className="grid gap-2 min-[560px]:grid-cols-2">
+                  {chapterHits.map((chapter) => (
+                    <li key={`${chapter.subjectSlug}-${chapter.slug}`}>
+                      <Link
+                        href={chapterHref(chapter.subjectSlug, chapter.slug)}
+                        onClick={onClose}
+                        className="group flex min-h-14 items-center gap-3 rounded-2xl border border-hairline bg-surface px-3 py-2.5 transition hover:border-primary/35 hover:bg-primary-tint/35"
+                      >
+                        <BookOpen
+                          className="h-4 w-4 shrink-0 text-primary"
+                          aria-hidden="true"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold text-ink">
+                            {chapter.name}
+                          </span>
+                          <span className="block truncate text-[11px] text-ink-mute">
+                            {chapter.subject}
+                            {chapter.unit ? ` · ${chapter.unit}` : ""}
+                          </span>
+                        </span>
+                        <ArrowRight
+                          className="h-4 w-4 shrink-0 text-ink-mute transition group-hover:translate-x-0.5 group-hover:text-primary"
+                          aria-hidden="true"
+                        />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             ) : null}
 
             {results.length > 0 ? (

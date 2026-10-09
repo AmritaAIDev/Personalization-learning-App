@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { AiUnavailableNote } from "@/components/AiUnavailableBlock";
 import SourceCitations from "@/components/learning/SourceCitations";
-import { ApiError, apiFetch } from "@/lib/api";
+import { ApiError, apiFetch, streamApi } from "@/lib/api";
 import type {
   CreateDoubtPayload,
   CreateDoubtThreadPayload,
@@ -149,10 +149,12 @@ function DoubtTurn({
   doubt,
   isPending,
   elapsedSeconds,
+  streamText,
 }: {
   doubt: DoubtCard;
   isPending: boolean;
   elapsedSeconds: number;
+  streamText?: string;
 }) {
   const answered = doubt.status === "ANSWERED";
   const isFallback = answered && doubt.answeredWithFallback;
@@ -217,6 +219,18 @@ function DoubtTurn({
                 </p>
               ) : null}
             </>
+          ) : streamText ? (
+            <div>
+              <StudyMarkdown className="text-sm leading-7 text-ink-soft">
+                {streamText}
+              </StudyMarkdown>
+              <span className="stream-caret" aria-hidden="true" />
+              <p className="mt-1 text-[11px] font-semibold text-ink-mute" role="status" aria-live="polite">
+                {isPending && elapsedSeconds > 8
+                  ? `Writing for ${elapsedSeconds}s…`
+                  : "Writing…"}
+              </p>
+            </div>
           ) : (
             <div className="flex items-center gap-3 py-1">
               <ThinkingDots />
@@ -256,6 +270,8 @@ export default function DoubtsPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [pendingDoubtId, setPendingDoubtId] = useState<string | null>(null);
   const [pendingElapsed, setPendingElapsed] = useState(0);
+  // Live partial answer text while the tutor streams it in.
+  const [streamText, setStreamText] = useState("");
   const [scanning, setScanning] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewFileName, setPreviewFileName] = useState<string | null>(null);
@@ -368,6 +384,7 @@ export default function DoubtsPage() {
         const resolved = data.doubts.find((d) => d.id === targetId);
         if (resolved && resolved.status === "ANSWERED") {
           setPendingDoubtId(null);
+          setStreamText("");
           return;
         }
       } catch {
@@ -431,34 +448,75 @@ export default function DoubtsPage() {
     setSubmitting(true);
     setError(null);
     setSuccess(null);
+    const payload: CreateDoubtPayload = {
+      subject: (routeScope?.subject ?? activeThread?.subject ?? form.subject)
+        .trim(),
+      chapter: (routeScope?.chapter ?? activeThread?.chapter ?? form.chapter)
+        .trim(),
+      topic: (routeScope?.topic ?? activeThread?.topic ?? form.topic).trim(),
+      message: form.message.trim(),
+      threadId: isRealThreadId(activeThread?.id)
+        ? activeThread?.id
+        : undefined,
+    };
+
+    let streamed = false;
+    let liveText = "";
     try {
-      const payload: CreateDoubtPayload = {
-        subject: (routeScope?.subject ?? activeThread?.subject ?? form.subject)
-          .trim(),
-        chapter: (routeScope?.chapter ?? activeThread?.chapter ?? form.chapter)
-          .trim(),
-        topic: (routeScope?.topic ?? activeThread?.topic ?? form.topic).trim(),
-        message: form.message.trim(),
-        threadId: isRealThreadId(activeThread?.id)
-          ? activeThread?.id
-          : undefined,
-      };
-      const created = await apiFetch<DoubtCard>("/api/doubts", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      setForm((current) => ({ ...current, message: "" }));
-      growComposer();
-      setActiveThreadId(created.threadId ?? activeThreadId);
-      setPendingElapsed(0);
-      setPendingDoubtId(created.id);
-      await loadDoubts();
+      for await (const evt of streamApi("/api/doubts/stream", {
+        body: payload,
+      })) {
+        if (evt.event === "start") {
+          const created = (evt.data as { doubt: DoubtCard }).doubt;
+          streamed = true;
+          setForm((current) => ({ ...current, message: "" }));
+          growComposer();
+          setActiveThreadId(created.threadId ?? activeThreadId);
+          setPendingElapsed(0);
+          setPendingDoubtId(created.id);
+          await loadDoubts();
+        } else if (evt.event === "chunk") {
+          liveText += (evt.data as { content: string }).content;
+          setStreamText(liveText);
+        } else if (evt.event === "done") {
+          setPendingDoubtId(null);
+          setStreamText("");
+          await loadDoubts();
+        } else if (evt.event === "error") {
+          throw new ApiError(
+            0,
+            (evt.data as { message?: string }).message ??
+              "Unable to send this doubt right now.",
+          );
+        }
+      }
+      if (!streamed) throw new ApiError(0, "The tutor stream ended early.");
     } catch (caught) {
-      setError(
-        caught instanceof ApiError
-          ? caught.message
-          : "Unable to send this doubt right now.",
-      );
+      if (streamed) {
+        // The server keeps generating and persists the answer regardless of
+        // this socket; the existing poller will surface it. Stay quiet.
+      } else {
+        // Stream unavailable: fall back to the classic create + poll path.
+        setStreamText("");
+        try {
+          const created = await apiFetch<DoubtCard>("/api/doubts", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
+          setForm((current) => ({ ...current, message: "" }));
+          growComposer();
+          setActiveThreadId(created.threadId ?? activeThreadId);
+          setPendingElapsed(0);
+          setPendingDoubtId(created.id);
+          await loadDoubts();
+        } catch (fallbackCaught) {
+          setError(
+            fallbackCaught instanceof ApiError
+              ? fallbackCaught.message
+              : "Unable to send this doubt right now.",
+          );
+        }
+      }
     } finally {
       setSubmitting(false);
     }
@@ -649,6 +707,9 @@ export default function DoubtsPage() {
                       doubt={doubt}
                       isPending={doubt.id === pendingDoubtId}
                       elapsedSeconds={pendingElapsed}
+                      streamText={
+                        doubt.id === pendingDoubtId ? streamText : undefined
+                      }
                     />
                   ))
                 ) : (

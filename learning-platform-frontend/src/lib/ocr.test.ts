@@ -17,17 +17,23 @@ describe("recognizeQuestionImage", () => {
     recognizeMock.mockReset();
   });
 
-  it("returns the extracted, trimmed text on success", async () => {
-    recognizeMock.mockResolvedValue({
-      data: { text: "  What is the value of g on the Moon?  \n\n\n" },
-    });
-    const { recognizeQuestionImage } = await import("./ocr");
+  it(
+    "returns the extracted, trimmed text on success",
+    async () => {
+      recognizeMock.mockResolvedValue({
+        data: { text: "  What is the value of g on the Moon?  \n\n\n" },
+      });
+      const { recognizeQuestionImage } = await import("./ocr");
 
-    const text = await recognizeQuestionImage(makeImageFile());
+      const text = await recognizeQuestionImage(makeImageFile());
 
-    expect(text).toBe("What is the value of g on the Moon?");
-    expect(recognizeMock).toHaveBeenCalledWith(expect.any(File), "eng");
-  });
+      expect(text).toBe("What is the value of g on the Moon?");
+      expect(recognizeMock).toHaveBeenCalledWith(expect.any(File), "eng");
+    },
+    // The mocked recognize resolves instantly; only the dynamic module load
+    // can stretch past the 5s default when jsdom suites saturate the pool.
+    20_000,
+  );
 
   it("rejects a non-image file before ever calling tesseract", async () => {
     const { recognizeQuestionImage, OcrError } = await import("./ocr");

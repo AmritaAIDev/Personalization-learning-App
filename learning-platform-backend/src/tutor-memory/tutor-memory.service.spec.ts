@@ -98,14 +98,12 @@ describe('TutorMemoryService', () => {
         event(`Miss topic ${i}`, false, 10 + i),
       ),
       {
-        summary: jest
-          .fn()
-          .mockResolvedValue({
-            mastered: 99,
-            developing: 99,
-            weak: 99,
-            tracked: 297,
-          }),
+        summary: jest.fn().mockResolvedValue({
+          mastered: 99,
+          developing: 99,
+          weak: 99,
+          tracked: 297,
+        }),
         weakSkills: jest.fn().mockResolvedValue(manyWeak),
       },
     );

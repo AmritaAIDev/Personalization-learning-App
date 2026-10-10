@@ -29,7 +29,7 @@ const add = (severity: Finding['severity'], code: string, message: string) =>
 async function rows(
   sql: string,
   params?: unknown[],
-): Promise<Record<string, unknown>[]> {
+): Promise<Record<string, string>[]> {
   return dataSource.query(sql, params);
 }
 

@@ -197,7 +197,12 @@ describe('AgentService without an LLM configured', () => {
   };
 
   function construct(): AgentService {
-    return new AgentService(configService as never, {} as never, {} as never);
+    return new AgentService(
+      configService as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
   }
 
   it('constructs without throwing when the API key is empty', () => {
@@ -208,7 +213,12 @@ describe('AgentService without an LLM configured', () => {
     const missingKeyConfig = { get: jest.fn(() => undefined) };
     expect(
       () =>
-        new AgentService(missingKeyConfig as never, {} as never, {} as never),
+        new AgentService(
+          missingKeyConfig as never,
+          {} as never,
+          {} as never,
+          {} as never,
+        ),
     ).not.toThrow();
   });
 

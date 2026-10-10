@@ -15,9 +15,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * same release — the old code expects the old names, the new code the new
  * ones (rename is instant, so the deploy window is a single restart).
  */
-export class RenameLegacyColumnsToSnakeCase1787000500000
-  implements MigrationInterface
-{
+export class RenameLegacyColumnsToSnakeCase1787000500000 implements MigrationInterface {
   name = 'RenameLegacyColumnsToSnakeCase1787000500000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

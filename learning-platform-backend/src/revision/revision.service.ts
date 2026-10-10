@@ -1,12 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, LessThanOrEqual, Repository } from 'typeorm';
 import { NotebookService } from '../notebook/notebook.service';
 import { BookmarksService } from '../bookmarks/bookmarks.service';
 import { CompetencyService } from '../adaptive/competency.service';
 import { LearningTopicState } from '../adaptive/learning-topic-state.entity';
 import { LearningResource } from '../diagnostics/learning-resource.entity';
 import { LearningResourceType } from '../diagnostics/diagnostic.types';
+import { addDays, todayIST } from '../study-plan/plan-dates';
+import {
+  StudyPlanTask,
+  StudyTaskStatus,
+} from '../study-plan/study-plan.entity';
+import {
+  getTargetPressure,
+  WEAK_TOPIC_LIMIT_BY_PHASE,
+} from '../users/target-pressure';
 import type {
   RevisionHubPayload,
   RevisionRecommendations,
@@ -16,7 +25,10 @@ import type {
 } from './revision.types';
 
 const MISTAKE_LIMIT = 40;
-const WEAK_TOPIC_LIMIT = 8;
+/** Plan tasks due within this many days count as "coming up" for ranking. */
+const PLAN_LOOKAHEAD_DAYS = 14;
+/** Score-point boost for a weak topic the study plan schedules soon. */
+const PLANNED_SOON_BOOST = 25;
 const RECENT_TOPIC_LIMIT = 6;
 /** Recommendation lookups are capped separately from the weak-topic list shown, so the page stays fast even for a student with many weak topics. */
 const RECOMMENDATION_TOPIC_LIMIT = 5;
@@ -53,34 +65,84 @@ export class RevisionService {
     private readonly topicStates: Repository<LearningTopicState>,
     @InjectRepository(LearningResource)
     private readonly resources: Repository<LearningResource>,
+    @InjectRepository(StudyPlanTask)
+    private readonly planTasks: Repository<StudyPlanTask>,
   ) {}
 
-  async getHub(userId: string): Promise<RevisionHubPayload> {
-    const [mistakes, bookmarks, growth, recentStates] = await Promise.all([
-      this.notebookService.getMistakes(userId, MISTAKE_LIMIT),
-      this.bookmarksService.getBookmarks(userId),
-      this.competencyService.getGrowth(userId),
-      this.topicStates.find({
-        where: { userId },
-        order: { lastActivityAt: 'DESC' },
-        take: RECENT_TOPIC_LIMIT,
-      }),
-    ]);
+  /**
+   * `targetMonth` (the student's `YYYY-MM` goal) makes the hub target-aware:
+   * the closer it is, the longer the weak-topic list, and weak topics the study
+   * plan schedules in the next two weeks are ranked first. With no target it
+   * behaves exactly as before.
+   */
+  async getHub(
+    userId: string,
+    targetMonth: string | null = null,
+    now: Date = new Date(),
+  ): Promise<RevisionHubPayload> {
+    const pressure = getTargetPressure(targetMonth, now);
+    const weakLimit = WEAK_TOPIC_LIMIT_BY_PHASE[pressure.phase];
+    const [mistakes, bookmarks, growth, recentStates, upcoming] =
+      await Promise.all([
+        this.notebookService.getMistakes(userId, MISTAKE_LIMIT),
+        this.bookmarksService.getBookmarks(userId),
+        this.competencyService.getGrowth(userId),
+        this.topicStates.find({
+          where: { userId },
+          order: { lastActivityAt: 'DESC' },
+          take: RECENT_TOPIC_LIMIT,
+        }),
+        pressure.phase === 'none'
+          ? Promise.resolve([] as StudyPlanTask[])
+          : this.planTasks.find({
+              where: {
+                plan: { userId },
+                status: StudyTaskStatus.PENDING,
+                date: LessThanOrEqual(
+                  addDays(todayIST(now), PLAN_LOOKAHEAD_DAYS),
+                ),
+              },
+              order: { date: 'ASC' },
+            }),
+      ]);
+
+    // Earliest pending plan date per topic (tasks arrive date-ascending).
+    const plannedFor = new Map<string, string>();
+    for (const task of upcoming) {
+      const key = this.scopeKey(task.subject, task.chapter, task.topic);
+      if (!plannedFor.has(key)) plannedFor.set(key, task.date);
+    }
+    const rankOf = (topic: {
+      subject: string;
+      chapter: string;
+      topic: string;
+      score: number;
+    }) =>
+      topic.score -
+      (plannedFor.has(this.scopeKey(topic.subject, topic.chapter, topic.topic))
+        ? PLANNED_SOON_BOOST
+        : 0);
 
     const trackedTopics = growth.topics.filter((topic) => topic.answered > 0);
     const weakTopics: RevisionTopicView[] = trackedTopics
       .filter(
         (topic) => topic.band === 'Beginner' || topic.band === 'Developing',
       )
-      .sort((left, right) => left.score - right.score)
-      .slice(0, WEAK_TOPIC_LIMIT)
-      .map((topic) => ({
-        subject: topic.subject,
-        chapter: topic.chapter,
-        topic: topic.topic,
-        score: topic.score,
-        band: topic.band,
-      }));
+      .sort((left, right) => rankOf(left) - rankOf(right))
+      .slice(0, weakLimit)
+      .map((topic) => {
+        const planned = plannedFor.get(
+          this.scopeKey(topic.subject, topic.chapter, topic.topic),
+        );
+        return {
+          subject: topic.subject,
+          chapter: topic.chapter,
+          topic: topic.topic,
+          score: topic.score,
+          band: topic.band,
+          ...(planned ? { plannedFor: planned } : {}),
+        };
+      });
 
     const growthByScope = new Map(
       growth.topics.map((topic) => [
@@ -109,6 +171,14 @@ export class RevisionService {
     ).length;
 
     return {
+      target:
+        pressure.phase === 'none' || !targetMonth
+          ? null
+          : {
+              targetMonth,
+              daysLeft: pressure.daysLeft ?? 0,
+              phase: pressure.phase,
+            },
       summary: {
         dueCount,
         resolvedCount: mistakes.cards.length - dueCount,

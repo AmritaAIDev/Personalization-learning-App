@@ -19,6 +19,7 @@ import { useBookmarkedQuestions } from "@/lib/useBookmarkedQuestions";
 import ChapterLink from "@/components/catalog/ChapterLink";
 import BookmarkButton from "@/components/learning/BookmarkButton";
 import ResourceCard from "@/components/learning/ResourceCard";
+import TargetBanner from "@/components/revision/TargetBanner";
 import type { NotebookMistakeCard } from "@/lib/notebook-types";
 import type {
   RevisionHubPayload,
@@ -136,6 +137,11 @@ function TopicCard({ topic }: { topic: RevisionTopicView }) {
       <span className={`text-sm font-bold ${scoreTone(topic.score)}`}>
         {topic.score}%
       </span>
+      {topic.plannedFor ? (
+        <span className="hidden shrink-0 rounded-full bg-canvas px-2 py-0.5 text-[11px] font-semibold text-ink-mute sm:inline">
+          In plan {topic.plannedFor.slice(5)}
+        </span>
+      ) : null}
       <Link
         href={learningUrl(topic, { tab: "practice" })}
         className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-primary-tint px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary hover:text-white"
@@ -216,6 +222,8 @@ export default function RevisionHubPage() {
 
       {data ? (
         <>
+          {data.target ? <TargetBanner target={data.target} /> : null}
+
           {/* Summary strip */}
           <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-5">
             {[

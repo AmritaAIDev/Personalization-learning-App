@@ -14,7 +14,10 @@ export class RevisionController {
   @Get('hub')
   async getHub(@CurrentUser() user: AuthenticatedUser) {
     return {
-      data: await this.revisionService.getHub(user.id),
+      data: await this.revisionService.getHub(
+        user.id,
+        user.personalization.targetMonth,
+      ),
     };
   }
 }

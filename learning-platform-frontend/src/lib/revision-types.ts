@@ -9,6 +9,8 @@ export interface RevisionTopicView {
   topic: string;
   score: number;
   band: CompetencyBand;
+  /** YYYY-MM-DD the study plan next schedules this topic. */
+  plannedFor?: string;
 }
 
 export interface RevisionRecentTopicView extends RevisionTopicView {
@@ -21,7 +23,15 @@ export interface RevisionTopicRecommendation {
   resources: LearningResource[];
 }
 
+export interface RevisionTarget {
+  targetMonth: string;
+  daysLeft: number;
+  phase: "foundation" | "consolidation" | "sprint";
+}
+
 export interface RevisionHubPayload {
+  /** Null when the student has no (or an already-passed) target month. */
+  target: RevisionTarget | null;
   summary: {
     dueCount: number;
     resolvedCount: number;

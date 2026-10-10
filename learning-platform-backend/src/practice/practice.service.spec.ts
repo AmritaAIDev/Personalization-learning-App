@@ -1,4 +1,7 @@
-import { EMPTY_PERSONALIZATION } from '../users/personalization';
+import {
+  currentMonthIST,
+  EMPTY_PERSONALIZATION,
+} from '../users/personalization';
 import {
   BadRequestException,
   ConflictException,
@@ -11,6 +14,13 @@ import {
 } from '../question.entity';
 import { PracticeService } from './practice.service';
 import { PracticeAttemptStatus } from './practice.types';
+
+/** The IST month `offset` months from now, as YYYY-MM. */
+function monthPlus(offset: number): string {
+  const [year, month] = currentMonthIST().split('-').map(Number);
+  const index = year * 12 + (month - 1) + offset;
+  return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`;
+}
 
 function makeQuestion(
   id: string,
@@ -143,6 +153,61 @@ describe('PracticeService', () => {
     expect(JSON.stringify(payload.questions)).not.toContain('correct_answer');
     expect(JSON.stringify(payload.questions)).not.toContain('solution');
   });
+
+  it.each([
+    [monthPlus(12), { Easy: 5, Medium: 5, Hard: 5 }],
+    [monthPlus(2), { Easy: 4, Medium: 5, Hard: 6 }],
+    [monthPlus(0), { Easy: 3, Medium: 5, Hard: 7 }],
+  ])(
+    'shifts the difficulty mix as the target month %s approaches',
+    async (targetMonth, expected) => {
+      const bigBank = [
+        ...Array.from({ length: 8 }, (_, i) =>
+          makeQuestion('e' + i, 'Easy', i),
+        ),
+        ...Array.from({ length: 8 }, (_, i) =>
+          makeQuestion('m' + i, 'Medium', i + 8),
+        ),
+        ...Array.from({ length: 8 }, (_, i) =>
+          makeQuestion('h' + i, 'Hard', i + 16),
+        ),
+      ];
+      attemptsRepository.findOne.mockResolvedValue(null);
+      questionsRepository.find.mockResolvedValue(bigBank);
+      attemptsRepository.create.mockImplementation((input) => ({
+        id: 'attempt-1',
+        ...input,
+      }));
+      attemptsRepository.save.mockImplementation(async (input) => input);
+
+      await service.createOrResume(
+        {
+          id: 'student-1',
+          name: 'Student',
+          email: 'student@example.invalid',
+          role: 'student',
+          xp: 0,
+          level: 1,
+          streak: 0,
+          personalization: { ...EMPTY_PERSONALIZATION, targetMonth },
+        },
+        {
+          subject: 'Physics',
+          chapter: 'Electric Charges and Fields',
+          topic: "Coulomb's Law and Charge",
+        },
+      );
+
+      const created = attemptsRepository.create.mock.calls[0][0];
+      const counts = { Easy: 0, Medium: 0, Hard: 0 };
+      for (const question of bigBank) {
+        if (created.questionIds.includes(question.id)) {
+          counts[question.difficulty as keyof typeof counts] += 1;
+        }
+      }
+      expect(counts).toEqual(expected);
+    },
+  );
 
   it('builds the largest balanced set it can when a tier has fewer than five', async () => {
     const thinBank = [

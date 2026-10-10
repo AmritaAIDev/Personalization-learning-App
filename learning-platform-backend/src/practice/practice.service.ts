@@ -16,6 +16,11 @@ import { MisconceptionsService } from '../misconceptions/misconceptions.service'
 import type { ExplanationResult } from '../citation.util';
 import { generateReviewExplanation } from '../common/review-explanation';
 import { Question, QuestionPublicationStatus } from '../question.entity';
+import {
+  DIFFICULTY_MIX,
+  getTargetPressure,
+  type TargetPhase,
+} from '../users/target-pressure';
 import { PracticeAnswer } from './practice-answer.entity';
 import { PracticeAttempt } from './practice-attempt.entity';
 import {
@@ -25,7 +30,6 @@ import {
 } from './practice.dto';
 import {
   PRACTICE_DIFFICULTIES,
-  PRACTICE_PER_DIFFICULTY,
   PracticeAnalysis,
   PracticeAttemptStatus,
   PracticePerformanceRow,
@@ -118,7 +122,8 @@ export class PracticeService {
       },
       order: { created_at: 'ASC' },
     });
-    const questions = this.selectBalancedQuestionSet(candidates);
+    const { phase } = getTargetPressure(user.personalization.targetMonth);
+    const questions = this.selectBalancedQuestionSet(candidates, phase);
     const startedAt = new Date();
     const attempt = this.attemptsRepository.create({
       userId: user.id,
@@ -433,13 +438,19 @@ export class PracticeService {
     return orderedQuestions as Question[];
   }
 
-  private selectBalancedQuestionSet(candidates: Question[]): Question[] {
+  private selectBalancedQuestionSet(
+    candidates: Question[],
+    phase: TargetPhase = 'none',
+  ): Question[] {
     // Adaptive sizing: aim for five per difficulty, but degrade gracefully to
     // the largest balanced set the topic actually has (minimum one per tier) so
     // a topic with a thinner bank still opens instead of 503-ing. Well-stocked
-    // topics still get the full 15-question set.
+    // topics still get the full 15-question set. As the student's target month
+    // nears, the mix shifts from 5/5/5 towards harder, exam-like questions
+    // (see DIFFICULTY_MIX); the total stays 15.
+    const mix = DIFFICULTY_MIX[phase];
     const selected: Question[] = [];
-    for (const difficulty of PRACTICE_DIFFICULTIES) {
+    for (const [tierIndex, difficulty] of PRACTICE_DIFFICULTIES.entries()) {
       const tier = candidates.filter(
         (question) => question.difficulty === difficulty,
       );
@@ -448,7 +459,7 @@ export class PracticeService {
           'This topic needs at least one published Easy, Medium, and Hard question before practice can start.',
         );
       }
-      const target = Math.min(PRACTICE_PER_DIFFICULTY, tier.length);
+      const target = Math.min(mix[tierIndex], tier.length);
       selected.push(...this.pickDiverseQuestions(tier, target));
     }
     return this.shuffle(selected);

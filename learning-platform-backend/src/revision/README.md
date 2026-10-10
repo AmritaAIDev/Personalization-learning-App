@@ -11,6 +11,10 @@ Built entirely on existing services rather than re-querying their underlying tab
 
 ## API
 
-| Method | Path | Description |
-| --- | --- | --- |
-| GET | `/api/revision/hub` | the full revision hub payload for the signed-in student |
+| Method | Path                | Description                                             |
+| ------ | ------------------- | ------------------------------------------------------- |
+| GET    | `/api/revision/hub` | the full revision hub payload for the signed-in student |
+
+## Target awareness
+
+`GET /api/revision/hub` returns `target` (`{ targetMonth, daysLeft, phase }`, or `null` without a target). The phase comes from `users/target-pressure.ts`. The closer the target, the longer the weak-topic list (8, then 10, then 12). Weak topics that the study plan has pending within the next 14 days are ranked ahead of slightly weaker unplanned ones and carry a `plannedFor` date. With no target, behaviour is unchanged and the plan is not queried.

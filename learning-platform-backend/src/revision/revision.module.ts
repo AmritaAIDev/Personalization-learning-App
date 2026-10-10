@@ -4,6 +4,7 @@ import { NotebookModule } from '../notebook/notebook.module';
 import { BookmarksModule } from '../bookmarks/bookmarks.module';
 import { AdaptiveModule } from '../adaptive/adaptive.module';
 import { LearningTopicState } from '../adaptive/learning-topic-state.entity';
+import { StudyPlanTask } from '../study-plan/study-plan.entity';
 import { LearningResource } from '../diagnostics/learning-resource.entity';
 import { RevisionController } from './revision.controller';
 import { RevisionService } from './revision.service';
@@ -13,7 +14,11 @@ import { RevisionService } from './revision.service';
     NotebookModule,
     BookmarksModule,
     AdaptiveModule,
-    TypeOrmModule.forFeature([LearningTopicState, LearningResource]),
+    TypeOrmModule.forFeature([
+      LearningTopicState,
+      LearningResource,
+      StudyPlanTask,
+    ]),
   ],
   controllers: [RevisionController],
   providers: [RevisionService],

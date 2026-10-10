@@ -18,6 +18,8 @@ export interface RevisionTopicView {
   topic: string;
   score: number;
   band: CompetencyBand;
+  /** `YYYY-MM-DD` the study plan next schedules this topic (within two weeks). */
+  plannedFor?: string;
 }
 
 export interface RevisionRecentTopicView extends RevisionTopicView {
@@ -42,7 +44,15 @@ export interface RevisionRecommendations {
  * (Notebook, Bookmarks, CompetencyService) or the same query shape
  * diagnostics.service.ts already uses for resource matching.
  */
+export interface RevisionTargetContext {
+  targetMonth: string;
+  daysLeft: number;
+  phase: 'foundation' | 'consolidation' | 'sprint';
+}
+
 export interface RevisionHubPayload {
+  /** Null when the student has no (or an already-passed) target month. */
+  target: RevisionTargetContext | null;
   summary: {
     dueCount: number;
     resolvedCount: number;

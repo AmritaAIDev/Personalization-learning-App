@@ -25,6 +25,7 @@ describe('RevisionService', () => {
   const competencyService = { getGrowth: jest.fn() };
   const topicStates = { find: jest.fn() };
   const resources = { find: jest.fn() };
+  const planTasks = { find: jest.fn() };
   let service: RevisionService;
 
   beforeEach(() => {
@@ -42,12 +43,14 @@ describe('RevisionService', () => {
     });
     topicStates.find.mockResolvedValue([]);
     resources.find.mockResolvedValue([]);
+    planTasks.find.mockResolvedValue([]);
     service = new RevisionService(
       notebookService as never,
       bookmarksService as never,
       competencyService as never,
       topicStates as never,
       resources as never,
+      planTasks as never,
     );
   });
 
@@ -211,5 +214,65 @@ describe('RevisionService', () => {
         content: null,
       },
     ]);
+  });
+
+  describe('target awareness', () => {
+    // 2026-10-10 IST; Dec 2026 ends 82 days later (consolidation), Oct 2026 is 21 days (sprint).
+    const now = new Date('2026-10-10T06:00:00Z');
+    const manyWeak = Array.from({ length: 14 }, (_, i) =>
+      makeTopic({ topic: `Topic ${i}`, score: i, band: 'Beginner' }),
+    );
+
+    it('reports no target and skips the plan lookup when none is set', async () => {
+      const hub = await service.getHub('user-1', null, now);
+      expect(hub.target).toBeNull();
+      expect(planTasks.find).not.toHaveBeenCalled();
+    });
+
+    it('describes the target phase and days left', async () => {
+      const hub = await service.getHub('user-1', '2026-12', now);
+      expect(hub.target).toEqual({
+        targetMonth: '2026-12',
+        daysLeft: 82,
+        phase: 'consolidation',
+      });
+    });
+
+    it('lists more weak topics as the target gets closer', async () => {
+      competencyService.getGrowth.mockResolvedValue({
+        overall: {},
+        timeline: [],
+        topics: manyWeak,
+      });
+      const far = await service.getHub('user-1', '2027-06', now);
+      const mid = await service.getHub('user-1', '2026-12', now);
+      const near = await service.getHub('user-1', '2026-10', now);
+      expect(far.weakTopics).toHaveLength(8);
+      expect(mid.weakTopics).toHaveLength(10);
+      expect(near.weakTopics).toHaveLength(12);
+    });
+
+    it('ranks a weak topic the plan schedules soon ahead of a slightly weaker one', async () => {
+      competencyService.getGrowth.mockResolvedValue({
+        overall: {},
+        timeline: [],
+        topics: [
+          makeTopic({ topic: 'Weaker', score: 10, band: 'Beginner' }),
+          makeTopic({ topic: 'Planned', score: 30, band: 'Beginner' }),
+        ],
+      });
+      planTasks.find.mockResolvedValue([
+        {
+          subject: 'Physics',
+          chapter: 'Electrostatics',
+          topic: 'Planned',
+          date: '2026-10-12',
+        },
+      ]);
+      const hub = await service.getHub('user-1', '2026-12', now);
+      expect(hub.weakTopics.map((t) => t.topic)).toEqual(['Planned', 'Weaker']);
+      expect(hub.weakTopics[0].plannedFor).toBe('2026-10-12');
+      expect(hub.weakTopics[1].plannedFor).toBeUndefined();
+    });
   });
 });

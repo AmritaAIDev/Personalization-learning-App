@@ -127,6 +127,7 @@ export class AdaptiveController {
     @Param('sessionId', ParseUUIDPipe) sessionId: string,
     @Param('sessionItemId', ParseUUIDPipe) sessionItemId: string,
     @Body() body: SubmitLearningAnswerDto,
+    @Query('lean') lean?: string,
   ) {
     return {
       data: await this.adaptiveService.submitAnswer(
@@ -134,6 +135,7 @@ export class AdaptiveController {
         sessionId,
         sessionItemId,
         body,
+        { lean: lean === '1' },
       ),
     };
   }

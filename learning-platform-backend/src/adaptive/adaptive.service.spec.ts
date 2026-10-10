@@ -992,3 +992,87 @@ describe('AdaptiveService row-level answer mutations', () => {
     });
   });
 });
+
+describe('AdaptiveService instant verdict (lean answers)', () => {
+  function build(isCorrect: boolean, kind: string) {
+    const dataSource = {
+      transaction: jest.fn(async (work: (manager: never) => Promise<unknown>) =>
+        work({} as never),
+      ),
+    } as unknown as DataSource;
+    const service = new AdaptiveService(
+      dataSource,
+      {} as AdaptiveContentService,
+      {} as GenerationWorkerService,
+      { markPending: jest.fn() } as unknown as TutorService,
+      {} as AgentService,
+      {
+        recordFromWrongAnswer: jest.fn().mockResolvedValue(undefined),
+      } as unknown as MisconceptionsService,
+      {} as Repository<LearningTopicState>,
+      {} as Repository<LearningSession>,
+      {} as Repository<Flashcard>,
+      {} as Repository<FlashcardReview>,
+      {} as Repository<Question>,
+      {} as Repository<Topic>,
+      tracingStub,
+    );
+    const privateMethods = service as unknown as {
+      applyAnswer: (...args: unknown[]) => Promise<unknown>;
+      getSession: (...args: unknown[]) => Promise<unknown>;
+    };
+    jest.spyOn(privateMethods, 'applyAnswer').mockResolvedValue({
+      kind,
+      isCorrect,
+      sessionId: 'session-id',
+      session: { id: 'session-id' },
+      question: { id: 'q', options: [], commonErrors: [] },
+      selectedOption: 'A',
+      sessionItemId: 'item-id',
+      shouldExplainSecondFailure: false,
+      prefetchScope: null,
+      prefetchLevel: null,
+      route: null,
+    });
+    const getSession = jest
+      .spyOn(privateMethods, 'getSession')
+      .mockResolvedValue({ session: {}, currentItem: null, progress: [] });
+    return { service, getSession };
+  }
+
+  it('returns only the verdict, without rebuilding the session, in lean mode', async () => {
+    const { service, getSession } = build(true, 'CORRECT');
+    const result = await service.submitAnswer(
+      'user-id',
+      'session-id',
+      'item-id',
+      { selectedOption: 'A' },
+      { lean: true },
+    );
+    expect(result).toEqual({
+      feedback: {
+        kind: 'CORRECT',
+        isCorrect: true,
+        assistantMessage: null,
+        tutorPending: false,
+        route: null,
+      },
+    });
+    expect(getSession).not.toHaveBeenCalled();
+  });
+
+  it('still returns the full session, plus the verdict, by default', async () => {
+    const { service, getSession } = build(false, 'REINFORCE');
+    const result = await service.submitAnswer(
+      'user-id',
+      'session-id',
+      'item-id',
+      { selectedOption: 'A' },
+    );
+    expect(getSession).toHaveBeenCalled();
+    expect(result).toMatchObject({
+      progress: [],
+      feedback: { kind: 'REINFORCE', isCorrect: false },
+    });
+  });
+});

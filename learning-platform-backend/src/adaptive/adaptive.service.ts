@@ -186,6 +186,8 @@ type AnswerMutation = {
     | 'ADVANCED'
     | 'MASTERED'
     | 'REINFORCE';
+  /** Whether the submitted option was the right one (for the instant verdict). */
+  isCorrect: boolean;
   sessionId: string;
   session: LearningSession;
   question: LearningQuestionReference;
@@ -429,6 +431,7 @@ export class AdaptiveService {
     sessionId: string,
     sessionItemId: string,
     input: SubmitLearningAnswerDto,
+    options: { lean?: boolean } = {},
   ) {
     const mutation = await this.dataSource.transaction((manager) =>
       this.applyAnswer(manager, userId, sessionId, sessionItemId, input),
@@ -486,14 +489,21 @@ export class AdaptiveService {
       ).catch(() => undefined);
     }
 
+    const feedback = {
+      kind: mutation.kind,
+      isCorrect: mutation.isCorrect,
+      assistantMessage: null,
+      tutorPending,
+      route: mutation.route,
+    };
+    // Lean mode answers as soon as the verdict is committed, so the learner
+    // sees right/wrong immediately; the client then loads the refreshed
+    // session (next question, round summary) with a separate GET.
+    if (options.lean) return { feedback };
+
     return {
       ...(await this.getSession(userId, sessionId)),
-      feedback: {
-        kind: mutation.kind,
-        assistantMessage: null,
-        tutorPending,
-        route: mutation.route,
-      },
+      feedback,
     };
   }
 
@@ -911,6 +921,7 @@ export class AdaptiveService {
     }
     return {
       kind,
+      isCorrect,
       sessionId,
       session,
       question,

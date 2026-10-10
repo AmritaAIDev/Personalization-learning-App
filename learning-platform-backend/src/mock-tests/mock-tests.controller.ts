@@ -27,7 +27,12 @@ export class MockTestsController {
 
   @Post()
   async createAttempt(@CurrentUser() user: AuthenticatedUser) {
-    return { data: await this.mockTestsService.createAttempt(user.id) };
+    return {
+      data: await this.mockTestsService.createAttempt(
+        user.id,
+        user.personalization.className,
+      ),
+    };
   }
 
   @Get(':attemptId')

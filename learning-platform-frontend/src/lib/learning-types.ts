@@ -113,11 +113,16 @@ export type LearningAnswerPayload = LearningSessionPayload & {
       | "ADVANCED"
       | "MASTERED"
       | "REINFORCE";
+    /** Whether the submitted option was right; lets the UI show it at once. */
+    isCorrect: boolean;
     assistantMessage: TutorMessage | null;
     tutorPending: boolean;
     route: LearningScope | null;
   };
 };
+
+/** What the server returns the instant an answer is judged (before the next question loads). */
+export type LearningVerdictPayload = Pick<LearningAnswerPayload, "feedback">;
 
 export type FlashcardRating = "AGAIN" | "HARD" | "GOOD" | "EASY";
 

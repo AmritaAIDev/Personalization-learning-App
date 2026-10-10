@@ -60,6 +60,7 @@ describe('MockTestsService', () => {
     find: jest.fn(),
     findOne: jest.fn(),
   };
+  const catalogService = { getChaptersOutsideClass: jest.fn() };
   let service: MockTestsService;
 
   beforeEach(() => {
@@ -68,7 +69,9 @@ describe('MockTestsService', () => {
       attemptsRepository as never,
       answersRepository as never,
       questionsRepository as never,
+      catalogService as never,
     );
+    catalogService.getChaptersOutsideClass.mockResolvedValue(new Set());
     attemptsRepository.create.mockImplementation((input) => input);
     attemptsRepository.save.mockImplementation(async (input) => input);
     answersRepository.create.mockImplementation((input) => input);
@@ -93,6 +96,54 @@ describe('MockTestsService', () => {
       'Physics',
     ]);
     expect(result.attempt.status).toBe(MockTestAttemptStatus.IN_PROGRESS);
+  });
+
+  it("leaves out the other class's chapters for a Class 11 student", async () => {
+    attemptsRepository.findOne.mockResolvedValue(null);
+    catalogService.getChaptersOutsideClass.mockResolvedValue(
+      new Set(['Class 12 Chapter']),
+    );
+    questionsRepository.find.mockImplementation(
+      async ({ where }: { where: { subject: string } }) => [
+        ...Array.from({ length: 20 }, (_, index) => ({
+          ...makeQuestion(`${where.subject}-a${index}`, where.subject),
+          chapter: 'Class 11 Chapter',
+        })),
+        ...Array.from({ length: 20 }, (_, index) => ({
+          ...makeQuestion(`${where.subject}-b${index}`, where.subject),
+          chapter: 'Class 12 Chapter',
+        })),
+      ],
+    );
+
+    const result = await service.createAttempt('user-1', '11');
+
+    expect(catalogService.getChaptersOutsideClass).toHaveBeenCalledWith(
+      'user-1',
+      '11',
+    );
+    const ids = attemptsRepository.create.mock.calls[0][0].questionIds;
+    expect(ids.length).toBeGreaterThan(0);
+    expect(ids.every((id: string) => id.includes('-a'))).toBe(true);
+    expect(result.questions.length).toBe(ids.length);
+  });
+
+  it('falls back to the full bank when the class filter would empty a subject', async () => {
+    attemptsRepository.findOne.mockResolvedValue(null);
+    catalogService.getChaptersOutsideClass.mockResolvedValue(
+      new Set(['Only Chapter']),
+    );
+    questionsRepository.find.mockImplementation(
+      async ({ where }: { where: { subject: string } }) =>
+        Array.from({ length: 5 }, (_, index) => ({
+          ...makeQuestion(`${where.subject}-${index}`, where.subject),
+          chapter: 'Only Chapter',
+        })),
+    );
+
+    const result = await service.createAttempt('user-1', '12');
+
+    expect(result.questions.length).toBeGreaterThan(0);
   });
 
   it('scores with JEE negative marking and computes a subject breakdown', async () => {

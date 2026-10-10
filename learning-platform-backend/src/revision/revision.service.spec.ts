@@ -217,6 +217,19 @@ describe('RevisionService', () => {
   });
 
   describe('target awareness', () => {
+    it('asks for a new target once the old month has passed', async () => {
+      const hub = await service.getHub(
+        'user-1',
+        '2026-08',
+        new Date('2026-10-10T06:00:00Z'),
+      );
+      expect(hub.target).toEqual({
+        targetMonth: '2026-08',
+        daysLeft: 0,
+        phase: 'passed',
+      });
+    });
+
     // 2026-10-10 IST; Dec 2026 ends 82 days later (consolidation), Oct 2026 is 21 days (sprint).
     const now = new Date('2026-10-10T06:00:00Z');
     const manyWeak = Array.from({ length: 14 }, (_, i) =>

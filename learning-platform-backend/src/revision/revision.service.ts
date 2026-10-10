@@ -12,6 +12,7 @@ import {
   StudyPlanTask,
   StudyTaskStatus,
 } from '../study-plan/study-plan.entity';
+import { TARGET_MONTH_PATTERN } from '../users/personalization';
 import {
   getTargetPressure,
   WEAK_TOPIC_LIMIT_BY_PHASE,
@@ -21,6 +22,7 @@ import type {
   RevisionRecommendations,
   RevisionResourceView,
   RevisionTopicRecommendation,
+  RevisionTargetContext,
   RevisionTopicView,
 } from './revision.types';
 
@@ -171,14 +173,7 @@ export class RevisionService {
     ).length;
 
     return {
-      target:
-        pressure.phase === 'none' || !targetMonth
-          ? null
-          : {
-              targetMonth,
-              daysLeft: pressure.daysLeft ?? 0,
-              phase: pressure.phase,
-            },
+      target: this.toTargetContext(targetMonth, pressure),
       summary: {
         dueCount,
         resolvedCount: mistakes.cards.length - dueCount,
@@ -191,6 +186,24 @@ export class RevisionService {
       weakTopics,
       recentlyPracticed,
       recommendations,
+    };
+  }
+
+  /** `passed` lets the page ask for a new target instead of going silent. */
+  private toTargetContext(
+    targetMonth: string | null,
+    pressure: ReturnType<typeof getTargetPressure>,
+  ): RevisionTargetContext | null {
+    if (!targetMonth) return null;
+    if (pressure.phase === 'none') {
+      return TARGET_MONTH_PATTERN.test(targetMonth)
+        ? { targetMonth, daysLeft: 0, phase: 'passed' }
+        : null;
+    }
+    return {
+      targetMonth,
+      daysLeft: pressure.daysLeft ?? 0,
+      phase: pressure.phase,
     };
   }
 

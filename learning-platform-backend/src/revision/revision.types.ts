@@ -47,7 +47,7 @@ export interface RevisionRecommendations {
 export interface RevisionTargetContext {
   targetMonth: string;
   daysLeft: number;
-  phase: 'foundation' | 'consolidation' | 'sprint';
+  phase: 'foundation' | 'consolidation' | 'sprint' | 'passed';
 }
 
 export interface RevisionHubPayload {

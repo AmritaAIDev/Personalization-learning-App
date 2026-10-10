@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomInt } from 'node:crypto';
 import { In, LessThan, Repository } from 'typeorm';
+import { CatalogService } from '../catalog/catalog.service';
 import { Question, QuestionPublicationStatus } from '../question.entity';
 import { MockTestAnswer } from './mock-test-answer.entity';
 import { MockTestAttempt } from './mock-test-attempt.entity';
@@ -84,9 +85,13 @@ export class MockTestsService {
     private readonly answersRepository: Repository<MockTestAnswer>,
     @InjectRepository(Question)
     private readonly questionsRepository: Repository<Question>,
+    private readonly catalogService: CatalogService,
   ) {}
 
-  async createAttempt(userId: string): Promise<MockTestAttemptPayload> {
+  async createAttempt(
+    userId: string,
+    className: string | null = null,
+  ): Promise<MockTestAttemptPayload> {
     const activeAttempt = await this.attemptsRepository.findOne({
       where: { userId, status: MockTestAttemptStatus.IN_PROGRESS },
       order: { startedAt: 'DESC' },
@@ -104,8 +109,12 @@ export class MockTestsService {
       await this.finalizeAttempt(activeAttempt);
     }
 
+    // A Class 11 / 12 student is not tested on the other class's chapters.
+    const outsideClass = await this.catalogService
+      .getChaptersOutsideClass(userId, className)
+      .catch(() => new Set<string>());
     const { questions, subjectCounts, difficultyMix } =
-      await this.drawFullMockSet();
+      await this.drawFullMockSet(outsideClass);
     if (questions.length === 0) {
       throw new ServiceUnavailableException(
         'Not enough published questions are available yet to assemble a full mock test.',
@@ -446,7 +455,9 @@ export class MockTestsService {
    * difficulty. Degrades gracefully to whatever a thin subject's bank can
    * actually supply rather than failing the whole attempt.
    */
-  private async drawFullMockSet(): Promise<{
+  private async drawFullMockSet(
+    outsideClass: ReadonlySet<string> = new Set(),
+  ): Promise<{
     questions: Question[];
     subjectCounts: SubjectCount[];
     difficultyMix: DifficultyCount[];
@@ -455,9 +466,14 @@ export class MockTestsService {
     const allQuestions: Question[] = [];
 
     for (const subject of MOCK_TEST_SUBJECTS) {
-      const bank = await this.questionsRepository.find({
+      const fullBank = await this.questionsRepository.find({
         where: { subject, status: QuestionPublicationStatus.PUBLISHED },
       });
+      const scoped = fullBank.filter(
+        (question) => !outsideClass.has(question.chapter),
+      );
+      // Never leave a subject empty just because of the class filter.
+      const bank = scoped.length > 0 ? scoped : fullBank;
       const picked = this.pickDiverseQuestions(
         bank,
         Math.min(MOCK_TEST_QUESTIONS_PER_SUBJECT, bank.length),

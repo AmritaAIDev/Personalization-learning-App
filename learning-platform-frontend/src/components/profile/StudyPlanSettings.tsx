@@ -171,7 +171,8 @@ export default function StudyPlanSettings() {
       >
         <p className="text-sm leading-6 text-ink-soft">
           Topics you have already completed stay completed. The rest are
-          rescheduled up to your new target month.
+          rescheduled up to your new target month. Practice difficulty and
+          your revision list also adjust to how close the new target is.
         </p>
       </Modal>
     </section>

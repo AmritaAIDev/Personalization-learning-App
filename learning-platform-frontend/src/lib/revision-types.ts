@@ -26,7 +26,7 @@ export interface RevisionTopicRecommendation {
 export interface RevisionTarget {
   targetMonth: string;
   daysLeft: number;
-  phase: "foundation" | "consolidation" | "sprint";
+  phase: "foundation" | "consolidation" | "sprint" | "passed";
 }
 
 export interface RevisionHubPayload {

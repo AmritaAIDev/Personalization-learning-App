@@ -24,6 +24,7 @@ import {
   topicProgress,
   type TopicProgress,
 } from './catalog.progress';
+import { includeForClass } from '../study-plan/plan-topics';
 import type { UpdateChapterMetaDto } from './catalog.dto';
 import {
   ChapterMeta,
@@ -208,6 +209,25 @@ export class CatalogService {
         }));
       });
     });
+  }
+
+  /**
+   * Question-side chapter names that are taught in the other class, so a
+   * Class 11 student's mock test can leave out Class 12 chapters (and the
+   * reverse). Droppers, students with no class and chapters with no class
+   * level yet are never excluded.
+   */
+  async getChaptersOutsideClass(
+    userId: string,
+    className: string | null,
+  ): Promise<Set<string>> {
+    if (className !== '11' && className !== '12') return new Set();
+    const rows = await this.getPlanTopics(userId);
+    return new Set(
+      rows
+        .filter((row) => !includeForClass(row.classLevel, className))
+        .map((row) => row.scopeChapter),
+    );
   }
 
   async getSubjectChapters(

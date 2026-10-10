@@ -14,6 +14,7 @@ import type {
   LearningSessionPayload,
   LearningState,
   LearningTab,
+  LearningVerdictPayload,
 } from "@/lib/learning-types";
 import FlashcardDeck from "./FlashcardDeck";
 import LearningTabs from "./LearningTabs";
@@ -100,6 +101,18 @@ export default function AdaptiveStudySession({
     useState<LearningAnswerPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [answering, setAnswering] = useState(false);
+  /**
+   * The judged answer, shown the moment the server decides (right/wrong on the
+   * option itself). The next question / round summary loads right after, so the
+   * learner never stares at a spinner waiting for everything at once.
+   */
+  const [verdict, setVerdict] = useState<{
+    option: string;
+    isCorrect: boolean;
+  } | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncFailed, setSyncFailed] = useState(false);
+  const syncRef = useRef<(() => Promise<void>) | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<LearningDashboardPayload | null>(
     null,
@@ -170,6 +183,7 @@ export default function AdaptiveStudySession({
       setPayload(next);
       setFeedback(null);
       setMissedItem(null);
+      setVerdict(null);
       void refreshDashboard();
     } catch (reason) {
       setError(
@@ -182,42 +196,74 @@ export default function AdaptiveStudySession({
     }
   }, [refreshDashboard, scope]);
 
+  /** Loads the refreshed session after a judged answer, then applies it. */
+  const syncAfterVerdict = useCallback(
+    async (
+      sessionId: string,
+      judged: LearningAnswerPayload["feedback"],
+      answeredItem: LearningSessionPayload["currentItem"],
+    ) => {
+      const run = async () => {
+        setSyncing(true);
+        setSyncFailed(false);
+        try {
+          const session = await apiFetch<LearningSessionPayload>(
+            `/api/learning/sessions/${sessionId}`,
+          );
+          const next: LearningAnswerPayload = { ...session, feedback: judged };
+          // A correct answer mid-round is held for an explicit "Next question".
+          if (judged.kind === "CORRECT" && next.session.status === "ACTIVE") {
+            setPendingAdvance(next);
+          } else {
+            setPayload(next);
+            setMissedItem(
+              isMissTransition(next.session.transition) ? answeredItem : null,
+            );
+            setVerdict(null);
+            if (next.session.status !== "ACTIVE") void refreshDashboard();
+          }
+        } catch {
+          setSyncFailed(true);
+        } finally {
+          setSyncing(false);
+        }
+      };
+      syncRef.current = run;
+      await run();
+    },
+    [refreshDashboard],
+  );
+
   const answer = useCallback(
     async (selectedOption: string) => {
-      if (!payload?.currentItem || answering) return;
+      if (!payload?.currentItem || answering || syncing) return;
       const answeredItem = payload.currentItem;
+      const sessionId = payload.session.id;
       setAnswering(true);
       setError(null);
+      let judged: LearningVerdictPayload["feedback"];
       try {
-        const next = await apiFetch<LearningAnswerPayload>(
-          `/api/learning/sessions/${payload.session.id}/items/${payload.currentItem.id}/answer`,
+        // Lean: returns as soon as the verdict is committed.
+        const result = await apiFetch<LearningVerdictPayload>(
+          `/api/learning/sessions/${sessionId}/items/${answeredItem.id}/answer?lean=1`,
           { method: "POST", body: JSON.stringify({ selectedOption }) },
         );
-        // A correct answer mid-round already carries the next question in
-        // this same response, but the learner hasn't asked to move on yet —
-        // hold it back for an explicit "Next question" click.
-        if (next.feedback.kind === "CORRECT" && next.session.status === "ACTIVE") {
-          setPendingAdvance(next);
-          setFeedback(next.feedback);
-        } else {
-          setPayload(next);
-          setFeedback(next.feedback);
-          setMissedItem(
-            isMissTransition(next.session.transition) ? answeredItem : null,
-          );
-          if (next.session.status !== "ACTIVE") void refreshDashboard();
-        }
+        judged = result.feedback;
       } catch (reason) {
         setError(
           reason instanceof Error
             ? reason.message
             : "Your answer could not be checked.",
         );
-      } finally {
         setAnswering(false);
+        return;
       }
+      setAnswering(false);
+      setFeedback(judged);
+      setVerdict({ option: selectedOption, isCorrect: judged.isCorrect });
+      await syncAfterVerdict(sessionId, judged, answeredItem);
     },
-    [answering, payload, refreshDashboard],
+    [answering, payload, syncing, syncAfterVerdict],
   );
 
   /** Applies the held-back next question once the learner clicks "Next question". */
@@ -227,6 +273,7 @@ export default function AdaptiveStudySession({
     setFeedback(null);
     setMissedItem(null);
     setPendingAdvance(null);
+    setVerdict(null);
   }, [pendingAdvance]);
 
   const stopPractice = () => {
@@ -234,6 +281,8 @@ export default function AdaptiveStudySession({
     setFeedback(null);
     setMissedItem(null);
     setPendingAdvance(null);
+    setVerdict(null);
+    setSyncFailed(false);
     setError(null);
     selectTab("overview");
   };
@@ -333,6 +382,10 @@ export default function AdaptiveStudySession({
             scope={scope}
             loading={loading}
             answering={answering}
+            verdict={verdict}
+            syncing={syncing}
+            syncFailed={syncFailed}
+            onRetrySync={() => void syncRef.current?.()}
             error={error}
             pendingNextQuestion={pendingAdvance !== null}
             onNextQuestion={continueToNext}

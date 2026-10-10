@@ -41,6 +41,7 @@ const StudyMarkdown = dynamic(() => import("./StudyMarkdown"), {
 });
 
 type Feedback = LearningAnswerPayload["feedback"] | null;
+type Verdict = { option: string; isCorrect: boolean };
 type MissedItem = LearningSessionPayload["currentItem"];
 
 export type PracticeWorkspaceProps = {
@@ -51,6 +52,10 @@ export type PracticeWorkspaceProps = {
   scope: LearningScope;
   loading: boolean;
   answering: boolean;
+  verdict: Verdict | null;
+  syncing: boolean;
+  syncFailed: boolean;
+  onRetrySync: () => void;
   error: string | null;
   /** True once a correct answer has arrived but is held back for an explicit "Next question" click. */
   pendingNextQuestion: boolean;
@@ -71,6 +76,10 @@ export default function PracticeWorkspace({
   scope,
   loading,
   answering,
+  verdict,
+  syncing,
+  syncFailed,
+  onRetrySync,
   error,
   pendingNextQuestion,
   onNextQuestion,
@@ -142,6 +151,10 @@ export default function PracticeWorkspace({
               payload={payload}
               feedback={feedback}
               answering={answering}
+              verdict={verdict}
+              syncing={syncing}
+              syncFailed={syncFailed}
+              onRetrySync={onRetrySync}
               error={error}
               pendingNextQuestion={pendingNextQuestion}
               onAnswer={onAnswer}
@@ -299,6 +312,10 @@ function ActiveQuestion({
   payload,
   feedback,
   answering,
+  verdict,
+  syncing,
+  syncFailed,
+  onRetrySync,
   error,
   pendingNextQuestion,
   onAnswer,
@@ -308,6 +325,10 @@ function ActiveQuestion({
   payload: LearningSessionPayload;
   feedback: Feedback;
   answering: boolean;
+  verdict: Verdict | null;
+  syncing: boolean;
+  syncFailed: boolean;
+  onRetrySync: () => void;
   error: string | null;
   pendingNextQuestion: boolean;
   onAnswer: (option: string) => void;
@@ -317,6 +338,9 @@ function ActiveQuestion({
   const current = payload.currentItem;
   const [pendingOption, setPendingOption] = useState<string | null>(null);
   const nextButtonRef = useRef<HTMLButtonElement | null>(null);
+  // Options are locked while the answer is judged and while the follow-up
+  // (next question / summary) loads, so a second tap can't double-submit.
+  const locked = answering || syncing;
 
   // The correct answer just landed but is held for an explicit click — send
   // focus to that click so Enter/Space (already muscle memory from answering)
@@ -326,7 +350,7 @@ function ActiveQuestion({
   }, [pendingNextQuestion]);
 
   useEffect(() => {
-    if (!current || answering) return;
+    if (!current || locked) return;
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (
@@ -365,12 +389,12 @@ function ActiveQuestion({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [answering, current, onAnswer, onNextQuestion, onTutorPrompt, pendingNextQuestion]);
+  }, [locked, current, onAnswer, onNextQuestion, onTutorPrompt, pendingNextQuestion]);
 
   if (!current) return null;
 
   const select = (option: string) => {
-    if (answering || pendingNextQuestion || current.attemptedOptions.includes(option))
+    if (locked || pendingNextQuestion || current.attemptedOptions.includes(option))
       return;
     setPendingOption(option);
     onAnswer(option);
@@ -378,9 +402,8 @@ function ActiveQuestion({
 
   // Once the answer is locked in as correct, the just-answered option reads
   // as a win, not a rule-out — it's the last attempt recorded for this item.
-  const justAnsweredCorrectOption = pendingNextQuestion
-    ? (current.attemptedOptions.at(-1) ?? null)
-    : null;
+  const justAnsweredCorrectOption =
+    verdict?.isCorrect ? verdict.option : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -418,10 +441,12 @@ function ActiveQuestion({
           aria-label="Answer options"
         >
           {current.options.map((option, index) => {
-            const isCorrectPick =
-              pendingNextQuestion && option === justAnsweredCorrectOption;
+            const isCorrectPick = option === justAnsweredCorrectOption;
+            const judgedWrong =
+              verdict !== null && !verdict.isCorrect && option === verdict.option;
             const ruledOut =
-              !isCorrectPick && current.attemptedOptions.includes(option);
+              !isCorrectPick &&
+              (judgedWrong || current.attemptedOptions.includes(option));
             const isPending = pendingOption === option && answering;
             return (
               <button
@@ -429,7 +454,7 @@ function ActiveQuestion({
                 type="button"
                 role="radio"
                 aria-checked={pendingOption === option}
-                disabled={answering || pendingNextQuestion || ruledOut}
+                disabled={locked || pendingNextQuestion || ruledOut}
                 onClick={() => select(option)}
                 className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left text-[13px] font-medium transition ${
                   isCorrectPick
@@ -490,18 +515,53 @@ function ActiveQuestion({
               className="h-4 w-4 animate-spin text-primary"
               aria-hidden="true"
             />
-            Checking your reasoning...
+            Checking your answer...
           </p>
         ) : null}
 
         {!answering && feedback ? <AnswerFeedback feedback={feedback} /> : null}
 
-        {pendingNextQuestion ? (
+        {syncing && feedback && !pendingNextQuestion ? (
+          <p
+            className="flex items-center gap-2 px-1 text-xs font-medium text-ink-mute"
+            role="status"
+          >
+            <LoaderCircle
+              className="h-3.5 w-3.5 animate-spin"
+              aria-hidden="true"
+            />
+            {feedback.kind === "CORRECT"
+              ? "Loading your next question..."
+              : feedback.kind === "SOCRATIC_HINT"
+                ? "Updating your question..."
+                : "Wrapping up this round..."}
+          </p>
+        ) : null}
+
+        {syncFailed && !syncing ? (
+          <div
+            className="flex flex-wrap items-center gap-3 rounded-xl border border-danger/20 bg-danger-tint px-3 py-2 text-[13px] font-medium text-danger"
+            role="alert"
+          >
+            Your answer was saved, but the next step could not load.
+            <button
+              type="button"
+              onClick={onRetrySync}
+              className="font-bold underline"
+            >
+              Try again
+            </button>
+          </div>
+        ) : null}
+
+        {pendingNextQuestion ||
+        (syncing && feedback?.kind === "CORRECT") ? (
           <button
             ref={nextButtonRef}
             type="button"
             onClick={onNextQuestion}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-strong sm:w-auto"
+            disabled={!pendingNextQuestion}
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-strong disabled:opacity-60 sm:w-auto"
           >
             Next question
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
